@@ -1,7 +1,7 @@
 # Taxi Pro — Streamlit app (app.py)
 # Install: pip install -r requirements.txt
 
-streamlit>=1.28.0
+# 1.33+ recommended for st.feedback("stars") (Passenger settings tab)
+streamlit>=1.33.0
 pandas>=2.0.0
-numpy>=1.24.0
 deep-translator>=1.11.0
