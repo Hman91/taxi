@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../api/client.dart';
+import '../l10n/app_localizations.dart';
+import '../services/taxi_app_service.dart';
 
 class OwnerScreen extends StatefulWidget {
   const OwnerScreen({super.key});
@@ -10,7 +11,7 @@ class OwnerScreen extends StatefulWidget {
 }
 
 class _OwnerScreenState extends State<OwnerScreen> {
-  final _api = TaxiApiClient();
+  final _api = TaxiAppService();
   final _secretController = TextEditingController(text: 'NabeulGold2026');
   String? _token;
   Map<String, dynamic>? _metrics;
@@ -43,14 +44,18 @@ class _OwnerScreenState extends State<OwnerScreen> {
       final trips = await _api.listTrips(t);
       setState(() {
         _metrics = m;
-        _trips = trips.map((e) => {
-              'id': e.id,
-              'date': e.date,
-              'route': e.route,
-              'fare': e.fare,
-              'commission': e.commission,
-              'type': e.type,
-            }).toList();
+        _trips = trips
+            .map(
+              (e) => {
+                'id': e.id,
+                'date': e.date,
+                'route': e.route,
+                'fare': e.fare,
+                'commission': e.commission,
+                'type': e.type,
+              },
+            )
+            .toList();
         _message = null;
       });
     } catch (e) {
@@ -68,9 +73,10 @@ class _OwnerScreenState extends State<OwnerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Owner HQ'),
+        title: Text(l.ownerTitle),
         actions: [
           if (_token != null)
             IconButton(
@@ -85,27 +91,32 @@ class _OwnerScreenState extends State<OwnerScreen> {
           TextField(
             controller: _secretController,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'Owner password'),
+            decoration: InputDecoration(labelText: l.ownerPassword),
           ),
           FilledButton(
             onPressed: _busy ? null : _login,
-            child: const Text('Login & load dashboard'),
+            child: Text(l.loginLoadDashboard),
           ),
           if (_metrics != null) ...[
             const SizedBox(height: 16),
-            Text('Commission (DT): ${_metrics!['total_commission']}'),
-            Text('Trips: ${_metrics!['trip_count']}'),
-            Text('Avg rating: ${_metrics!['rating_average']} (${_metrics!['rating_count']} votes)'),
+            Text(l.commissionLabel(_metrics!['total_commission'].toString())),
+            Text(l.tripsCount(_metrics!['trip_count'].toString())),
+            Text(l.avgRatingLabel(
+              _metrics!['rating_average'].toString(),
+              _metrics!['rating_count'].toString(),
+            )),
           ],
           const Divider(),
-          const Text('Trips', style: TextStyle(fontWeight: FontWeight.bold)),
-          if (_trips.isEmpty)
-            const Text('No trips yet'),
+          Text(l.tripsHeading, style: const TextStyle(fontWeight: FontWeight.bold)),
+          if (_trips.isEmpty) Text(l.noTripsYet),
           ..._trips.map(
             (t) => ListTile(
               dense: true,
               title: Text('${t['route']} — ${t['fare']} DT'),
-              subtitle: Text('${t['date']} · comm ${t['commission']}'),
+              subtitle: Text(l.tripListSubtitle(
+                t['date'] as String,
+                t['commission'].toString(),
+              )),
             ),
           ),
           if (_message != null) Text(_message!, style: const TextStyle(color: Colors.red)),

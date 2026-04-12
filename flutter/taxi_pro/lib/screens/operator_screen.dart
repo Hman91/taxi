@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../api/client.dart';
+import '../l10n/app_localizations.dart';
+import '../services/taxi_app_service.dart';
 
 class OperatorScreen extends StatefulWidget {
   const OperatorScreen({super.key});
@@ -10,7 +11,7 @@ class OperatorScreen extends StatefulWidget {
 }
 
 class _OperatorScreenState extends State<OperatorScreen> {
-  final _api = TaxiApiClient();
+  final _api = TaxiAppService();
   final _secretController = TextEditingController(text: 'Operator2026');
   String? _token;
   String? _message;
@@ -54,27 +55,30 @@ class _OperatorScreenState extends State<OperatorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Operator / Dispatch')),
+      appBar: AppBar(title: Text(l.operatorTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           TextField(
             controller: _secretController,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'Operator code'),
+            decoration: InputDecoration(labelText: l.operatorCode),
           ),
           FilledButton(
             onPressed: _busy ? null : _login,
-            child: const Text('Login & load trips'),
+            child: Text(l.loginLoadTrips),
           ),
           const Divider(),
-          if (_trips.isEmpty)
-            const Text('No trips loaded'),
+          if (_trips.isEmpty) Text(l.noTripsLoaded),
           ..._trips.map(
             (t) => ListTile(
               title: Text('${t['route']}'),
-              subtitle: Text('${t['date']} · ${t['fare']} DT'),
+              subtitle: Text(l.operatorTripSubtitle(
+                t['date'] as String,
+                t['fare'].toString(),
+              )),
             ),
           ),
           if (_message != null) Text(_message!, style: const TextStyle(color: Colors.red)),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../api/client.dart';
+import '../l10n/app_localizations.dart';
+import '../services/taxi_app_service.dart';
 
 /// Corporate portal: login matches API; booking is UI-only until B2B billing API exists.
 class B2bScreen extends StatefulWidget {
@@ -11,7 +12,7 @@ class B2bScreen extends StatefulWidget {
 }
 
 class _B2bScreenState extends State<B2bScreen> {
-  final _api = TaxiApiClient();
+  final _api = TaxiAppService();
   final _secretController = TextEditingController(text: 'Biz2026');
   String? _message;
   bool _busy = false;
@@ -43,27 +44,25 @@ class _B2bScreenState extends State<B2bScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('B2B Corporate')),
+      appBar: AppBar(title: Text(l.b2bTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           TextField(
             controller: _secretController,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'Company code'),
+            decoration: InputDecoration(labelText: l.companyCode),
           ),
           FilledButton(
             onPressed: _busy ? null : _login,
-            child: const Text('Verify company code'),
+            child: Text(l.verifyCompanyCode),
           ),
           if (_ok)
-            const Padding(
-              padding: EdgeInsets.only(top: 16),
-              child: Text(
-                'Connected to monthly billing (stub). Ride requests and PDF invoice '
-                'can be wired to the API in a follow-up.',
-              ),
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(l.b2bConnectedStub),
             ),
           if (_message != null) Text(_message!, style: const TextStyle(color: Colors.red)),
         ],

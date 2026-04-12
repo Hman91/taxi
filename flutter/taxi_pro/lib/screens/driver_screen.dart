@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../api/client.dart';
+import '../l10n/app_localizations.dart';
+import '../services/taxi_app_service.dart';
 
 class DriverScreen extends StatefulWidget {
   const DriverScreen({super.key});
@@ -10,16 +11,19 @@ class DriverScreen extends StatefulWidget {
 }
 
 class _DriverScreenState extends State<DriverScreen> {
-  final _api = TaxiApiClient();
+  final _api = TaxiAppService();
   final _secretController = TextEditingController(text: 'Driver2026');
   final _routeController = TextEditingController();
   final _fareController = TextEditingController(text: '20');
-  String _payType = 'كاش / بطاقة';
+  static const _payCash = 'كاش / بطاقة';
+  static const _payB2b = 'فاتورة شركة (B2B)';
+  String _payType = _payCash;
   String? _token;
   String? _message;
   bool _busy = false;
 
   Future<void> _login() async {
+    final l = AppLocalizations.of(context)!;
     setState(() {
       _busy = true;
       _message = null;
@@ -28,7 +32,7 @@ class _DriverScreenState extends State<DriverScreen> {
       final r = await _api.login(role: 'driver', secret: _secretController.text.trim());
       setState(() {
         _token = r.accessToken;
-        _message = 'Logged in as ${r.role}';
+        _message = l.loggedInAs(r.role);
       });
     } catch (e) {
       setState(() => _message = e.toString());
@@ -38,14 +42,15 @@ class _DriverScreenState extends State<DriverScreen> {
   }
 
   Future<void> _submitTrip() async {
+    final l = AppLocalizations.of(context)!;
     final t = _token;
     if (t == null) {
-      setState(() => _message = 'Login first');
+      setState(() => _message = l.loginFirst);
       return;
     }
     final fare = double.tryParse(_fareController.text.trim());
     if (fare == null || fare < 0) {
-      setState(() => _message = 'Invalid fare');
+      setState(() => _message = l.invalidFare);
       return;
     }
     setState(() {
@@ -59,7 +64,7 @@ class _DriverScreenState extends State<DriverScreen> {
         fare: fare,
         type: _payType,
       );
-      setState(() => _message = 'Trip #${trip.id} recorded. Commission ${trip.commission} DT');
+      setState(() => _message = l.tripRecorded(trip.id, trip.commission.toString()));
     } catch (e) {
       setState(() => _message = e.toString());
     } finally {
@@ -77,45 +82,46 @@ class _DriverScreenState extends State<DriverScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Driver')),
+      appBar: AppBar(title: Text(l.driverTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           TextField(
             controller: _secretController,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'Driver code'),
+            decoration: InputDecoration(labelText: l.driverCode),
           ),
           const SizedBox(height: 8),
           FilledButton(
             onPressed: _busy ? null : _login,
-            child: const Text('Login'),
+            child: Text(l.login),
           ),
           if (_token != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text('Session active', style: TextStyle(color: Colors.green.shade800)),
+              child: Text(l.sessionActive, style: TextStyle(color: Colors.green.shade800)),
             ),
           const Divider(height: 32),
           TextField(
             controller: _routeController,
-            decoration: const InputDecoration(labelText: 'Route'),
+            decoration: InputDecoration(labelText: l.route),
           ),
           TextField(
             controller: _fareController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Fare (DT)'),
+            decoration: InputDecoration(labelText: l.fareAmount),
           ),
           InputDecorator(
-            decoration: const InputDecoration(labelText: 'Payment type'),
+            decoration: InputDecoration(labelText: l.paymentType),
             child: DropdownButton<String>(
               value: _payType,
               isExpanded: true,
               underline: const SizedBox.shrink(),
-              items: const [
-                DropdownMenuItem(value: 'كاش / بطاقة', child: Text('Cash / card')),
-                DropdownMenuItem(value: 'فاتورة شركة (B2B)', child: Text('B2B invoice')),
+              items: [
+                DropdownMenuItem(value: _payCash, child: Text(l.cashOrCard)),
+                DropdownMenuItem(value: _payB2b, child: Text(l.b2bInvoice)),
               ],
               onChanged: (v) => setState(() => _payType = v ?? _payType),
             ),
@@ -123,7 +129,7 @@ class _DriverScreenState extends State<DriverScreen> {
           const SizedBox(height: 12),
           FilledButton(
             onPressed: _busy ? null : _submitTrip,
-            child: const Text('Complete trip (10% commission)'),
+            child: Text(l.completeTripCommission),
           ),
           if (_message != null) Padding(padding: const EdgeInsets.only(top: 16), child: Text(_message!)),
         ],

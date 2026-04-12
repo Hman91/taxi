@@ -10,6 +10,7 @@ from flask import Blueprint, current_app, jsonify, request
 from .. import db as db_module
 from ..auth_tokens import issue_token, verify_token_safe
 from ..services import pricing
+from ..services import users as users_service
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -118,6 +119,42 @@ def login() -> Tuple[Any, int]:
 
     token = issue_token(role)
     return jsonify({"access_token": token, "token_type": "Bearer", "role": role}), 200
+
+
+@bp.post("/auth/register")
+def register() -> Tuple[Any, int]:
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip()
+    password = data.get("password") or ""
+    role = (data.get("role") or "user").strip().lower()
+    user, err = users_service.register(email, password, role)
+    if err:
+        code = 409 if err == "email_taken" else 400
+        return jsonify({"error": err}), code
+    return jsonify({"user": user}), 201
+
+
+@bp.post("/auth/login-app")
+def login_app() -> Tuple[Any, int]:
+    """JWT for mobile/web app users (`user` | `driver`) with `uid` in token."""
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip()
+    password = data.get("password") or ""
+    user, err = users_service.authenticate(email, password)
+    if err:
+        return jsonify({"error": err}), 401
+    token = issue_token(user["role"], user_id=int(user["id"]))
+    return (
+        jsonify(
+            {
+                "access_token": token,
+                "token_type": "Bearer",
+                "role": user["role"],
+                "user_id": user["id"],
+            }
+        ),
+        200,
+    )
 
 
 @bp.post("/trips")

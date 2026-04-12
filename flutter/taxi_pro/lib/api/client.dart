@@ -135,4 +135,122 @@ class TaxiApiClient {
     }
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
+
+  Future<Map<String, dynamic>> registerAppUser({
+    required String email,
+    required String password,
+    required String role,
+  }) async {
+    final r = await _http.post(
+      _u('/api/auth/register'),
+      headers: _jsonHeaders(),
+      body: jsonEncode({'email': email, 'password': password, 'role': role}),
+    );
+    if (r.statusCode != 201) {
+      throw TaxiApiException(r.body, r.statusCode);
+    }
+    return jsonDecode(r.body) as Map<String, dynamic>;
+  }
+
+  Future<AppLoginResponse> loginApp({
+    required String email,
+    required String password,
+  }) async {
+    final r = await _http.post(
+      _u('/api/auth/login-app'),
+      headers: _jsonHeaders(),
+      body: jsonEncode({'email': email, 'password': password}),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(r.body, r.statusCode);
+    }
+    return AppLoginResponse.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  Future<List<Ride>> listRides(String token) async {
+    final r = await _http.get(_u('/api/rides'), headers: _jsonHeaders(bearer: token));
+    if (r.statusCode != 200) {
+      throw TaxiApiException(r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    final list = body['rides'] as List<dynamic>;
+    return list.map((e) => Ride.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<Ride> createRide({
+    required String token,
+    required String pickup,
+    required String destination,
+  }) async {
+    final r = await _http.post(
+      _u('/api/rides'),
+      headers: _jsonHeaders(bearer: token),
+      body: jsonEncode({'pickup': pickup, 'destination': destination}),
+    );
+    if (r.statusCode != 201) {
+      throw TaxiApiException(r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return Ride.fromJson(body['ride'] as Map<String, dynamic>);
+  }
+
+  Future<Ride> acceptRide({required String token, required int rideId}) async {
+    final r = await _http.post(
+      _u('/api/rides/$rideId/accept'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return Ride.fromJson(body['ride'] as Map<String, dynamic>);
+  }
+
+  Future<Ride> rejectRide({required String token, required int rideId}) async {
+    final r = await _http.post(
+      _u('/api/rides/$rideId/reject'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return Ride.fromJson(body['ride'] as Map<String, dynamic>);
+  }
+
+  Future<Ride> startRide({required String token, required int rideId}) async {
+    final r = await _http.post(
+      _u('/api/rides/$rideId/start'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return Ride.fromJson(body['ride'] as Map<String, dynamic>);
+  }
+
+  Future<Ride> completeRide({required String token, required int rideId}) async {
+    final r = await _http.post(
+      _u('/api/rides/$rideId/complete'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return Ride.fromJson(body['ride'] as Map<String, dynamic>);
+  }
+
+  Future<Ride> cancelRide({required String token, required int rideId}) async {
+    final r = await _http.post(
+      _u('/api/rides/$rideId/cancel'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return Ride.fromJson(body['ride'] as Map<String, dynamic>);
+  }
 }

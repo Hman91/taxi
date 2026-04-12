@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../api/client.dart';
+import '../l10n/app_localizations.dart';
+import '../services/taxi_app_service.dart';
 
 class PassengerScreen extends StatefulWidget {
   const PassengerScreen({super.key});
@@ -10,7 +11,7 @@ class PassengerScreen extends StatefulWidget {
 }
 
 class _PassengerScreenState extends State<PassengerScreen> {
-  final _api = TaxiApiClient();
+  final _api = TaxiAppService();
   Map<String, double> _fares = {};
   String? _routeKey;
   Map<String, dynamic>? _airportQuote;
@@ -79,11 +80,12 @@ class _PassengerScreenState extends State<PassengerScreen> {
 
   Future<void> _submitRating() async {
     if (_rating < 1 || _rating > 5) return;
+    final l = AppLocalizations.of(context)!;
     try {
       await _api.submitRating(_rating);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Thank you for your feedback!')),
+        SnackBar(content: Text(l.thankYouFeedback)),
       );
       setState(() => _rating = 0);
     } catch (e) {
@@ -99,15 +101,16 @@ class _PassengerScreenState extends State<PassengerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Passenger'),
-          bottom: const TabBar(
+          title: Text(l.passengerTitle),
+          bottom: TabBar(
             tabs: [
-              Tab(text: 'Airport'),
-              Tab(text: 'GPS'),
+              Tab(text: l.tabAirport),
+              Tab(text: l.tabGps),
             ],
           ),
         ),
@@ -115,15 +118,15 @@ class _PassengerScreenState extends State<PassengerScreen> {
             ? const Center(child: CircularProgressIndicator())
             : TabBarView(
                 children: [
-                  _airportTab(),
-                  _gpsTab(),
+                  _airportTab(context, l),
+                  _gpsTab(context, l),
                 ],
               ),
       ),
     );
   }
 
-  Widget _airportTab() {
+  Widget _airportTab(BuildContext context, AppLocalizations l) {
     if (_error != null && _fares.isEmpty) {
       return Center(child: Text(_error!, textAlign: TextAlign.center));
     }
@@ -133,7 +136,7 @@ class _PassengerScreenState extends State<PassengerScreen> {
       children: [
         if (_fares.isNotEmpty)
           InputDecorator(
-            decoration: const InputDecoration(labelText: 'Route'),
+            decoration: InputDecoration(labelText: l.route),
             child: DropdownButton<String>(
               value: _routeKey,
               isExpanded: true,
@@ -155,10 +158,10 @@ class _PassengerScreenState extends State<PassengerScreen> {
             textAlign: TextAlign.center,
           ),
           if (q['is_night'] == true)
-            const Text('+50% night fare', style: TextStyle(color: Colors.deepOrange)),
+            Text(l.nightFare50, style: const TextStyle(color: Colors.deepOrange)),
         ],
         const SizedBox(height: 24),
-        const Text('Rate your last ride', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(l.rateYourLastRide, style: const TextStyle(fontWeight: FontWeight.bold)),
         Row(
           children: List.generate(5, (i) {
             final star = i + 1;
@@ -173,32 +176,32 @@ class _PassengerScreenState extends State<PassengerScreen> {
         ),
         FilledButton(
           onPressed: _rating > 0 ? _submitRating : null,
-          child: const Text('Submit rating'),
+          child: Text(l.submitRating),
         ),
       ],
     );
   }
 
-  Widget _gpsTab() {
+  Widget _gpsTab(BuildContext context, AppLocalizations l) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         TextField(
           controller: _distController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Distance km (optional — stub if empty)',
+          decoration: InputDecoration(
+            labelText: l.distanceKmOptional,
           ),
         ),
         const SizedBox(height: 12),
         FilledButton(
           onPressed: _quoteGps,
-          child: const Text('Get estimate'),
+          child: Text(l.getEstimate),
         ),
         if (_gpsQuote != null) ...[
           const SizedBox(height: 16),
-          Text('Distance: ${_gpsQuote!['distance_km']} km'),
-          Text('Fare: ${_gpsQuote!['final_fare']} DT'),
+          Text(l.distanceKm(_gpsQuote!['distance_km'].toString())),
+          Text(l.fareDt(_gpsQuote!['final_fare'].toString())),
         ],
         if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
       ],

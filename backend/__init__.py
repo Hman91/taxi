@@ -27,8 +27,10 @@ def create_app() -> Flask:
         db_module.init_db()
 
     from .routes.api import bp as api_bp
+    from .routes.rides import bp as rides_bp
 
     app.register_blueprint(api_bp)
+    app.register_blueprint(rides_bp)
 
     return app
 

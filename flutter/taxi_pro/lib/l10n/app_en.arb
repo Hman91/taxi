@@ -1,0 +1,103 @@
+{
+  "@@locale": "en",
+  "appTitle": "Taxi Pro Tunisia",
+  "loginAs": "Login as",
+  "language": "Language",
+  "rolePassenger": "Passenger",
+  "roleDriver": "Driver",
+  "roleOwner": "Owner",
+  "roleOperator": "Operator",
+  "roleB2b": "B2B / Corporate",
+  "passengerTitle": "Passenger",
+  "tabAirport": "Airport",
+  "tabGps": "GPS",
+  "route": "Route",
+  "nightFare50": "+50% night fare",
+  "rateYourLastRide": "Rate your last ride",
+  "submitRating": "Submit rating",
+  "thankYouFeedback": "Thank you for your feedback!",
+  "distanceKmOptional": "Distance km (optional — stub if empty)",
+  "getEstimate": "Get estimate",
+  "distanceKm": "Distance: {km} km",
+  "@distanceKm": {
+    "placeholders": {
+      "km": {"type": "Object"}
+    }
+  },
+  "fareDt": "Fare: {amount} DT",
+  "@fareDt": {
+    "placeholders": {
+      "amount": {"type": "Object"}
+    }
+  },
+  "driverTitle": "Driver",
+  "driverCode": "Driver code",
+  "login": "Login",
+  "sessionActive": "Session active",
+  "fareAmount": "Fare (DT)",
+  "paymentType": "Payment type",
+  "cashOrCard": "Cash / card",
+  "b2bInvoice": "B2B invoice",
+  "completeTripCommission": "Complete trip (10% commission)",
+  "loggedInAs": "Logged in as {role}",
+  "@loggedInAs": {
+    "placeholders": {
+      "role": {"type": "String"}
+    }
+  },
+  "loginFirst": "Login first",
+  "invalidFare": "Invalid fare",
+  "tripRecorded": "Trip #{id} recorded. Commission {commission} DT",
+  "@tripRecorded": {
+    "placeholders": {
+      "id": {"type": "int"},
+      "commission": {"type": "Object"}
+    }
+  },
+  "ownerTitle": "Owner HQ",
+  "ownerPassword": "Owner password",
+  "loginLoadDashboard": "Login & load dashboard",
+  "commissionLabel": "Commission (DT): {amount}",
+  "@commissionLabel": {
+    "placeholders": {
+      "amount": {"type": "Object"}
+    }
+  },
+  "tripsCount": "Trips: {count}",
+  "@tripsCount": {
+    "placeholders": {
+      "count": {"type": "Object"}
+    }
+  },
+  "avgRatingLabel": "Avg rating: {avg} ({count} votes)",
+  "@avgRatingLabel": {
+    "placeholders": {
+      "avg": {"type": "Object"},
+      "count": {"type": "Object"}
+    }
+  },
+  "tripsHeading": "Trips",
+  "noTripsYet": "No trips yet",
+  "tripListSubtitle": "{date} · comm {commission}",
+  "@tripListSubtitle": {
+    "placeholders": {
+      "date": {"type": "String"},
+      "commission": {"type": "Object"}
+    }
+  },
+  "operatorTitle": "Operator / Dispatch",
+  "operatorCode": "Operator code",
+  "loginLoadTrips": "Login & load trips",
+  "noTripsLoaded": "No trips loaded",
+  "operatorTripSubtitle": "{date} · {fare} DT",
+  "@operatorTripSubtitle": {
+    "placeholders": {
+      "date": {"type": "String"},
+      "fare": {"type": "Object"}
+    }
+  },
+  "b2bTitle": "B2B Corporate",
+  "companyCode": "Company code",
+  "verifyCompanyCode": "Verify company code",
+  "b2bConnectedStub": "Connected to monthly billing (stub). Ride requests and PDF invoice can be wired to the API in a follow-up."
+}
