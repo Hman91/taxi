@@ -178,4 +178,133 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get b2bConnectedStub => '已连接月度账单（演示）。后续可将叫车与 PDF 发票接入 API。';
+
+  @override
+  String get roleAppPassenger => '乘客（行程与聊天）';
+
+  @override
+  String get roleAppDriver => '司机（应用）';
+
+  @override
+  String get appPassengerTitle => '乘客 — 行程';
+
+  @override
+  String get appDriverTitle => '司机 — 应用';
+
+  @override
+  String get emailLabel => '邮箱';
+
+  @override
+  String get passwordLabel => '密码';
+
+  @override
+  String get signInApp => '登录';
+
+  @override
+  String get registerAppAccount => '注册乘客账号';
+
+  @override
+  String get registerDriverAccount => '注册司机账号';
+
+  @override
+  String get logoutApp => '退出';
+
+  @override
+  String get genericCancel => '取消';
+
+  @override
+  String get syncPreferredLanguage => '将语言同步到个人资料';
+
+  @override
+  String get profileLanguageSynced => '已更新首选语言。';
+
+  @override
+  String get myRidesHeading => '我的行程';
+
+  @override
+  String get ridePickupLabel => '上车点';
+
+  @override
+  String get rideDestinationLabel => '目的地';
+
+  @override
+  String get requestRideButton => '叫车';
+
+  @override
+  String get openChatButton => '聊天';
+
+  @override
+  String get chatUnavailable => '此行程尚未开启聊天。';
+
+  @override
+  String get noRidesYetApp => '暂无行程。';
+
+  @override
+  String get driverPendingRides => '待接订单';
+
+  @override
+  String get acceptRide => '接单';
+
+  @override
+  String get rejectRide => '释放';
+
+  @override
+  String get startRide => '开始';
+
+  @override
+  String get completeRide => '完成';
+
+  @override
+  String get cancelRidePassenger => '取消行程';
+
+  @override
+  String rideStatusFmt(String status) {
+    return '状态：$status';
+  }
+
+  @override
+  String get adminOversightHeading => '实时监控';
+
+  @override
+  String get adminLoadRidesBtn => '加载应用行程';
+
+  @override
+  String get adminLoadDriversBtn => '司机位置';
+
+  @override
+  String get adminLoadOwnerMetricsBtn => '管理指标';
+
+  @override
+  String get adminRidesHeading => '应用行程';
+
+  @override
+  String get adminDriversHeading => '司机';
+
+  @override
+  String get adminNoRidesLoaded => '点击「加载应用行程」。';
+
+  @override
+  String get adminNoDriversData => '点击「司机位置」。';
+
+  @override
+  String adminRideRow(String pickup, String destination) {
+    return '$pickup → $destination';
+  }
+
+  @override
+  String driverLocationRow(String lat, String lng) {
+    return '纬度 $lat，经度 $lng';
+  }
+
+  @override
+  String get chatScreenTitle => '行程聊天';
+
+  @override
+  String get messageFieldHint => '输入消息';
+
+  @override
+  String get sendChatMessage => '发送';
+
+  @override
+  String get accountDisabledContactAdmin => '账号已停用，请联系管理员。';
 }

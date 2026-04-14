@@ -1,54 +1,32 @@
 """App-user ride API (JWT with uid). Legacy code-login tokens are not accepted here."""
 from __future__ import annotations
 
-from functools import wraps
-from typing import Any, Callable, Optional, Tuple, TypeVar
+from typing import Any, Tuple
 
 from flask import Blueprint, jsonify, request
 
-from ..auth_tokens import current_jwt_user_id, verify_token_safe
+from .. import db as db_module
+from ..services import chat_service
 from ..services import rides as rides_service
+from .jwt_auth import json_error, require_jwt_with_uid
 
 bp = Blueprint("rides_api", __name__, url_prefix="/api/rides")
 
-F = TypeVar("F", bound=Callable[..., Any])
 
-
-def _bearer_token() -> Optional[str]:
-    auth = request.headers.get("Authorization", "")
-    if auth.startswith("Bearer "):
-        return auth[7:].strip()
+def _guard_enabled(uid: int) -> Tuple[Any, int] | None:
+    row = db_module.user_by_id(uid)
+    if row is None or not row.get("is_enabled", True):
+        return jsonify({"error": "account_disabled"}), 403
     return None
-
-
-def require_jwt_with_uid(*allowed_roles: str) -> Callable[[F], F]:
-    def decorator(fn: F) -> F:
-        @wraps(fn)
-        def wrapped(*args: Any, **kwargs: Any) -> Any:
-            token = _bearer_token()
-            if not token:
-                return jsonify({"error": "missing_token"}), 401
-            role = verify_token_safe(token)
-            if role is None:
-                return jsonify({"error": "invalid_token"}), 401
-            if role not in allowed_roles:
-                return jsonify({"error": "forbidden"}), 403
-            uid = current_jwt_user_id()
-            if uid is None:
-                return jsonify({"error": "app_user_token_required"}), 403
-            kwargs["_uid"] = uid
-            kwargs["_role"] = role
-            return fn(*args, **kwargs)
-
-        return wrapped  # type: ignore[return-value]
-
-    return decorator
 
 
 @bp.get("")
 @require_jwt_with_uid("user", "driver")
 def list_rides(**kwargs: Any) -> Tuple[Any, int]:
     uid = kwargs["_uid"]
+    bad = _guard_enabled(uid)
+    if bad:
+        return bad
     role = kwargs["_role"]
     data = rides_service.list_for_app_user(uid, role)
     return jsonify({"rides": data}), 200
@@ -58,6 +36,9 @@ def list_rides(**kwargs: Any) -> Tuple[Any, int]:
 @require_jwt_with_uid("user")
 def create_ride(**kwargs: Any) -> Tuple[Any, int]:
     uid = kwargs["_uid"]
+    bad = _guard_enabled(uid)
+    if bad:
+        return bad
     body = request.get_json(silent=True) or {}
     pickup = (body.get("pickup") or "").strip()
     destination = (body.get("destination") or "").strip()
@@ -68,10 +49,31 @@ def create_ride(**kwargs: Any) -> Tuple[Any, int]:
     return jsonify({"ride": ride}), 201
 
 
+@bp.get("/<int:ride_id>/conversation")
+@require_jwt_with_uid("user", "driver")
+def ride_conversation(ride_id: int, **kwargs: Any) -> Tuple[Any, int]:
+    uid = kwargs["_uid"]
+    bad = _guard_enabled(uid)
+    if bad:
+        return bad
+    data, err = chat_service.get_conversation_for_ride(ride_id, uid)
+    if err == "not_found":
+        return json_error("not_found", 404)
+    if err == "forbidden":
+        return json_error("forbidden", 403)
+    if err == "chat_not_open":
+        return json_error("chat_not_open", 400)
+    assert data is not None
+    return jsonify(data), 200
+
+
 @bp.post("/<int:ride_id>/accept")
 @require_jwt_with_uid("driver")
 def accept(ride_id: int, **kwargs: Any) -> Tuple[Any, int]:
     uid = kwargs["_uid"]
+    bad = _guard_enabled(uid)
+    if bad:
+        return bad
     ride, err = rides_service.accept_ride(ride_id, uid)
     if err:
         st = 404 if err == "not_found" else 400
@@ -83,6 +85,9 @@ def accept(ride_id: int, **kwargs: Any) -> Tuple[Any, int]:
 @require_jwt_with_uid("driver")
 def reject(ride_id: int, **kwargs: Any) -> Tuple[Any, int]:
     uid = kwargs["_uid"]
+    bad = _guard_enabled(uid)
+    if bad:
+        return bad
     ride, err = rides_service.reject_or_release(ride_id, uid)
     if err:
         st = 404 if err == "not_found" else 400
@@ -94,6 +99,9 @@ def reject(ride_id: int, **kwargs: Any) -> Tuple[Any, int]:
 @require_jwt_with_uid("driver")
 def start(ride_id: int, **kwargs: Any) -> Tuple[Any, int]:
     uid = kwargs["_uid"]
+    bad = _guard_enabled(uid)
+    if bad:
+        return bad
     ride, err = rides_service.start_ride(ride_id, uid)
     if err:
         st = 404 if err == "not_found" else 400
@@ -105,6 +113,9 @@ def start(ride_id: int, **kwargs: Any) -> Tuple[Any, int]:
 @require_jwt_with_uid("driver")
 def complete(ride_id: int, **kwargs: Any) -> Tuple[Any, int]:
     uid = kwargs["_uid"]
+    bad = _guard_enabled(uid)
+    if bad:
+        return bad
     ride, err = rides_service.complete_ride(ride_id, uid)
     if err:
         st = 404 if err == "not_found" else 400
@@ -116,6 +127,9 @@ def complete(ride_id: int, **kwargs: Any) -> Tuple[Any, int]:
 @require_jwt_with_uid("user")
 def cancel(ride_id: int, **kwargs: Any) -> Tuple[Any, int]:
     uid = kwargs["_uid"]
+    bad = _guard_enabled(uid)
+    if bad:
+        return bad
     ride, err = rides_service.cancel_ride(ride_id, uid)
     if err:
         st = 404 if err == "not_found" else 400

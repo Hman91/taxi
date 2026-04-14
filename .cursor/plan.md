@@ -1,29 +1,61 @@
 ---
 name: Chat admin operator rides
-overview: "Scalable real-time chat (Flask-SocketIO), translate-on-delivery with DB-backed translation cache, PostgreSQL + SQLAlchemy migration from SQLite, plus operator/owner oversight (rides, driver locations, read-only conversations), owner-only money metrics, and enable/disable for drivers/B2B with localized contact-admin messaging."
+overview: "Execution follows .cursor/rules.md and .cursor/context.md. Scalable real-time chat (Flask-SocketIO), translate-on-delivery with DB cache, PostgreSQL + SQLAlchemy from SQLite, operator/owner admin (owner-only money metrics), enable/disable + 8-locale Flutter copy."
 todos:
-  - id: phase-db-pg
-    content: "PostgreSQL + SQLAlchemy models; Alembic migrations; env DATABASE_URL; migrate SQLite data (users, drivers, rides, trips, ratings)"
-    status: pending
-  - id: phase-schema-chat
-    content: "Add conversations, messages, translations tables; link conversation to ride; users.preferred_language + is_enabled; drivers geo; b2b_tenants"
-    status: pending
-  - id: phase-socketio-chat
-    content: "Flask-SocketIO app factory; JWT auth on connect; events send_message / receive path; persist message then emit"
-    status: pending
-  - id: phase-translate-service
-    content: "TranslationService (detect optional + translate); DB cache in translations; resolve per-recipient on delivery; optional Celery task"
-    status: pending
-  - id: phase-admin-rest
-    content: "REST admin blueprint (rides, locations, read conversations, toggles); metrics owner-only; auth/disable guards"
-    status: pending
-  - id: phase-flutter-ws
-    content: "Flutter socket client + ChatMessage model (original/translated/display); REST fallback history; operator/owner dashboards"
-    status: pending
+  - id: step-1-pg-orm
+    content: "Step 1 — PostgreSQL + SQLAlchemy + Alembic; DATABASE_URL; replace SQLite db session in HTTP layer"
+    status: completed
+  - id: step-2-migrate-data
+    content: "Step 2 — One-off SQLite → PostgreSQL migration script; verify core tables"
+    status: completed
+  - id: step-3-chat-schema
+    content: "Step 3 — conversations, messages, translations; preferred_language, is_enabled, driver geo, b2b_tenants"
+    status: completed
+  - id: step-4-rest-chat
+    content: "Step 4 — REST chat history + PATCH preferred_language (blueprints + services only)"
+    status: completed
+  - id: step-5-socketio
+    content: "Step 5 — Flask-SocketIO; JWT connect; sockets/ send_message + ride updates; thin handlers"
+    status: completed
+  - id: step-6-translate
+    content: "Step 6 — services/translation_service.py; translate-on-delivery; translations table cache"
+    status: completed
+  - id: step-7-admin
+    content: "Step 7 — Admin blueprint; operator vs owner; owner-only metrics; toggles + API errors for disabled accounts"
+    status: completed
+  - id: step-8-flutter
+    content: "Step 8 — Flutter socket + ChatMessage; chat UI; operator/owner; 8-language ARB for new strings"
+    status: completed
+  - id: step-9-docs
+    content: "Step 9 — README/runbook env vars; smoke tests"
+    status: completed
 isProject: false
 ---
 
 # Real-time chat, translation cache, PostgreSQL, and admin/operator oversight
+
+## Plan governance
+
+- **Source of truth:** All work must follow [`.cursor/rules.md`](rules.md) (Flask blueprints, services layer, JWT, SocketIO in `sockets/`, PostgreSQL + SQLAlchemy, translation rules, Flutter layering, **8 locales** for any new user-facing copy) and [`.cursor/context.md`](context.md) (stack, features, folder split).
+- **Progress tracking:** When a step is done, mark it **`[x]`** in **Execution checklist** below. Optionally mirror status in the YAML `todos` at the top of this file (`pending` → `completed`).
+
+---
+
+## Execution checklist (step by step)
+
+Complete in order unless noted.
+
+- [x] **Step 1 — PostgreSQL + ORM baseline:** SQLAlchemy (Flask-SQLAlchemy), Alembic, `DATABASE_URL`; models mirroring current app tables; route handlers use DB session from extensions — retire ad-hoc SQLite where rules require PostgreSQL.
+- [x] **Step 2 — Data migration:** Script: SQLite (`backend/data` or current path) → PostgreSQL; order: users → drivers → rides → trips → ratings; verify counts and spot-check IDs.
+- [x] **Step 3 — Chat schema:** `conversations` (ride-scoped), `messages` (original only + `original_language`), `translations` (cache, unique per message + target language); `users.preferred_language`, `users.is_enabled`; driver `last_lat` / `last_lng` / `last_seen_at`; `b2b_tenants` with `is_enabled`; indexes per roadmap below.
+- [x] **Step 4 — REST chat + profile:** Blueprint `routes/`, logic in `services/`; JWT auth; JSON-only responses; conversation open when ride is accepted (or as specified); `GET` paginated message history; `PATCH /me` (or equivalent) for `preferred_language`.
+- [x] **Step 5 — Flask-SocketIO:** `create_app` wires SocketIO; JWT on connect; **`send_message`** / receive path and **ride status** events implemented under `sockets/` (no business logic stuffed in event handlers — delegate to services).
+- [x] **Step 6 — Translation:** `services/translation_service.py` only; on delivery, read/write `translations` table; no duplicate vendor calls; timeout + fallback to original; optional Celery + Redis later per rules.
+- [x] **Step 7 — Admin REST:** `routes/admin.py` (or equivalent blueprint); `require_roles` for operator vs **owner-only** money metrics; list rides, driver locations, read-only conversations; enable/disable users and B2B; API signals for disabled accounts.
+- [x] **Step 8 — Flutter:** `socket_io_client` (or match server); **ChatSocketService** + repository; **`ChatMessage`** (`displayText`); chat screens; operator/owner dashboards; **every new string** in all eight ARBs: Arabic, French, English, German, Spanish, Chinese, Russian, Italian (`flutter/taxi_pro/lib/l10n/`).
+- [x] **Step 9 — Docs & verification:** README: `DATABASE_URL`, Socket URL, workers; smoke test auth, rides, chat, admin, disabled-user flow.
+
+---
 
 ## Goals (product + engineering)
 
@@ -276,6 +308,8 @@ class ChatMessage {
 
 ## Implementation roadmap (phased)
 
+Map to **Execution checklist**: P0 ≈ Steps 1–2, P1 ≈ Steps 3–4, P2–P3 ≈ Steps 5–6, P4 ≈ Step 7, P5 ≈ Step 8, P6 ≈ Step 9.
+
 | Phase | Scope |
 |-------|--------|
 | **P0** | Add PostgreSQL + SQLAlchemy + Alembic; migrate schema; one-off SQLite→PG script; replace `db.py` session usage in existing HTTP routes. |
@@ -313,11 +347,14 @@ CREATE UNIQUE INDEX ux_translations_msg_lang ON translations (message_id, target
 
 ## Deliverables checklist
 
+Track **Execution checklist** as the primary progress list; use this as a closing gate before release.
+
 - [ ] Architecture diagram (this doc + optional Mermaid in README).
-- [ ] Folder structure (backend + Flutter) as above.
+- [ ] Folder structure (backend + Flutter) as above — matches **rules.md** (routes / services / models / sockets).
 - [ ] PostgreSQL schema + Alembic migrations.
-- [ ] Phased roadmap P0–P6.
-- [ ] Snippets for Socket + translation cache.
+- [ ] Phased roadmap P0–P6 aligned with execution steps 1–9.
+- [ ] Snippets for Socket + translation cache (`services/translation_service.py`).
+- [ ] All new UI copy present in **8 languages** per **rules.md**.
 
 ---
 

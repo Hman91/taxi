@@ -179,4 +179,133 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get b2bConnectedStub =>
       'متصل بالفوترة الشهرية (وضع تجريبي). يمكن ربط طلبات الرحلات والفاتورة PDF بالواجهة لاحقاً.';
+
+  @override
+  String get roleAppPassenger => 'حريف (رحلات ومحادثة)';
+
+  @override
+  String get roleAppDriver => 'سائق (تطبيق)';
+
+  @override
+  String get appPassengerTitle => 'الحريف — الرحلات';
+
+  @override
+  String get appDriverTitle => 'السائق — التطبيق';
+
+  @override
+  String get emailLabel => 'البريد';
+
+  @override
+  String get passwordLabel => 'كلمة المرور';
+
+  @override
+  String get signInApp => 'دخول';
+
+  @override
+  String get registerAppAccount => 'إنشاء حساب حريف';
+
+  @override
+  String get registerDriverAccount => 'إنشاء حساب سائق';
+
+  @override
+  String get logoutApp => 'خروج';
+
+  @override
+  String get genericCancel => 'إلغاء';
+
+  @override
+  String get syncPreferredLanguage => 'مزامنة اللغة مع الملف';
+
+  @override
+  String get profileLanguageSynced => 'تم تحديث اللغة المفضّلة.';
+
+  @override
+  String get myRidesHeading => 'رحلاتي';
+
+  @override
+  String get ridePickupLabel => 'الانطلاق';
+
+  @override
+  String get rideDestinationLabel => 'الوجهة';
+
+  @override
+  String get requestRideButton => 'طلب رحلة';
+
+  @override
+  String get openChatButton => 'محادثة';
+
+  @override
+  String get chatUnavailable => 'المحادثة غير متاحة لهذه الرحلة بعد.';
+
+  @override
+  String get noRidesYetApp => 'لا رحلات.';
+
+  @override
+  String get driverPendingRides => 'طلبات الرحلات';
+
+  @override
+  String get acceptRide => 'قبول';
+
+  @override
+  String get rejectRide => 'تحرير';
+
+  @override
+  String get startRide => 'بدء';
+
+  @override
+  String get completeRide => 'إنهاء';
+
+  @override
+  String get cancelRidePassenger => 'إلغاء الرحلة';
+
+  @override
+  String rideStatusFmt(String status) {
+    return 'الحالة: $status';
+  }
+
+  @override
+  String get adminOversightHeading => 'مراقبة مباشرة';
+
+  @override
+  String get adminLoadRidesBtn => 'تحميل رحلات التطبيق';
+
+  @override
+  String get adminLoadDriversBtn => 'مواقع السائقين';
+
+  @override
+  String get adminLoadOwnerMetricsBtn => 'مقاييس الإدارة';
+
+  @override
+  String get adminRidesHeading => 'رحلات التطبيق';
+
+  @override
+  String get adminDriversHeading => 'السائقون';
+
+  @override
+  String get adminNoRidesLoaded => 'اضغط «تحميل رحلات التطبيق».';
+
+  @override
+  String get adminNoDriversData => 'اضغط «مواقع السائقين».';
+
+  @override
+  String adminRideRow(String pickup, String destination) {
+    return '$pickup → $destination';
+  }
+
+  @override
+  String driverLocationRow(String lat, String lng) {
+    return 'خط العرض $lat، خط الطول $lng';
+  }
+
+  @override
+  String get chatScreenTitle => 'محادثة الرحلة';
+
+  @override
+  String get messageFieldHint => 'اكتب رسالة';
+
+  @override
+  String get sendChatMessage => 'إرسال';
+
+  @override
+  String get accountDisabledContactAdmin => 'الحساب معطّل. تواصل مع المشرف.';
 }

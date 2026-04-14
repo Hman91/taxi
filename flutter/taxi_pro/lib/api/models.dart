@@ -53,6 +53,29 @@ class LoginResponse {
   }
 }
 
+class DriverPinLoginResponse {
+  DriverPinLoginResponse({
+    required this.accessToken,
+    required this.role,
+    required this.driverName,
+    required this.phone,
+  });
+
+  final String accessToken;
+  final String role;
+  final String driverName;
+  final String phone;
+
+  factory DriverPinLoginResponse.fromJson(Map<String, dynamic> json) {
+    return DriverPinLoginResponse(
+      accessToken: json['access_token'] as String,
+      role: json['role'] as String,
+      driverName: json['driver_name'] as String,
+      phone: json['phone'] as String,
+    );
+  }
+}
+
 /// JWT from `/api/auth/login-app` (includes `uid` in token for ride APIs).
 class AppLoginResponse {
   AppLoginResponse({
@@ -70,6 +93,24 @@ class AppLoginResponse {
       accessToken: json['access_token'] as String,
       role: json['role'] as String,
       userId: json['user_id'] as int,
+    );
+  }
+}
+
+/// `GET /api/rides/:id/conversation`
+class RideConversationInfo {
+  RideConversationInfo({
+    required this.conversationId,
+    required this.rideId,
+  });
+
+  final int conversationId;
+  final int rideId;
+
+  factory RideConversationInfo.fromJson(Map<String, dynamic> json) {
+    return RideConversationInfo(
+      conversationId: (json['conversation_id'] as num).toInt(),
+      rideId: (json['ride_id'] as num).toInt(),
     );
   }
 }

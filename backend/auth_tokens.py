@@ -50,3 +50,17 @@ def current_jwt_user_id() -> Optional[int]:
         return None
     uid = getattr(g, "jwt_user_id", None)
     return int(uid) if uid is not None else None
+
+
+def decode_app_token(token: str) -> tuple[Optional[int], Optional[str]]:
+    """Parse a Bearer-style app token into (user_id, role), or (None, None) if invalid or missing uid."""
+    try:
+        max_age = current_app.config["TOKEN_MAX_AGE_SECONDS"]
+        data = _serializer().loads(token, max_age=max_age)
+        role = str(data.get("role", ""))
+        uid_raw = data.get("uid")
+        if uid_raw is None:
+            return None, None
+        return int(uid_raw), role
+    except (BadSignature, SignatureExpired, KeyError, TypeError, ValueError):
+        return None, None

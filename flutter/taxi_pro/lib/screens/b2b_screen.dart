@@ -13,7 +13,7 @@ class B2bScreen extends StatefulWidget {
 
 class _B2bScreenState extends State<B2bScreen> {
   final _api = TaxiAppService();
-  final _secretController = TextEditingController(text: 'Biz2026');
+  final _secretController = TextEditingController(text: 'Hotel2026');
   String? _message;
   bool _busy = false;
   bool _ok = false;

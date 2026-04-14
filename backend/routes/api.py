@@ -16,6 +16,12 @@ bp = Blueprint("api", __name__, url_prefix="/api")
 
 F = TypeVar("F", bound=Callable[..., Any])
 
+# Legacy Streamlit driver credentials (phone + PIN) for ops/demo flow.
+_DRIVER_PIN_DB = {
+    "98123456": {"name": "خليل (سائق 1)", "pin": "1234"},
+    "50111222": {"name": "أحمد (سائق 2)", "pin": "0000"},
+}
+
 
 def _bearer_token() -> Optional[str]:
     auth = request.headers.get("Authorization", "")
@@ -121,6 +127,30 @@ def login() -> Tuple[Any, int]:
     return jsonify({"access_token": token, "token_type": "Bearer", "role": role}), 200
 
 
+@bp.post("/auth/login-driver-pin")
+def login_driver_pin() -> Tuple[Any, int]:
+    """Legacy-compatible driver login using phone + PIN."""
+    data = request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip()
+    pin = (data.get("pin") or "").strip()
+    row = _DRIVER_PIN_DB.get(phone)
+    if row is None or pin != row["pin"]:
+        return jsonify({"error": "invalid_credentials"}), 401
+    token = issue_token("driver")
+    return (
+        jsonify(
+            {
+                "access_token": token,
+                "token_type": "Bearer",
+                "role": "driver",
+                "driver_name": row["name"],
+                "phone": phone,
+            }
+        ),
+        200,
+    )
+
+
 @bp.post("/auth/register")
 def register() -> Tuple[Any, int]:
     data = request.get_json(silent=True) or {}
@@ -142,7 +172,8 @@ def login_app() -> Tuple[Any, int]:
     password = data.get("password") or ""
     user, err = users_service.authenticate(email, password)
     if err:
-        return jsonify({"error": err}), 401
+        code = 403 if err == "account_disabled" else 401
+        return jsonify({"error": err}), code
     token = issue_token(user["role"], user_id=int(user["id"]))
     return (
         jsonify(

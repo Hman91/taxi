@@ -1,0 +1,124 @@
+"""Operator + owner admin API (rides, drivers, chat read, toggles, owner-only metrics)."""
+from __future__ import annotations
+
+from typing import Any, Tuple
+
+from flask import Blueprint, jsonify, request
+
+from .. import db as db_module
+from ..services import admin_service
+from .api import require_roles
+
+bp = Blueprint("admin_api", __name__, url_prefix="/api/admin")
+
+
+def _json_error(code: str, status: int) -> Tuple[Any, int]:
+    return jsonify({"error": code}), status
+
+
+@bp.get("/rides")
+@require_roles("owner", "operator")
+def admin_rides(**kwargs: Any) -> Tuple[Any, int]:
+    limit_raw = request.args.get("limit", "200")
+    try:
+        limit = int(limit_raw)
+    except (TypeError, ValueError):
+        return _json_error("invalid_limit", 400)
+    data = admin_service.list_rides(limit=limit)
+    return jsonify({"rides": data}), 200
+
+
+@bp.get("/drivers/locations")
+@require_roles("owner", "operator")
+def admin_driver_locations(**kwargs: Any) -> Tuple[Any, int]:
+    data = admin_service.list_driver_locations()
+    return jsonify({"drivers": data}), 200
+
+
+@bp.get("/conversations/<int:conversation_id>/messages")
+@require_roles("owner", "operator")
+def admin_conversation_messages(conversation_id: int, **kwargs: Any) -> Tuple[Any, int]:
+    lang = request.args.get("lang") or request.args.get("target_lang")
+    before_raw = request.args.get("before_id")
+    limit_raw = request.args.get("limit", "50")
+    before_id: int | None = None
+    if before_raw is not None and str(before_raw).strip() != "":
+        try:
+            before_id = int(before_raw)
+        except (TypeError, ValueError):
+            return _json_error("invalid_before_id", 400)
+    try:
+        limit = int(limit_raw)
+    except (TypeError, ValueError):
+        return _json_error("invalid_limit", 400)
+
+    data, err = admin_service.list_conversation_messages_admin(
+        conversation_id,
+        target_lang=lang,
+        before_id=before_id,
+        limit=limit,
+    )
+    if err == "not_found":
+        return _json_error("not_found", 404)
+    assert data is not None
+    return jsonify({"messages": data}), 200
+
+
+@bp.get("/metrics")
+@require_roles("owner")
+def admin_owner_metrics(**kwargs: Any) -> Tuple[Any, int]:
+    m = db_module.owner_metrics()
+    return jsonify(m), 200
+
+
+@bp.get("/users")
+@require_roles("owner", "operator")
+def admin_list_users(**kwargs: Any) -> Tuple[Any, int]:
+    limit_raw = request.args.get("limit", "100")
+    offset_raw = request.args.get("offset", "0")
+    try:
+        limit = int(limit_raw)
+        offset = int(offset_raw)
+    except (TypeError, ValueError):
+        return _json_error("invalid_pagination", 400)
+    data = admin_service.list_app_users(limit=limit, offset=offset)
+    return jsonify({"users": data}), 200
+
+
+@bp.patch("/users/<int:user_id>")
+@require_roles("owner", "operator")
+def admin_patch_user(user_id: int, **kwargs: Any) -> Tuple[Any, int]:
+    body = request.get_json(silent=True) or {}
+    if "is_enabled" not in body:
+        return _json_error("is_enabled_required", 400)
+    if not isinstance(body.get("is_enabled"), bool):
+        return _json_error("invalid_is_enabled", 400)
+    user, err = admin_service.set_user_enabled(user_id, bool(body["is_enabled"]))
+    if err == "not_found":
+        return _json_error("not_found", 404)
+    if err == "invalid_user_role":
+        return _json_error("invalid_user_role", 400)
+    assert user is not None
+    return jsonify({"user": user}), 200
+
+
+@bp.get("/b2b-tenants")
+@require_roles("owner", "operator")
+def admin_list_b2b(**kwargs: Any) -> Tuple[Any, int]:
+    data = admin_service.list_b2b_tenants()
+    return jsonify({"b2b_tenants": data}), 200
+
+
+@bp.patch("/b2b-tenants/<int:tenant_id>")
+@require_roles("owner", "operator")
+def admin_patch_b2b(tenant_id: int, **kwargs: Any) -> Tuple[Any, int]:
+    body = request.get_json(silent=True) or {}
+    if "is_enabled" not in body:
+        return _json_error("is_enabled_required", 400)
+    if not isinstance(body.get("is_enabled"), bool):
+        return _json_error("invalid_is_enabled", 400)
+    row, err = admin_service.set_b2b_tenant_enabled(tenant_id, bool(body["is_enabled"]))
+    if err == "not_found":
+        return _json_error("not_found", 404)
+    assert row is not None
+    return jsonify({"b2b_tenant": row}), 200

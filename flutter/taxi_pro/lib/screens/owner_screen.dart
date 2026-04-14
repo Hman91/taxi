@@ -16,6 +16,9 @@ class _OwnerScreenState extends State<OwnerScreen> {
   String? _token;
   Map<String, dynamic>? _metrics;
   List<Map<String, dynamic>> _trips = [];
+  List<Map<String, dynamic>> _adminRides = [];
+  List<Map<String, dynamic>> _adminDrivers = [];
+  Map<String, dynamic>? _adminMetrics;
   String? _message;
   bool _busy = false;
 
@@ -58,6 +61,57 @@ class _OwnerScreenState extends State<OwnerScreen> {
             .toList();
         _message = null;
       });
+    } catch (e) {
+      setState(() => _message = e.toString());
+    } finally {
+      setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _loadAdminRides() async {
+    final t = _token;
+    if (t == null) return;
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      final r = await _api.listAdminRides(t);
+      setState(() => _adminRides = r);
+    } catch (e) {
+      setState(() => _message = e.toString());
+    } finally {
+      setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _loadAdminDrivers() async {
+    final t = _token;
+    if (t == null) return;
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      final r = await _api.listAdminDriverLocations(t);
+      setState(() => _adminDrivers = r);
+    } catch (e) {
+      setState(() => _message = e.toString());
+    } finally {
+      setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _loadAdminMetrics() async {
+    final t = _token;
+    if (t == null) return;
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      final m = await _api.adminOwnerMetrics(t);
+      setState(() => _adminMetrics = m);
     } catch (e) {
       setState(() => _message = e.toString());
     } finally {
@@ -119,6 +173,66 @@ class _OwnerScreenState extends State<OwnerScreen> {
               )),
             ),
           ),
+          if (_token != null) ...[
+            const Divider(),
+            Text(l.adminOversightHeading, style: const TextStyle(fontWeight: FontWeight.bold)),
+            FilledButton.tonal(
+              onPressed: _busy ? null : _loadAdminMetrics,
+              child: Text(l.adminLoadOwnerMetricsBtn),
+            ),
+            if (_adminMetrics != null) ...[
+              const SizedBox(height: 8),
+              Text(l.commissionLabel(_adminMetrics!['total_commission'].toString())),
+              Text(l.tripsCount(_adminMetrics!['trip_count'].toString())),
+              Text(l.avgRatingLabel(
+                _adminMetrics!['rating_average'].toString(),
+                _adminMetrics!['rating_count'].toString(),
+              )),
+            ],
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.tonal(
+                    onPressed: _busy ? null : _loadAdminRides,
+                    child: Text(l.adminLoadRidesBtn),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.tonal(
+                    onPressed: _busy ? null : _loadAdminDrivers,
+                    child: Text(l.adminLoadDriversBtn),
+                  ),
+                ),
+              ],
+            ),
+            Text(l.adminRidesHeading, style: const TextStyle(fontWeight: FontWeight.w600)),
+            if (_adminRides.isEmpty) Text(l.adminNoRidesLoaded),
+            ..._adminRides.map(
+              (r) => ListTile(
+                dense: true,
+                title: Text(l.adminRideRow(
+                  r['pickup']?.toString() ?? '',
+                  r['destination']?.toString() ?? '',
+                )),
+                subtitle: Text(l.rideStatusFmt(r['status']?.toString() ?? '')),
+              ),
+            ),
+            Text(l.adminDriversHeading, style: const TextStyle(fontWeight: FontWeight.w600)),
+            if (_adminDrivers.isEmpty) Text(l.adminNoDriversData),
+            ..._adminDrivers.map(
+              (d) => ListTile(
+                dense: true,
+                title: Text(d['email']?.toString() ?? ''),
+                subtitle: Text(
+                  l.driverLocationRow(
+                    d['last_lat']?.toString() ?? '—',
+                    d['last_lng']?.toString() ?? '—',
+                  ),
+                ),
+              ),
+            ),
+          ],
           if (_message != null) Text(_message!, style: const TextStyle(color: Colors.red)),
         ],
       ),

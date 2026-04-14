@@ -179,4 +179,135 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get b2bConnectedStub =>
       'Collegato alla fatturazione mensile (demo). Richieste e fattura PDF potranno essere collegate all\'API in seguito.';
+
+  @override
+  String get roleAppPassenger => 'Passeggero (corse e chat)';
+
+  @override
+  String get roleAppDriver => 'Autista (app)';
+
+  @override
+  String get appPassengerTitle => 'Passeggero — corse';
+
+  @override
+  String get appDriverTitle => 'Autista — app';
+
+  @override
+  String get emailLabel => 'Email';
+
+  @override
+  String get passwordLabel => 'Password';
+
+  @override
+  String get signInApp => 'Accedi';
+
+  @override
+  String get registerAppAccount => 'Crea account passeggero';
+
+  @override
+  String get registerDriverAccount => 'Crea account autista';
+
+  @override
+  String get logoutApp => 'Esci';
+
+  @override
+  String get genericCancel => 'Annulla';
+
+  @override
+  String get syncPreferredLanguage => 'Sincronizza lingua nel profilo';
+
+  @override
+  String get profileLanguageSynced => 'Lingua preferita aggiornata.';
+
+  @override
+  String get myRidesHeading => 'Le mie corse';
+
+  @override
+  String get ridePickupLabel => 'Partenza';
+
+  @override
+  String get rideDestinationLabel => 'Destinazione';
+
+  @override
+  String get requestRideButton => 'Richiedi corsa';
+
+  @override
+  String get openChatButton => 'Chat';
+
+  @override
+  String get chatUnavailable =>
+      'La chat non è ancora disponibile per questa corsa.';
+
+  @override
+  String get noRidesYetApp => 'Nessuna corsa.';
+
+  @override
+  String get driverPendingRides => 'Coda corse';
+
+  @override
+  String get acceptRide => 'Accetta';
+
+  @override
+  String get rejectRide => 'Rilascia';
+
+  @override
+  String get startRide => 'Avvia';
+
+  @override
+  String get completeRide => 'Completa';
+
+  @override
+  String get cancelRidePassenger => 'Annulla corsa';
+
+  @override
+  String rideStatusFmt(String status) {
+    return 'Stato: $status';
+  }
+
+  @override
+  String get adminOversightHeading => 'Monitoraggio live';
+
+  @override
+  String get adminLoadRidesBtn => 'Carica corse app';
+
+  @override
+  String get adminLoadDriversBtn => 'Posizioni autisti';
+
+  @override
+  String get adminLoadOwnerMetricsBtn => 'Metriche admin';
+
+  @override
+  String get adminRidesHeading => 'Corse app';
+
+  @override
+  String get adminDriversHeading => 'Autisti';
+
+  @override
+  String get adminNoRidesLoaded => 'Tocca «Carica corse app».';
+
+  @override
+  String get adminNoDriversData => 'Tocca «Posizioni autisti».';
+
+  @override
+  String adminRideRow(String pickup, String destination) {
+    return '$pickup → $destination';
+  }
+
+  @override
+  String driverLocationRow(String lat, String lng) {
+    return 'Lat $lat, Lng $lng';
+  }
+
+  @override
+  String get chatScreenTitle => 'Chat corsa';
+
+  @override
+  String get messageFieldHint => 'Scrivi un messaggio';
+
+  @override
+  String get sendChatMessage => 'Invia';
+
+  @override
+  String get accountDisabledContactAdmin =>
+      'Account disabilitato. Contatta un amministratore.';
 }

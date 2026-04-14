@@ -415,6 +415,252 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Connected to monthly billing (stub). Ride requests and PDF invoice can be wired to the API in a follow-up.'**
   String get b2bConnectedStub;
+
+  /// No description provided for @roleAppPassenger.
+  ///
+  /// In en, this message translates to:
+  /// **'Passenger (rides & chat)'**
+  String get roleAppPassenger;
+
+  /// No description provided for @roleAppDriver.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver (app shifts)'**
+  String get roleAppDriver;
+
+  /// No description provided for @appPassengerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Passenger — rides'**
+  String get appPassengerTitle;
+
+  /// No description provided for @appDriverTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver — app'**
+  String get appDriverTitle;
+
+  /// No description provided for @emailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get emailLabel;
+
+  /// No description provided for @passwordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get passwordLabel;
+
+  /// No description provided for @signInApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get signInApp;
+
+  /// No description provided for @registerAppAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create passenger account'**
+  String get registerAppAccount;
+
+  /// No description provided for @registerDriverAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create driver account'**
+  String get registerDriverAccount;
+
+  /// No description provided for @logoutApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get logoutApp;
+
+  /// No description provided for @genericCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get genericCancel;
+
+  /// No description provided for @syncPreferredLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync language to profile'**
+  String get syncPreferredLanguage;
+
+  /// No description provided for @profileLanguageSynced.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred language updated.'**
+  String get profileLanguageSynced;
+
+  /// No description provided for @myRidesHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'My rides'**
+  String get myRidesHeading;
+
+  /// No description provided for @ridePickupLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup'**
+  String get ridePickupLabel;
+
+  /// No description provided for @rideDestinationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination'**
+  String get rideDestinationLabel;
+
+  /// No description provided for @requestRideButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Request ride'**
+  String get requestRideButton;
+
+  /// No description provided for @openChatButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get openChatButton;
+
+  /// No description provided for @chatUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat is not open for this ride yet.'**
+  String get chatUnavailable;
+
+  /// No description provided for @noRidesYetApp.
+  ///
+  /// In en, this message translates to:
+  /// **'No rides to show.'**
+  String get noRidesYetApp;
+
+  /// No description provided for @driverPendingRides.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride pool'**
+  String get driverPendingRides;
+
+  /// No description provided for @acceptRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get acceptRide;
+
+  /// No description provided for @rejectRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Release'**
+  String get rejectRide;
+
+  /// No description provided for @startRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Start trip'**
+  String get startRide;
+
+  /// No description provided for @completeRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete'**
+  String get completeRide;
+
+  /// No description provided for @cancelRidePassenger.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel ride'**
+  String get cancelRidePassenger;
+
+  /// No description provided for @rideStatusFmt.
+  ///
+  /// In en, this message translates to:
+  /// **'Status: {status}'**
+  String rideStatusFmt(String status);
+
+  /// No description provided for @adminOversightHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Live app oversight'**
+  String get adminOversightHeading;
+
+  /// No description provided for @adminLoadRidesBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Load app rides'**
+  String get adminLoadRidesBtn;
+
+  /// No description provided for @adminLoadDriversBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver locations'**
+  String get adminLoadDriversBtn;
+
+  /// No description provided for @adminLoadOwnerMetricsBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Load admin metrics'**
+  String get adminLoadOwnerMetricsBtn;
+
+  /// No description provided for @adminRidesHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'App rides'**
+  String get adminRidesHeading;
+
+  /// No description provided for @adminDriversHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Drivers'**
+  String get adminDriversHeading;
+
+  /// No description provided for @adminNoRidesLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap “Load app rides” to fetch.'**
+  String get adminNoRidesLoaded;
+
+  /// No description provided for @adminNoDriversData.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap “Driver locations” to fetch.'**
+  String get adminNoDriversData;
+
+  /// No description provided for @adminRideRow.
+  ///
+  /// In en, this message translates to:
+  /// **'{pickup} → {destination}'**
+  String adminRideRow(String pickup, String destination);
+
+  /// No description provided for @driverLocationRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Lat {lat}, Lng {lng}'**
+  String driverLocationRow(String lat, String lng);
+
+  /// No description provided for @chatScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride chat'**
+  String get chatScreenTitle;
+
+  /// No description provided for @messageFieldHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a message'**
+  String get messageFieldHint;
+
+  /// No description provided for @sendChatMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get sendChatMessage;
+
+  /// No description provided for @accountDisabledContactAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Account disabled. Contact an administrator.'**
+  String get accountDisabledContactAdmin;
 }
 
 class _AppLocalizationsDelegate

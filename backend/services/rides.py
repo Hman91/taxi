@@ -4,6 +4,8 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 
 from .. import db as db_module
+from . import chat_service
+from . import realtime_broadcast
 
 
 def request_ride(user_id: int, pickup: str, destination: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
@@ -14,6 +16,8 @@ def request_ride(user_id: int, pickup: str, destination: str) -> Tuple[Optional[
     if db_module.user_has_active_ride(user_id):
         return None, "active_ride_exists"
     ride = db_module.ride_insert(user_id=user_id, pickup=pickup, destination=destination)
+    if ride is not None:
+        realtime_broadcast.broadcast_ride_update(ride)
     return ride, None
 
 
@@ -45,6 +49,9 @@ def accept_ride(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[str, A
     updated = db_module.ride_update(
         ride_id, driver_id=int(d["id"]), status="accepted"
     )
+    if updated is not None:
+        chat_service.ensure_conversation_for_ride(ride_id)
+        realtime_broadcast.broadcast_ride_update(updated)
     return updated, None
 
 
@@ -63,6 +70,8 @@ def reject_or_release(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[
     updated = db_module.ride_update(
         ride_id, clear_driver=True, status="pending"
     )
+    if updated is not None:
+        realtime_broadcast.broadcast_ride_update(updated)
     return updated, None
 
 
@@ -76,6 +85,8 @@ def start_ride(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[str, An
     if row["driver_id"] != int(d["id"]) or row["status"] != "accepted":
         return None, "invalid_status"
     updated = db_module.ride_update(ride_id, status="ongoing")
+    if updated is not None:
+        realtime_broadcast.broadcast_ride_update(updated)
     return updated, None
 
 
@@ -89,6 +100,8 @@ def complete_ride(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[str,
     if row["driver_id"] != int(d["id"]) or row["status"] != "ongoing":
         return None, "invalid_status"
     updated = db_module.ride_update(ride_id, status="completed")
+    if updated is not None:
+        realtime_broadcast.broadcast_ride_update(updated)
     return updated, None
 
 
@@ -101,4 +114,6 @@ def cancel_ride(ride_id: int, user_id: int) -> Tuple[Optional[Dict[str, Any]], O
     if row["status"] in ("completed", "cancelled"):
         return None, "invalid_status"
     updated = db_module.ride_update(ride_id, status="cancelled", clear_driver=True)
+    if updated is not None:
+        realtime_broadcast.broadcast_ride_update(updated)
     return updated, None

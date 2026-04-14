@@ -6,6 +6,8 @@ from typing import Any, Dict, Optional, Tuple
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from .. import db as db_module
+from ..extensions import db
+from ..models import User
 
 
 def register(email: str, password: str, role: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
@@ -25,11 +27,39 @@ def register(email: str, password: str, role: str) -> Tuple[Optional[Dict[str, A
         )
     row = db_module.user_by_id(uid)
     assert row is not None
-    return {"id": row["id"], "email": row["email"], "role": row["role"]}, None
+    return {
+        "id": row["id"],
+        "email": row["email"],
+        "role": row["role"],
+        "preferred_language": row["preferred_language"],
+        "is_enabled": row["is_enabled"],
+    }, None
 
 
 def authenticate(email: str, password: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     row = db_module.user_by_email(email)
     if row is None or not check_password_hash(row["password_hash"], password):
         return None, "invalid_credentials"
-    return {"id": row["id"], "email": row["email"], "role": row["role"]}, None
+    if not row.get("is_enabled", True):
+        return None, "account_disabled"
+    return {
+        "id": row["id"],
+        "email": row["email"],
+        "role": row["role"],
+        "preferred_language": row["preferred_language"],
+        "is_enabled": row["is_enabled"],
+    }, None
+
+
+def set_preferred_language(user_id: int, language: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    raw = (language or "").strip()
+    if not raw or len(raw) > 10:
+        return None, "invalid_language"
+    u = db.session.get(User, user_id)
+    if u is None:
+        return None, "not_found"
+    u.preferred_language = raw
+    db.session.commit()
+    out = db_module.user_by_id(user_id)
+    assert out is not None
+    return out, None

@@ -99,5 +99,63 @@
   "b2bTitle": "B2B Corporate",
   "companyCode": "Company code",
   "verifyCompanyCode": "Verify company code",
-  "b2bConnectedStub": "Connected to monthly billing (stub). Ride requests and PDF invoice can be wired to the API in a follow-up."
+  "b2bConnectedStub": "Connected to monthly billing (stub). Ride requests and PDF invoice can be wired to the API in a follow-up.",
+  "roleAppPassenger": "Passenger (rides & chat)",
+  "roleAppDriver": "Driver (app shifts)",
+  "appPassengerTitle": "Passenger — rides",
+  "appDriverTitle": "Driver — app",
+  "emailLabel": "Email",
+  "passwordLabel": "Password",
+  "signInApp": "Sign in",
+  "registerAppAccount": "Create passenger account",
+  "registerDriverAccount": "Create driver account",
+  "logoutApp": "Sign out",
+  "genericCancel": "Cancel",
+  "syncPreferredLanguage": "Sync language to profile",
+  "profileLanguageSynced": "Preferred language updated.",
+  "myRidesHeading": "My rides",
+  "ridePickupLabel": "Pickup",
+  "rideDestinationLabel": "Destination",
+  "requestRideButton": "Request ride",
+  "openChatButton": "Chat",
+  "chatUnavailable": "Chat is not open for this ride yet.",
+  "noRidesYetApp": "No rides to show.",
+  "driverPendingRides": "Ride pool",
+  "acceptRide": "Accept",
+  "rejectRide": "Release",
+  "startRide": "Start trip",
+  "completeRide": "Complete",
+  "cancelRidePassenger": "Cancel ride",
+  "rideStatusFmt": "Status: {status}",
+  "@rideStatusFmt": {
+    "placeholders": {
+      "status": {"type": "String"}
+    }
+  },
+  "adminOversightHeading": "Live app oversight",
+  "adminLoadRidesBtn": "Load app rides",
+  "adminLoadDriversBtn": "Driver locations",
+  "adminLoadOwnerMetricsBtn": "Load admin metrics",
+  "adminRidesHeading": "App rides",
+  "adminDriversHeading": "Drivers",
+  "adminNoRidesLoaded": "Tap “Load app rides” to fetch.",
+  "adminNoDriversData": "Tap “Driver locations” to fetch.",
+  "adminRideRow": "{pickup} → {destination}",
+  "@adminRideRow": {
+    "placeholders": {
+      "pickup": {"type": "String"},
+      "destination": {"type": "String"}
+    }
+  },
+  "driverLocationRow": "Lat {lat}, Lng {lng}",
+  "@driverLocationRow": {
+    "placeholders": {
+      "lat": {"type": "String"},
+      "lng": {"type": "String"}
+    }
+  },
+  "chatScreenTitle": "Ride chat",
+  "messageFieldHint": "Type a message",
+  "sendChatMessage": "Send",
+  "accountDisabledContactAdmin": "Account disabled. Contact an administrator."
 }

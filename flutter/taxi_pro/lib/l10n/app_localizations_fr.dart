@@ -180,4 +180,135 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get b2bConnectedStub =>
       'Connecté à la facturation mensuelle (démo). Les demandes et la facture PDF pourront être reliées à l\'API ensuite.';
+
+  @override
+  String get roleAppPassenger => 'Passager (courses et chat)';
+
+  @override
+  String get roleAppDriver => 'Chauffeur (appli)';
+
+  @override
+  String get appPassengerTitle => 'Passager — courses';
+
+  @override
+  String get appDriverTitle => 'Chauffeur — appli';
+
+  @override
+  String get emailLabel => 'E-mail';
+
+  @override
+  String get passwordLabel => 'Mot de passe';
+
+  @override
+  String get signInApp => 'Connexion';
+
+  @override
+  String get registerAppAccount => 'Créer un compte passager';
+
+  @override
+  String get registerDriverAccount => 'Créer un compte chauffeur';
+
+  @override
+  String get logoutApp => 'Déconnexion';
+
+  @override
+  String get genericCancel => 'Annuler';
+
+  @override
+  String get syncPreferredLanguage => 'Synchroniser la langue du profil';
+
+  @override
+  String get profileLanguageSynced => 'Langue préférée mise à jour.';
+
+  @override
+  String get myRidesHeading => 'Mes courses';
+
+  @override
+  String get ridePickupLabel => 'Prise en charge';
+
+  @override
+  String get rideDestinationLabel => 'Destination';
+
+  @override
+  String get requestRideButton => 'Demander une course';
+
+  @override
+  String get openChatButton => 'Chat';
+
+  @override
+  String get chatUnavailable =>
+      'Le chat n’est pas encore ouvert pour cette course.';
+
+  @override
+  String get noRidesYetApp => 'Aucune course.';
+
+  @override
+  String get driverPendingRides => 'File d’attente';
+
+  @override
+  String get acceptRide => 'Accepter';
+
+  @override
+  String get rejectRide => 'Libérer';
+
+  @override
+  String get startRide => 'Démarrer';
+
+  @override
+  String get completeRide => 'Terminer';
+
+  @override
+  String get cancelRidePassenger => 'Annuler la course';
+
+  @override
+  String rideStatusFmt(String status) {
+    return 'Statut : $status';
+  }
+
+  @override
+  String get adminOversightHeading => 'Supervision en direct';
+
+  @override
+  String get adminLoadRidesBtn => 'Charger les courses appli';
+
+  @override
+  String get adminLoadDriversBtn => 'Positions chauffeurs';
+
+  @override
+  String get adminLoadOwnerMetricsBtn => 'Métriques admin';
+
+  @override
+  String get adminRidesHeading => 'Courses appli';
+
+  @override
+  String get adminDriversHeading => 'Chauffeurs';
+
+  @override
+  String get adminNoRidesLoaded => 'Appuyez sur « Charger les courses appli ».';
+
+  @override
+  String get adminNoDriversData => 'Appuyez sur « Positions chauffeurs ».';
+
+  @override
+  String adminRideRow(String pickup, String destination) {
+    return '$pickup → $destination';
+  }
+
+  @override
+  String driverLocationRow(String lat, String lng) {
+    return 'Lat $lat, Lng $lng';
+  }
+
+  @override
+  String get chatScreenTitle => 'Chat de course';
+
+  @override
+  String get messageFieldHint => 'Écrire un message';
+
+  @override
+  String get sendChatMessage => 'Envoyer';
+
+  @override
+  String get accountDisabledContactAdmin =>
+      'Compte désactivé. Contactez un administrateur.';
 }

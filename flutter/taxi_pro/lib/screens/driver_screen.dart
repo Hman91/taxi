@@ -12,14 +12,18 @@ class DriverScreen extends StatefulWidget {
 
 class _DriverScreenState extends State<DriverScreen> {
   final _api = TaxiAppService();
-  final _secretController = TextEditingController(text: 'Driver2026');
+  final _phoneController = TextEditingController(text: '98123456');
+  final _pinController = TextEditingController(text: '1234');
   final _routeController = TextEditingController();
   final _fareController = TextEditingController(text: '20');
   static const _payCash = 'كاش / بطاقة';
   static const _payB2b = 'فاتورة شركة (B2B)';
   String _payType = _payCash;
   String? _token;
+  String? _driverName;
   String? _message;
+  String _location = 'مطار النفيضة';
+  double _wallet = 20.0;
   bool _busy = false;
 
   Future<void> _login() async {
@@ -29,10 +33,15 @@ class _DriverScreenState extends State<DriverScreen> {
       _message = null;
     });
     try {
-      final r = await _api.login(role: 'driver', secret: _secretController.text.trim());
+      final r = await _api.loginDriverPin(
+        phone: _phoneController.text.trim(),
+        pin: _pinController.text.trim(),
+      );
       setState(() {
         _token = r.accessToken;
-        _message = l.loggedInAs(r.role);
+        _driverName = r.driverName;
+        _wallet = r.phone == '50111222' ? 15.0 : 20.0;
+        _message = '${l.loggedInAs(r.role)} — ${r.driverName}';
       });
     } catch (e) {
       setState(() => _message = e.toString());
@@ -74,7 +83,8 @@ class _DriverScreenState extends State<DriverScreen> {
 
   @override
   void dispose() {
-    _secretController.dispose();
+    _phoneController.dispose();
+    _pinController.dispose();
     _routeController.dispose();
     _fareController.dispose();
     super.dispose();
@@ -89,9 +99,14 @@ class _DriverScreenState extends State<DriverScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           TextField(
-            controller: _secretController,
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(labelText: 'رقم الهاتف'),
+          ),
+          TextField(
+            controller: _pinController,
             obscureText: true,
-            decoration: InputDecoration(labelText: l.driverCode),
+            decoration: const InputDecoration(labelText: 'PIN'),
           ),
           const SizedBox(height: 8),
           FilledButton(
@@ -101,8 +116,33 @@ class _DriverScreenState extends State<DriverScreen> {
           if (_token != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text(l.sessionActive, style: TextStyle(color: Colors.green.shade800)),
+              child: Text(
+                _driverName == null
+                    ? l.sessionActive
+                    : '${l.sessionActive} - $_driverName | الرصيد: ${_wallet.toStringAsFixed(3)} DT',
+                style: TextStyle(color: Colors.green.shade800),
+              ),
             ),
+          if (_token != null) ...[
+            const SizedBox(height: 8),
+            InputDecorator(
+              decoration: const InputDecoration(labelText: '📍 موقعك الجغرافي الحالي'),
+              child: DropdownButton<String>(
+                value: _location,
+                isExpanded: true,
+                underline: const SizedBox.shrink(),
+                items: const [
+                  'مطار قرطاج',
+                  'مطار النفيضة',
+                  'مطار المنستير',
+                  'وسط سوسة',
+                  'الحمامات',
+                  'نابل',
+                ].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(),
+                onChanged: (v) => setState(() => _location = v ?? _location),
+              ),
+            ),
+          ],
           const Divider(height: 32),
           TextField(
             controller: _routeController,

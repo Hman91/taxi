@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config.dart';
+import '../models/chat_message.dart';
 import 'models.dart';
 
 class TaxiApiException implements Exception {
@@ -13,12 +14,28 @@ class TaxiApiException implements Exception {
   String toString() => 'TaxiApiException: $message (${statusCode ?? "-"})';
 }
 
+/// `login-app` returned 403 with `account_disabled`.
+class TaxiAccountDisabledException implements Exception {
+  @override
+  String toString() => 'TaxiAccountDisabledException';
+}
+
 class TaxiApiClient {
   TaxiApiClient({http.Client? httpClient}) : _http = httpClient ?? http.Client();
 
   final http.Client _http;
 
   Uri _u(String path) => Uri.parse(apiBaseUrl).resolve(path);
+
+  String? _errorCodeFromBody(String body) {
+    try {
+      final m = jsonDecode(body);
+      if (m is Map<String, dynamic> && m['error'] is String) {
+        return m['error'] as String;
+      }
+    } catch (_) {}
+    return null;
+  }
 
   Map<String, String> _jsonHeaders({String? bearer}) {
     final h = <String, String>{'Content-Type': 'application/json'};
@@ -83,6 +100,21 @@ class TaxiApiClient {
       throw TaxiApiException(r.body, r.statusCode);
     }
     return LoginResponse.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  Future<DriverPinLoginResponse> loginDriverPin({
+    required String phone,
+    required String pin,
+  }) async {
+    final r = await _http.post(
+      _u('/api/auth/login-driver-pin'),
+      headers: _jsonHeaders(),
+      body: jsonEncode({'phone': phone, 'pin': pin}),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(_errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    return DriverPinLoginResponse.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
   Future<Trip> createTrip({
@@ -162,9 +194,101 @@ class TaxiApiClient {
       body: jsonEncode({'email': email, 'password': password}),
     );
     if (r.statusCode != 200) {
-      throw TaxiApiException(r.body, r.statusCode);
+      final code = _errorCodeFromBody(r.body);
+      if (r.statusCode == 403 && code == 'account_disabled') {
+        throw TaxiAccountDisabledException();
+      }
+      throw TaxiApiException(code ?? r.body, r.statusCode);
     }
     return AppLoginResponse.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  Future<RideConversationInfo?> getRideConversation({
+    required String token,
+    required int rideId,
+  }) async {
+    final r = await _http.get(
+      _u('/api/rides/$rideId/conversation'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode == 200) {
+      return RideConversationInfo.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+    }
+    if (r.statusCode == 400) {
+      final code = _errorCodeFromBody(r.body);
+      if (code == 'chat_not_open') return null;
+    }
+    throw TaxiApiException(_errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+  }
+
+  Future<List<ChatMessage>> listConversationMessages({
+    required String token,
+    required int conversationId,
+    int? beforeId,
+    int limit = 50,
+  }) async {
+    final q = <String, String>{'limit': '$limit'};
+    if (beforeId != null) q['before_id'] = '$beforeId';
+    final uri = _u('/api/conversations/$conversationId/messages').replace(queryParameters: q);
+    final r = await _http.get(uri, headers: _jsonHeaders(bearer: token));
+    if (r.statusCode != 200) {
+      throw TaxiApiException(_errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    final list = body['messages'] as List<dynamic>;
+    return list.map((e) => ChatMessage.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> patchPreferredLanguage({
+    required String token,
+    required String preferredLanguage,
+  }) async {
+    final r = await _http.patch(
+      _u('/api/me'),
+      headers: _jsonHeaders(bearer: token),
+      body: jsonEncode({'preferred_language': preferredLanguage}),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(_errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> listAdminRides(
+    String token, {
+    int limit = 200,
+  }) async {
+    final uri = _u('/api/admin/rides').replace(queryParameters: {'limit': '$limit'});
+    final r = await _http.get(uri, headers: _jsonHeaders(bearer: token));
+    if (r.statusCode != 200) {
+      throw TaxiApiException(_errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    final list = body['rides'] as List<dynamic>;
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> listAdminDriverLocations(String token) async {
+    final r = await _http.get(
+      _u('/api/admin/drivers/locations'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(_errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    final list = body['drivers'] as List<dynamic>;
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<Map<String, dynamic>> adminOwnerMetrics(String token) async {
+    final r = await _http.get(
+      _u('/api/admin/metrics'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(_errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
   Future<List<Ride>> listRides(String token) async {

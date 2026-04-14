@@ -1,5 +1,6 @@
 import '../api/client.dart';
 import '../api/models.dart';
+import '../models/chat_message.dart';
 
 /// UI talks to this layer only — no HTTP in widgets (see `.cursor/rules.md`).
 class TaxiAppService {
@@ -19,6 +20,12 @@ class TaxiAppService {
 
   Future<LoginResponse> login({required String role, required String secret}) =>
       _client.login(role: role, secret: secret);
+
+  Future<DriverPinLoginResponse> loginDriverPin({
+    required String phone,
+    required String pin,
+  }) =>
+      _client.loginDriverPin(phone: phone, pin: pin);
 
   Future<AppLoginResponse> loginApp({
     required String email,
@@ -72,4 +79,44 @@ class TaxiAppService {
 
   Future<Map<String, dynamic>> submitRating(int stars) =>
       _client.submitRating(stars);
+
+  Future<RideConversationInfo?> getRideConversation({
+    required String token,
+    required int rideId,
+  }) =>
+      _client.getRideConversation(token: token, rideId: rideId);
+
+  Future<List<ChatMessage>> listConversationMessages({
+    required String token,
+    required int conversationId,
+    int? beforeId,
+    int limit = 50,
+  }) =>
+      _client.listConversationMessages(
+        token: token,
+        conversationId: conversationId,
+        beforeId: beforeId,
+        limit: limit,
+      );
+
+  Future<void> patchPreferredLanguage({
+    required String token,
+    required String preferredLanguage,
+  }) =>
+      _client.patchPreferredLanguage(
+        token: token,
+        preferredLanguage: preferredLanguage,
+      );
+
+  Future<List<Map<String, dynamic>>> listAdminRides(
+    String token, {
+    int limit = 200,
+  }) =>
+      _client.listAdminRides(token, limit: limit);
+
+  Future<List<Map<String, dynamic>>> listAdminDriverLocations(String token) =>
+      _client.listAdminDriverLocations(token);
+
+  Future<Map<String, dynamic>> adminOwnerMetrics(String token) =>
+      _client.adminOwnerMetrics(token);
 }

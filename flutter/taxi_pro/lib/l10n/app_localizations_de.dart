@@ -180,4 +180,134 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get b2bConnectedStub =>
       'Mit Monatsabrechnung verbunden (Demo). Fahrtanfragen und PDF-Rechnung können später an die API angebunden werden.';
+
+  @override
+  String get roleAppPassenger => 'Fahrgast (Fahrten & Chat)';
+
+  @override
+  String get roleAppDriver => 'Fahrer (App)';
+
+  @override
+  String get appPassengerTitle => 'Fahrgast — Fahrten';
+
+  @override
+  String get appDriverTitle => 'Fahrer — App';
+
+  @override
+  String get emailLabel => 'E-Mail';
+
+  @override
+  String get passwordLabel => 'Passwort';
+
+  @override
+  String get signInApp => 'Anmelden';
+
+  @override
+  String get registerAppAccount => 'Fahrgastkonto erstellen';
+
+  @override
+  String get registerDriverAccount => 'Fahrerkonto erstellen';
+
+  @override
+  String get logoutApp => 'Abmelden';
+
+  @override
+  String get genericCancel => 'Abbrechen';
+
+  @override
+  String get syncPreferredLanguage => 'Sprache im Profil speichern';
+
+  @override
+  String get profileLanguageSynced => 'Bevorzugte Sprache aktualisiert.';
+
+  @override
+  String get myRidesHeading => 'Meine Fahrten';
+
+  @override
+  String get ridePickupLabel => 'Abholung';
+
+  @override
+  String get rideDestinationLabel => 'Ziel';
+
+  @override
+  String get requestRideButton => 'Fahrt anfragen';
+
+  @override
+  String get openChatButton => 'Chat';
+
+  @override
+  String get chatUnavailable => 'Chat für diese Fahrt noch nicht verfügbar.';
+
+  @override
+  String get noRidesYetApp => 'Keine Fahrten.';
+
+  @override
+  String get driverPendingRides => 'Fahrtenpool';
+
+  @override
+  String get acceptRide => 'Annehmen';
+
+  @override
+  String get rejectRide => 'Freigeben';
+
+  @override
+  String get startRide => 'Starten';
+
+  @override
+  String get completeRide => 'Beenden';
+
+  @override
+  String get cancelRidePassenger => 'Fahrt stornieren';
+
+  @override
+  String rideStatusFmt(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String get adminOversightHeading => 'Live-Überblick';
+
+  @override
+  String get adminLoadRidesBtn => 'App-Fahrten laden';
+
+  @override
+  String get adminLoadDriversBtn => 'Fahrerstandorte';
+
+  @override
+  String get adminLoadOwnerMetricsBtn => 'Admin-Kennzahlen';
+
+  @override
+  String get adminRidesHeading => 'App-Fahrten';
+
+  @override
+  String get adminDriversHeading => 'Fahrer';
+
+  @override
+  String get adminNoRidesLoaded => 'Tippen Sie auf „App-Fahrten laden“.';
+
+  @override
+  String get adminNoDriversData => 'Tippen Sie auf „Fahrerstandorte“.';
+
+  @override
+  String adminRideRow(String pickup, String destination) {
+    return '$pickup → $destination';
+  }
+
+  @override
+  String driverLocationRow(String lat, String lng) {
+    return 'Breite $lat, Länge $lng';
+  }
+
+  @override
+  String get chatScreenTitle => 'Fahrt-Chat';
+
+  @override
+  String get messageFieldHint => 'Nachricht eingeben';
+
+  @override
+  String get sendChatMessage => 'Senden';
+
+  @override
+  String get accountDisabledContactAdmin =>
+      'Konto deaktiviert. Wenden Sie sich an einen Administrator.';
 }

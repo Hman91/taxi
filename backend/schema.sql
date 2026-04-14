@@ -1,4 +1,5 @@
--- Taxi Pro — canonical schema (SQLite, foreign keys).
+-- Taxi Pro — legacy SQLite reference DDL (historical).
+-- The running API uses PostgreSQL; apply schema with Alembic (`alembic upgrade head`).
 -- Aligns with .cursor/rules.md: users, drivers, rides + legacy trips/ratings.
 
 PRAGMA foreign_keys = ON;

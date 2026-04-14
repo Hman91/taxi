@@ -180,4 +180,134 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get b2bConnectedStub =>
       'Подключено к ежемесячному биллингу (демо). Заявки и PDF-счёт можно связать с API позже.';
+
+  @override
+  String get roleAppPassenger => 'Пассажир (поездки и чат)';
+
+  @override
+  String get roleAppDriver => 'Водитель (приложение)';
+
+  @override
+  String get appPassengerTitle => 'Пассажир — поездки';
+
+  @override
+  String get appDriverTitle => 'Водитель — приложение';
+
+  @override
+  String get emailLabel => 'Эл. почта';
+
+  @override
+  String get passwordLabel => 'Пароль';
+
+  @override
+  String get signInApp => 'Войти';
+
+  @override
+  String get registerAppAccount => 'Создать аккаунт пассажира';
+
+  @override
+  String get registerDriverAccount => 'Создать аккаунт водителя';
+
+  @override
+  String get logoutApp => 'Выйти';
+
+  @override
+  String get genericCancel => 'Отмена';
+
+  @override
+  String get syncPreferredLanguage => 'Синхронизировать язык профиля';
+
+  @override
+  String get profileLanguageSynced => 'Предпочитаемый язык обновлён.';
+
+  @override
+  String get myRidesHeading => 'Мои поездки';
+
+  @override
+  String get ridePickupLabel => 'Откуда';
+
+  @override
+  String get rideDestinationLabel => 'Куда';
+
+  @override
+  String get requestRideButton => 'Заказать поездку';
+
+  @override
+  String get openChatButton => 'Чат';
+
+  @override
+  String get chatUnavailable => 'Чат для этой поездки ещё недоступен.';
+
+  @override
+  String get noRidesYetApp => 'Нет поездок.';
+
+  @override
+  String get driverPendingRides => 'Очередь заказов';
+
+  @override
+  String get acceptRide => 'Принять';
+
+  @override
+  String get rejectRide => 'Освободить';
+
+  @override
+  String get startRide => 'Начать';
+
+  @override
+  String get completeRide => 'Завершить';
+
+  @override
+  String get cancelRidePassenger => 'Отменить поездку';
+
+  @override
+  String rideStatusFmt(String status) {
+    return 'Статус: $status';
+  }
+
+  @override
+  String get adminOversightHeading => 'Мониторинг в реальном времени';
+
+  @override
+  String get adminLoadRidesBtn => 'Загрузить поездки приложения';
+
+  @override
+  String get adminLoadDriversBtn => 'Позиции водителей';
+
+  @override
+  String get adminLoadOwnerMetricsBtn => 'Админ-метрики';
+
+  @override
+  String get adminRidesHeading => 'Поездки приложения';
+
+  @override
+  String get adminDriversHeading => 'Водители';
+
+  @override
+  String get adminNoRidesLoaded => 'Нажмите «Загрузить поездки приложения».';
+
+  @override
+  String get adminNoDriversData => 'Нажмите «Позиции водителей».';
+
+  @override
+  String adminRideRow(String pickup, String destination) {
+    return '$pickup → $destination';
+  }
+
+  @override
+  String driverLocationRow(String lat, String lng) {
+    return 'Шир. $lat, Долг. $lng';
+  }
+
+  @override
+  String get chatScreenTitle => 'Чат поездки';
+
+  @override
+  String get messageFieldHint => 'Сообщение';
+
+  @override
+  String get sendChatMessage => 'Отправить';
+
+  @override
+  String get accountDisabledContactAdmin =>
+      'Аккаунт отключён. Обратитесь к администратору.';
 }

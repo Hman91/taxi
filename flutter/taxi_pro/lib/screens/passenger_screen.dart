@@ -14,12 +14,15 @@ class _PassengerScreenState extends State<PassengerScreen> {
   final _api = TaxiAppService();
   Map<String, double> _fares = {};
   String? _routeKey;
+  String? _start;
+  String? _end;
   Map<String, dynamic>? _airportQuote;
   Map<String, dynamic>? _gpsQuote;
   final _distController = TextEditingController();
   bool _loading = true;
   String? _error;
   int _rating = 0;
+  final _promoController = TextEditingController();
 
   @override
   void initState() {
@@ -37,6 +40,11 @@ class _PassengerScreenState extends State<PassengerScreen> {
       setState(() {
         _fares = fares;
         _routeKey = fares.keys.isNotEmpty ? fares.keys.first : null;
+        final starts = _starts();
+        _start = starts.isNotEmpty ? starts.first : null;
+        final ends = _start == null ? <String>[] : _endsForStart(_start!);
+        _end = ends.isNotEmpty ? ends.first : null;
+        _syncRouteSelection();
         _loading = false;
       });
       if (_routeKey != null) {
@@ -54,6 +62,21 @@ class _PassengerScreenState extends State<PassengerScreen> {
     final key = _routeKey;
     if (key == null) return;
     try {
+      final promo = _promoController.text.trim();
+      if (promo == 'WELCOME26') {
+        final base = _fares[key] ?? 0;
+        final q = await _api.quoteAirport(key);
+        final discounted = (base * 0.8);
+        final night = q['is_night'] == true;
+        final finalFare = night ? discounted * 1.5 : discounted;
+        setState(() => _airportQuote = {
+          ...q,
+          'base_fare': base,
+          'promo_applied': true,
+          'final_fare': finalFare.toStringAsFixed(3),
+        });
+        return;
+      }
       final q = await _api.quoteAirport(key);
       setState(() => _airportQuote = q);
     } catch (e) {
@@ -96,7 +119,36 @@ class _PassengerScreenState extends State<PassengerScreen> {
   @override
   void dispose() {
     _distController.dispose();
+    _promoController.dispose();
     super.dispose();
+  }
+
+  List<String> _starts() {
+    final out = <String>{};
+    for (final k in _fares.keys) {
+      final parts = k.split('➡️');
+      if (parts.isNotEmpty) out.add(parts.first.trim());
+    }
+    return out.toList()..sort();
+  }
+
+  List<String> _endsForStart(String start) {
+    final out = <String>{};
+    for (final k in _fares.keys) {
+      final parts = k.split('➡️');
+      if (parts.length < 2) continue;
+      if (parts.first.trim() == start.trim()) out.add(parts[1].trim());
+    }
+    return out.toList()..sort();
+  }
+
+  void _syncRouteSelection() {
+    if (_start == null || _end == null) {
+      _routeKey = null;
+      return;
+    }
+    final candidate = '${_start!.trim()} ➡️ ${_end!.trim()}';
+    _routeKey = _fares.containsKey(candidate) ? candidate : null;
   }
 
   @override
@@ -134,22 +186,53 @@ class _PassengerScreenState extends State<PassengerScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        if (_fares.isNotEmpty)
+        if (_fares.isNotEmpty) ...[
           InputDecorator(
-            decoration: InputDecoration(labelText: l.route),
+            decoration: const InputDecoration(labelText: '📍 نقطة الانطلاق'),
             child: DropdownButton<String>(
-              value: _routeKey,
+              value: _start,
               isExpanded: true,
               underline: const SizedBox.shrink(),
-              items: _fares.keys
-                  .map((k) => DropdownMenuItem(value: k, child: Text(k, overflow: TextOverflow.ellipsis)))
+              items: _starts()
+                  .map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis)))
                   .toList(),
               onChanged: (v) {
-                setState(() => _routeKey = v);
+                setState(() {
+                  _start = v;
+                  final ends = v == null ? <String>[] : _endsForStart(v);
+                  _end = ends.isNotEmpty ? ends.first : null;
+                  _syncRouteSelection();
+                });
                 _quoteAirport();
               },
             ),
           ),
+          const SizedBox(height: 8),
+          InputDecorator(
+            decoration: const InputDecoration(labelText: '🏁 الوجهة'),
+            child: DropdownButton<String>(
+              value: _end,
+              isExpanded: true,
+              underline: const SizedBox.shrink(),
+              items: (_start == null ? <String>[] : _endsForStart(_start!))
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis)))
+                  .toList(),
+              onChanged: (v) {
+                setState(() {
+                  _end = v;
+                  _syncRouteSelection();
+                });
+                _quoteAirport();
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _promoController,
+            decoration: const InputDecoration(labelText: 'كود التخفيض (WELCOME26)'),
+            onChanged: (_) => _quoteAirport(),
+          ),
+        ],
         const SizedBox(height: 16),
         if (q != null) ...[
           Text(
@@ -157,6 +240,8 @@ class _PassengerScreenState extends State<PassengerScreen> {
             style: Theme.of(context).textTheme.headlineMedium,
             textAlign: TextAlign.center,
           ),
+          if (q['promo_applied'] == true)
+            const Text('🎉 تم تفعيل التخفيض بنسبة 20%', style: TextStyle(color: Colors.green)),
           if (q['is_night'] == true)
             Text(l.nightFare50, style: const TextStyle(color: Colors.deepOrange)),
         ],

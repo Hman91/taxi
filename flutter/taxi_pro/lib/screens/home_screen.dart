@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import 'app_driver_screen.dart';
+import 'app_passenger_screen.dart';
 import 'b2b_screen.dart';
 import 'driver_screen.dart';
 import 'operator_screen.dart';
@@ -67,7 +69,9 @@ class HomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _tile(context, l.rolePassenger, Icons.person, const PassengerScreen()),
+          _tile(context, l.roleAppPassenger, Icons.smartphone, const AppPassengerScreen()),
           _tile(context, l.roleDriver, Icons.local_taxi, const DriverScreen()),
+          _tile(context, l.roleAppDriver, Icons.badge, const AppDriverScreen()),
           _tile(context, l.roleOwner, Icons.business_center, const OwnerScreen()),
           _tile(context, l.roleOperator, Icons.headset_mic, const OperatorScreen()),
           _tile(context, l.roleB2b, Icons.apartment, const B2bScreen()),
