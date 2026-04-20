@@ -1,4 +1,5 @@
 import 'dart:async' show StreamSubscription, Timer, unawaited;
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -685,9 +686,10 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     final l = AppLocalizations.of(context)!;
     const activeStatuses = {'pending', 'accepted', 'ongoing'};
     final hasActiveRide = _rides.any((r) => activeStatuses.contains(r.status));
+    final activeCount = _rides.where((r) => activeStatuses.contains(r.status)).length;
     return Scaffold(
       appBar: AppBar(
-        title: Text(l.appPassengerTitle),
+        title: const Text('🇹🇳 Taxi Pro VIP'),
         actions: [
           if (_token != null) ...[
             IconButton(
@@ -728,10 +730,24 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           if (_token == null) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Google login is required for passengers.',
-              style: Theme.of(context).textTheme.bodyMedium,
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '✈️ رحلات المطارات / Airport Transfers',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Google login is required for passengers.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 8),
             if (kIsWeb)
@@ -743,6 +759,40 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                 label: const Text('Continue with Google'),
               ),
           ] else ...[
+            Card(
+              color: Colors.black87,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Premium Dispatch Panel',
+                      style: TextStyle(
+                        color: Colors.amber,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Chip(
+                          avatar: const Icon(Icons.timelapse, size: 16),
+                          label: Text('Active rides: $activeCount'),
+                        ),
+                        Chip(
+                          avatar: const Icon(Icons.history, size: 16),
+                          label: Text('Total rides: ${_rides.length}'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             Card(
               child: ListTile(
                 dense: true,
@@ -764,18 +814,39 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: _busy || hasActiveRide ? null : _requestRide,
-              icon: const Icon(Icons.add_road),
-              label: Text(l.requestRideButton),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '✈️ Booking',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    FilledButton.icon(
+                      onPressed: _busy || hasActiveRide ? null : _requestRide,
+                      icon: const Icon(Icons.add_road),
+                      label: Text(l.requestRideButton),
+                    ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 16),
-            Text(l.myRidesHeading,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              '📑 My ride vault',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             if (_rides.isEmpty) Text(l.noRidesYetApp),
             ..._rides.map(
               (r) => Card(
                 child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   title: Text(l.adminRideRow(r.pickup, r.destination)),
                   subtitle: Text([
                     l.rideStatusFmt(r.status),
@@ -783,9 +854,11 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                     if ((r.driverPhone ?? '').isNotEmpty) 'Phone: ${r.driverPhone}',
                   ].join('\n')),
                   isThreeLine: true,
-                  leading: r.driverPhotoUrl != null && r.driverPhotoUrl!.isNotEmpty
-                      ? CircleAvatar(backgroundImage: NetworkImage(r.driverPhotoUrl!))
-                      : const CircleAvatar(child: Icon(Icons.person)),
+                  leading: (() {
+                    final provider = _imageProviderFromString(r.driverPhotoUrl);
+                    if (provider == null) return const CircleAvatar(child: Icon(Icons.person));
+                    return CircleAvatar(backgroundImage: provider);
+                  })(),
                   trailing: Wrap(
                     spacing: 4,
                     children: [
@@ -811,6 +884,21 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         ],
       ),
     );
+  }
+
+  ImageProvider<Object>? _imageProviderFromString(String? value) {
+    final raw = (value ?? '').trim();
+    if (raw.isEmpty) return null;
+    if (raw.startsWith('data:image/')) {
+      final commaIdx = raw.indexOf(',');
+      if (commaIdx <= 0 || commaIdx + 1 >= raw.length) return null;
+      try {
+        return MemoryImage(base64Decode(raw.substring(commaIdx + 1)));
+      } catch (_) {
+        return null;
+      }
+    }
+    return NetworkImage(raw);
   }
 }
 

@@ -92,18 +92,34 @@ class _B2bScreenState extends State<B2bScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(l.b2bTitle)),
+      appBar: AppBar(title: const Text('🏢 Taxi Pro Corporate')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          TextField(
-            controller: _secretController,
-            obscureText: true,
-            decoration: InputDecoration(labelText: l.companyCode),
-          ),
-          FilledButton(
-            onPressed: _busy ? null : _login,
-            child: Text(l.verifyCompanyCode),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '💼 بوابة الشركات والنزل',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _secretController,
+                    obscureText: true,
+                    decoration: InputDecoration(labelText: l.companyCode),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton(
+                    onPressed: _busy ? null : _login,
+                    child: Text(l.verifyCompanyCode),
+                  ),
+                ],
+              ),
+            ),
           ),
           if (_ok)
             Padding(
@@ -111,42 +127,72 @@ class _B2bScreenState extends State<B2bScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l.b2bConnectedStub),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _guestController,
-                    decoration: InputDecoration(labelText: l.ridePickupLabel),
-                  ),
-                  TextField(
-                    controller: _roomController,
-                    decoration:
-                        InputDecoration(labelText: l.rideDestinationLabel),
-                  ),
-                  const SizedBox(height: 8),
-                  InputDecorator(
-                    decoration: InputDecoration(labelText: l.route),
-                    child: DropdownButton<String>(
-                      value: _routeKey,
-                      isExpanded: true,
-                      underline: const SizedBox.shrink(),
-                      items: _fares.keys
-                          .map(
-                              (k) => DropdownMenuItem(value: k, child: Text(k)))
-                          .toList(),
-                      onChanged: (v) => setState(() => _routeKey = v),
+                  Card(
+                    color: Colors.green.shade50,
+                    child: ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.verified_user, color: Colors.green),
+                      title: Text(l.b2bConnectedStub),
+                      subtitle: const Text('✅ Connected to monthly billing workflow'),
                     ),
                   ),
-                  if (_routeKey != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        '${l.fareDt((_fares[_routeKey] ?? 0).toStringAsFixed(2))} • 5%',
+                  const SizedBox(height: 12),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '🚀 طلب سيارة على حساب الشركة',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _guestController,
+                            decoration: InputDecoration(labelText: l.ridePickupLabel),
+                          ),
+                          TextField(
+                            controller: _roomController,
+                            decoration:
+                                InputDecoration(labelText: l.rideDestinationLabel),
+                          ),
+                          const SizedBox(height: 8),
+                          InputDecorator(
+                            decoration: InputDecoration(labelText: l.route),
+                            child: DropdownButton<String>(
+                              value: _routeKey,
+                              isExpanded: true,
+                              underline: const SizedBox.shrink(),
+                              items: _fares.keys
+                                  .map((k) => DropdownMenuItem(value: k, child: Text(k)))
+                                  .toList(),
+                              onChanged: (v) => setState(() => _routeKey = v),
+                            ),
+                          ),
+                          if (_routeKey != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                '${l.fareDt((_fares[_routeKey] ?? 0).toStringAsFixed(2))} • 5%',
+                              ),
+                            ),
+                          const SizedBox(height: 8),
+                          FilledButton(
+                            onPressed: _busy ? null : _bookGuest,
+                            child: Text(l.requestRideButton),
+                          ),
+                        ],
                       ),
                     ),
+                  ),
                   const SizedBox(height: 8),
-                  FilledButton(
-                    onPressed: _busy ? null : _bookGuest,
-                    child: Text(l.requestRideButton),
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.bar_chart),
+                      title: const Text('📊 استهلاك الشهر الحالي'),
+                      subtitle: const Text('المبلغ المستحق (DT): 450.000'),
+                    ),
                   ),
                 ],
               ),

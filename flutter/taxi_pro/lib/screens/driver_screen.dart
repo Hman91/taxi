@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 
 import '../api/models.dart';
 import '../l10n/app_localizations.dart';
@@ -450,9 +451,15 @@ class _DriverScreenState extends State<DriverScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final trackedRides = _rides
+        .where((r) =>
+            r.status == 'pending' ||
+            (r.status == 'accepted' && r.driverId != null) ||
+            r.status == 'ongoing')
+        .toList();
     return Scaffold(
       appBar: AppBar(
-        title: Text(l.driverTitle),
+        title: const Text('🚕 Driver Mission Control'),
         actions: [
           if (_token != null)
             IconButton(
@@ -487,79 +494,130 @@ class _DriverScreenState extends State<DriverScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          TextField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            decoration: InputDecoration(labelText: l.emailLabel),
-          ),
-          TextField(
-            controller: _pinController,
-            obscureText: true,
-            decoration: InputDecoration(labelText: l.passwordLabel),
-          ),
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: _busy ? null : _login,
-            child: Text(l.login),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '📡 بوابة السائق',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(labelText: l.emailLabel),
+                  ),
+                  TextField(
+                    controller: _pinController,
+                    obscureText: true,
+                    decoration: InputDecoration(labelText: l.passwordLabel),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton(
+                    onPressed: _busy ? null : _login,
+                    child: Text(l.login),
+                  ),
+                ],
+              ),
+            ),
           ),
           if (_token != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                '${l.sessionActive}${_driverName == null ? '' : ' — $_driverName'}'
-                ' | Wallet: ${_walletBalance.toStringAsFixed(3)} DT',
-                style: TextStyle(color: Colors.green.shade800),
+            Card(
+              color: Colors.green.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Text(
+                  '${l.sessionActive}${_driverName == null ? '' : ' — $_driverName'}'
+                  ' | Wallet: ${_walletBalance.toStringAsFixed(3)} DT',
+                  style: TextStyle(color: Colors.green.shade900),
+                ),
               ),
             ),
           if (_token != null && (_carModel != null || _carColor != null)) ...[
             const SizedBox(height: 6),
-            Text(
-              'Car: ${_carModel ?? '-'} | Color: ${_carColor ?? '-'}',
-              style: const TextStyle(fontSize: 12),
+            Card(
+              child: ListTile(
+                dense: true,
+                leading: const Icon(Icons.directions_car),
+                title: const Text('Vehicle identity'),
+                subtitle: Text('Car: ${_carModel ?? '-'} | Color: ${_carColor ?? '-'}'),
+              ),
             ),
           ],
           if (_token != null && (_photoUrl?.isNotEmpty ?? false)) ...[
             const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                _photoUrl!,
-                height: 90,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-              ),
-            ),
+            Builder(builder: (context) {
+              final provider = _imageProviderFromString(_photoUrl);
+              if (provider == null) return const SizedBox.shrink();
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image(
+                  image: provider,
+                  height: 90,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              );
+            }),
           ],
           if (_token != null) ...[
-            const Divider(height: 32),
-            InputDecorator(
-              decoration: InputDecoration(labelText: l.ridePickupLabel),
-              child: DropdownButton<String>(
-                value: _location.isEmpty ? null : _location,
-                isExpanded: true,
-                underline: const SizedBox.shrink(),
-                items: _locations
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (v) async {
-                  if (v == null) return;
-                  setState(() => _location = v);
-                  await _pushDriverLocation();
-                },
+            const SizedBox(height: 8),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '📍 رادار الرحلات',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    InputDecorator(
+                      decoration: InputDecoration(labelText: l.ridePickupLabel),
+                      child: DropdownButton<String>(
+                        value: _location.isEmpty ? null : _location,
+                        isExpanded: true,
+                        underline: const SizedBox.shrink(),
+                        items: _locations
+                            .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                            .toList(),
+                        onChanged: (v) async {
+                          if (v == null) return;
+                          setState(() => _location = v);
+                          await _pushDriverLocation();
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    FilledButton.tonal(
+                      onPressed: _busy ? null : _refreshRides,
+                      child: Text(l.adminLoadRidesBtn),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Chip(
+                          avatar: const Icon(Icons.list_alt, size: 16),
+                          label: Text('Open requests: ${trackedRides.length}'),
+                        ),
+                        Chip(
+                          avatar: const Icon(Icons.notifications_active, size: 16),
+                          label: Text('Unread alerts: $_unreadCount'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 8),
-            FilledButton.tonal(
-              onPressed: _busy ? null : _refreshRides,
-              child: Text(l.adminLoadRidesBtn),
-            ),
-            const SizedBox(height: 8),
-            ..._rides
-                .where((r) =>
-                    r.status == 'pending' ||
-                    (r.status == 'accepted' && r.driverId != null) ||
-                    r.status == 'ongoing')
-                .map(
+            ...trackedRides.map(
                   (r) => Card(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
@@ -626,5 +684,20 @@ class _DriverScreenState extends State<DriverScreen> {
       }
     }
     return starts.toList()..sort();
+  }
+
+  ImageProvider<Object>? _imageProviderFromString(String? value) {
+    final raw = (value ?? '').trim();
+    if (raw.isEmpty) return null;
+    if (raw.startsWith('data:image/')) {
+      final commaIdx = raw.indexOf(',');
+      if (commaIdx <= 0 || commaIdx + 1 >= raw.length) return null;
+      try {
+        return MemoryImage(base64Decode(raw.substring(commaIdx + 1)));
+      } catch (_) {
+        return null;
+      }
+    }
+    return NetworkImage(raw);
   }
 }

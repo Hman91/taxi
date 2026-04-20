@@ -143,7 +143,7 @@ class _OwnerScreenState extends State<OwnerScreen> {
     final l = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(l.ownerTitle),
+        title: const Text('👑 HQ Control Center'),
         actions: [
           if (_token != null)
             IconButton(
@@ -155,71 +155,127 @@ class _OwnerScreenState extends State<OwnerScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          TextField(
-            controller: _secretController,
-            obscureText: true,
-            decoration: InputDecoration(labelText: l.ownerPassword),
-          ),
-          FilledButton(
-            onPressed: _busy ? null : _login,
-            child: Text(l.loginLoadDashboard),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '💰 مركز القيادة والتحكم (HQ)',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _secretController,
+                    obscureText: true,
+                    decoration: InputDecoration(labelText: l.ownerPassword),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton(
+                    onPressed: _busy ? null : _login,
+                    child: Text(l.loginLoadDashboard),
+                  ),
+                ],
+              ),
+            ),
           ),
           if (_metrics != null) ...[
             const SizedBox(height: 16),
-            Text(l.commissionLabel(_metrics!['total_commission'].toString())),
-            Text(l.tripsCount(_metrics!['trip_count'].toString())),
-            Text(l.avgRatingLabel(
-              _metrics!['rating_average'].toString(),
-              _metrics!['rating_count'].toString(),
-            )),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                Chip(
+                  avatar: const Icon(Icons.payments, size: 16),
+                  label: Text(
+                    'Profit: ${_metrics!['total_commission']} DT',
+                  ),
+                ),
+                Chip(
+                  avatar: const Icon(Icons.route, size: 16),
+                  label: Text('Trips: ${_metrics!['trip_count']}'),
+                ),
+                Chip(
+                  avatar: const Icon(Icons.star, size: 16),
+                  label: Text(
+                    '${_metrics!['rating_average']} ⭐ (${_metrics!['rating_count']})',
+                  ),
+                ),
+              ],
+            ),
           ],
           const Divider(),
-          Text(l.tripsHeading,
-              style: const TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            '📑 الخزنة السحابية (سجل الرحلات)',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           if (_trips.isEmpty) Text(l.noTripsYet),
           ..._trips.map(
-            (t) => ListTile(
-              dense: true,
-              title: Text('${t['route']} — ${t['fare']} DT'),
-              subtitle: Text(l.tripListSubtitle(
-                t['date'] as String,
-                t['commission'].toString(),
-              )),
+            (t) => Card(
+              child: ListTile(
+                dense: true,
+                leading: const Icon(Icons.receipt_long),
+                title: Text('${t['route']} — ${t['fare']} DT'),
+                subtitle: Text(l.tripListSubtitle(
+                  t['date'] as String,
+                  t['commission'].toString(),
+                )),
+              ),
             ),
           ),
           if (_token != null) ...[
             const Divider(),
-            Text(l.adminOversightHeading,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              '🛡️ Admin Oversight',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             FilledButton.tonal(
               onPressed: _busy ? null : _refreshAll,
               child: Text(l.adminLoadOwnerMetricsBtn),
             ),
             if (_adminMetrics != null) ...[
               const SizedBox(height: 8),
-              Text(l.commissionLabel(
-                  _adminMetrics!['total_commission'].toString())),
-              Text(l.tripsCount(_adminMetrics!['trip_count'].toString())),
-              Text(l.avgRatingLabel(
-                _adminMetrics!['rating_average'].toString(),
-                _adminMetrics!['rating_count'].toString(),
-              )),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  Chip(
+                    avatar: const Icon(Icons.payments, size: 16),
+                    label: Text(
+                      'Commission: ${_adminMetrics!['total_commission']} DT',
+                    ),
+                  ),
+                  Chip(
+                    avatar: const Icon(Icons.route, size: 16),
+                    label: Text('Trips: ${_adminMetrics!['trip_count']}'),
+                  ),
+                  Chip(
+                    avatar: const Icon(Icons.star, size: 16),
+                    label: Text(
+                      '${_adminMetrics!['rating_average']} ⭐ (${_adminMetrics!['rating_count']})',
+                    ),
+                  ),
+                ],
+              ),
             ],
             const Divider(),
-            Text(l.adminRidesHeading,
+            Text('🎧 ${l.adminRidesHeading}',
                 style: const TextStyle(fontWeight: FontWeight.w600)),
             if (_adminRides.isEmpty) Text(l.adminNoRidesLoaded),
             ..._adminRides.map(
-              (r) => ListTile(
-                dense: true,
-                title: Text(l.adminRideRow(
-                  r['pickup']?.toString() ?? '',
-                  r['destination']?.toString() ?? '',
-                )),
-                subtitle: Text(l.rideStatusFmt(r['status']?.toString() ?? '')),
+              (r) => Card(
+                child: ListTile(
+                  dense: true,
+                  title: Text(l.adminRideRow(
+                    r['pickup']?.toString() ?? '',
+                    r['destination']?.toString() ?? '',
+                  )),
+                  subtitle: Text(l.rideStatusFmt(r['status']?.toString() ?? '')),
+                ),
               ),
             ),
-            Text(l.adminDriversHeading,
+            Text('👥 ${l.adminDriversHeading}',
                 style: const TextStyle(fontWeight: FontWeight.w600)),
             if (_adminDrivers.isEmpty) Text(l.adminNoDriversData),
             ..._adminDrivers.map(

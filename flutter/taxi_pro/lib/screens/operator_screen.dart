@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 
 import '../l10n/app_localizations.dart';
 import '../services/taxi_app_service.dart';
@@ -12,6 +14,7 @@ class OperatorScreen extends StatefulWidget {
 
 class _OperatorScreenState extends State<OperatorScreen> {
   final _api = TaxiAppService();
+  final _imagePicker = ImagePicker();
   final _secretController = TextEditingController(text: 'Operator2026');
   final _newDriverPhone = TextEditingController();
   final _newDriverName = TextEditingController();
@@ -25,6 +28,13 @@ class _OperatorScreenState extends State<OperatorScreen> {
   List<Map<String, dynamic>> _driverPinAccounts = [];
   List<Map<String, dynamic>> _adminB2bBookings = [];
   bool _busy = false;
+
+  int _countByStatus(String status) => _adminRides
+      .where((r) => (r['status'] ?? '').toString().trim() == status)
+      .length;
+
+  double get _tripVaultRevenue => _trips.fold<double>(
+      0.0, (sum, t) => sum + ((t['fare'] as num?)?.toDouble() ?? 0.0));
 
   Future<void> _login() async {
     setState(() {
@@ -159,6 +169,7 @@ class _OperatorScreenState extends State<OperatorScreen> {
     final photoCtrl =
         TextEditingController(text: row['photo_url']?.toString() ?? '');
     bool autoDeduct = row['auto_deduct_enabled'] == true;
+    String selectedPhotoData = photoCtrl.text.trim();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -203,9 +214,54 @@ class _OperatorScreenState extends State<OperatorScreen> {
                   controller: colorCtrl,
                   decoration: const InputDecoration(labelText: 'Car color'),
                 ),
+                const SizedBox(height: 8),
+                if (selectedPhotoData.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image(
+                      image: _imageProviderFromString(selectedPhotoData),
+                      height: 90,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await _imagePicker.pickImage(
+                      source: ImageSource.gallery,
+                      imageQuality: 80,
+                      maxWidth: 1600,
+                    );
+                    if (picked == null) return;
+                    final bytes = await picked.readAsBytes();
+                    final name = picked.name.toLowerCase();
+                    final ext = name.contains('.') ? name.split('.').last : 'jpeg';
+                    final mime = ext == 'png'
+                        ? 'image/png'
+                        : ext == 'webp'
+                            ? 'image/webp'
+                            : 'image/jpeg';
+                    final dataUrl = 'data:$mime;base64,${base64Encode(bytes)}';
+                    setSt(() {
+                      selectedPhotoData = dataUrl;
+                    });
+                  },
+                  icon: const Icon(Icons.photo_library),
+                  label: const Text('Pick image from gallery'),
+                ),
+                if (selectedPhotoData.isNotEmpty &&
+                    selectedPhotoData.startsWith('data:image/'))
+                  TextButton.icon(
+                    onPressed: () => setSt(() => selectedPhotoData = ''),
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Remove picked image'),
+                  ),
                 TextField(
                   controller: photoCtrl,
-                  decoration: const InputDecoration(labelText: 'Photo URL'),
+                  decoration: const InputDecoration(
+                    labelText: 'Photo URL (optional)',
+                  ),
                 ),
               ],
             ),
@@ -249,7 +305,9 @@ class _OperatorScreenState extends State<OperatorScreen> {
           'auto_deduct_enabled': autoDeduct,
           'car_model': modelCtrl.text.trim(),
           'car_color': colorCtrl.text.trim(),
-          'photo_url': photoCtrl.text.trim(),
+          'photo_url': selectedPhotoData.isNotEmpty
+              ? selectedPhotoData
+              : photoCtrl.text.trim(),
         },
       );
       await _refreshAll();
@@ -273,6 +331,18 @@ class _OperatorScreenState extends State<OperatorScreen> {
     _newDriverName.dispose();
     _newDriverPin.dispose();
     super.dispose();
+  }
+
+  ImageProvider _imageProviderFromString(String value) {
+    final trimmed = value.trim();
+    if (trimmed.startsWith('data:image/')) {
+      final commaIdx = trimmed.indexOf(',');
+      if (commaIdx > 0 && commaIdx + 1 < trimmed.length) {
+        final b64 = trimmed.substring(commaIdx + 1);
+        return MemoryImage(base64Decode(b64));
+      }
+    }
+    return NetworkImage(trimmed);
   }
 
   @override
@@ -301,12 +371,12 @@ class _OperatorScreenState extends State<OperatorScreen> {
               length: 4,
               child: Column(
                 children: [
-                  TabBar(
+                  const TabBar(
                     tabs: [
-                      Tab(text: l.adminRidesHeading),
-                      Tab(text: l.adminDriversHeading),
-                      Tab(text: l.roleB2b),
-                      Tab(text: l.tripsHeading),
+                      Tab(text: '🎧 Dispatch'),
+                      Tab(text: '👥 Drivers'),
+                      Tab(text: '🏢 B2B'),
+                      Tab(text: '📑 Trip Vault'),
                     ],
                   ),
                   Expanded(
@@ -315,35 +385,73 @@ class _OperatorScreenState extends State<OperatorScreen> {
                         ListView(
                           padding: const EdgeInsets.all(12),
                           children: [
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      '🎧 مركز النداء والمراقبة (Dispatch)',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      _adminRides.any((r) =>
+                                              (r['status'] ?? '').toString() == 'pending')
+                                          ? 'يوجد طلبات معلقة تحتاج توزيع على السائقين.'
+                                          : '✅ نظام الواتساب متصل. لا توجد حجوزات معلقة.',
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        Chip(
+                                          avatar: const Icon(Icons.hourglass_top, size: 16),
+                                          label: Text('Pending: ${_countByStatus('pending')} طلب'),
+                                        ),
+                                        Chip(
+                                          avatar: const Icon(Icons.local_taxi, size: 16),
+                                          label: Text('Accepted: ${_countByStatus('accepted')}'),
+                                        ),
+                                        Chip(
+                                          avatar: const Icon(Icons.route, size: 16),
+                                          label: Text('Ongoing: ${_countByStatus('ongoing')}'),
+                                        ),
+                                        Chip(
+                                          avatar: const Icon(Icons.check_circle, size: 16),
+                                          label: Text('Completed: ${_countByStatus('completed')}'),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
                             FilledButton.tonal(
                               onPressed: _busy ? null : _refreshAll,
                               child: Text(l.adminLoadRidesBtn),
                             ),
                             if (_adminRides.isEmpty) Text(l.adminNoRidesLoaded),
                             ..._adminRides.map(
-                              (r) => ListTile(
-                                dense: true,
-                                title: Text(l.adminRideRow(
-                                  r['pickup']?.toString() ?? '',
-                                  r['destination']?.toString() ?? '',
-                                )),
-                                subtitle: Text(l.rideStatusFmt(
-                                    r['status']?.toString() ?? '')),
-                              ),
-                            ),
-                          ],
-                        ),
-                        ListView(
-                          padding: const EdgeInsets.all(12),
-                          children: [
-                            if (_adminB2bBookings.isEmpty)
-                              Text(l.noTripsLoaded),
-                            ..._adminB2bBookings.map(
-                              (b) => ListTile(
-                                dense: true,
-                                title: Text(b['route']?.toString() ?? ''),
-                                subtitle: Text(
-                                  '${b['guest_name'] ?? ''} • ${b['room_number'] ?? '-'} • ${b['fare']} DT',
+                              (r) => Card(
+                                child: ListTile(
+                                  dense: true,
+                                  leading: const Icon(Icons.directions_car),
+                                  title: Text(l.adminRideRow(
+                                    r['pickup']?.toString() ?? '',
+                                    r['destination']?.toString() ?? '',
+                                  )),
+                                  subtitle: Text(
+                                    'Status: ${r['status']?.toString() ?? ''}'
+                                    '${(r['driver_name'] ?? '').toString().isEmpty ? '' : ' | Driver: ${r['driver_name']}'}'
+                                    '${(r['created_at'] ?? '').toString().isEmpty ? '' : '\nAt: ${r['created_at']}'}',
+                                  ),
                                 ),
                               ),
                             ),
@@ -355,6 +463,16 @@ class _OperatorScreenState extends State<OperatorScreen> {
                             FilledButton.tonal(
                               onPressed: _busy ? null : _refreshAll,
                               child: Text(l.adminLoadDriversBtn),
+                            ),
+                            const SizedBox(height: 8),
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Text(
+                                  'Drivers online view: ${_adminDrivers.length}',
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ),
                             ),
                             if (_adminDrivers.isEmpty)
                               Text(l.adminNoDriversData),
@@ -400,7 +518,9 @@ class _OperatorScreenState extends State<OperatorScreen> {
                                 subtitle: Text(
                                   'Wallet: ${d['wallet_balance'] ?? 0} DT | '
                                   'Owner %: ${d['owner_commission_rate'] ?? 10} | '
-                                  'B2B %: ${d['b2b_commission_rate'] ?? 5}',
+                                  'B2B %: ${d['b2b_commission_rate'] ?? 5}'
+                                  '${(d['car_model'] ?? '').toString().isEmpty ? '' : '\nCar: ${d['car_model']}'}'
+                                  '${(d['car_color'] ?? '').toString().isEmpty ? '' : ' | Color: ${d['car_color']}'}',
                                 ),
                                 trailing: IconButton(
                                   icon: const Icon(Icons.edit),
@@ -425,6 +545,55 @@ class _OperatorScreenState extends State<OperatorScreen> {
                         ListView(
                           padding: const EdgeInsets.all(12),
                           children: [
+                            FilledButton.tonal(
+                              onPressed: _busy ? null : _refreshAll,
+                              child: const Text('Refresh corporate bookings'),
+                            ),
+                            const SizedBox(height: 8),
+                            if (_adminB2bBookings.isEmpty) Text(l.noTripsLoaded),
+                            ..._adminB2bBookings.map(
+                              (b) => ListTile(
+                                dense: true,
+                                title: Text(b['route']?.toString() ?? ''),
+                                subtitle: Text(
+                                  '${b['guest_name'] ?? ''} • ${b['room_number'] ?? '-'} • ${b['fare']} DT',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        ListView(
+                          padding: const EdgeInsets.all(12),
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.inventory_2_outlined),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  '📑 الخزنة السحابية (سجل الرحلات)',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                Chip(
+                                  avatar: const Icon(Icons.list_alt, size: 16),
+                                  label: Text('Trips: ${_trips.length}'),
+                                ),
+                                Chip(
+                                  avatar: const Icon(Icons.payments, size: 16),
+                                  label: Text(
+                                      'Revenue: ${_tripVaultRevenue.toStringAsFixed(3)} DT'),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
                             if (_trips.isEmpty) Text(l.noTripsLoaded),
                             ..._trips.map(
                               (t) => ListTile(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 
 import '../api/client.dart';
 import '../api/models.dart';
@@ -24,6 +25,9 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   String? _token;
   int? _userId;
   String _selectedLocation = '';
+  String? _driverPhotoUrl;
+  String? _driverCarModel;
+  String? _driverCarColor;
   List<Ride> _rides = [];
   final List<AppNotification> _notifications = [];
   String? _message;
@@ -241,8 +245,18 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     setState(() => _busy = true);
     try {
       final list = await _api.listRides(t);
+      final mine = list.where((r) => _isMine(r)).toList();
+      final ownPhoto =
+          mine.map((r) => r.driverPhotoUrl).firstWhere((v) => (v ?? '').trim().isNotEmpty, orElse: () => null);
+      final ownModel =
+          mine.map((r) => r.driverCarModel).firstWhere((v) => (v ?? '').trim().isNotEmpty, orElse: () => null);
+      final ownColor =
+          mine.map((r) => r.driverCarColor).firstWhere((v) => (v ?? '').trim().isNotEmpty, orElse: () => null);
       setState(() {
         _rides = list;
+        _driverPhotoUrl = ownPhoto ?? _driverPhotoUrl;
+        _driverCarModel = ownModel ?? _driverCarModel;
+        _driverCarColor = ownColor ?? _driverCarColor;
         _message = null;
       });
     } catch (e) {
@@ -348,6 +362,9 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     setState(() {
       _token = null;
       _userId = null;
+      _driverPhotoUrl = null;
+      _driverCarModel = null;
+      _driverCarColor = null;
       _rides = [];
       _notifications.clear();
       _message = null;
@@ -474,6 +491,34 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
                 onPressed: _busy ? null : _register,
                 child: Text(l.registerDriverAccount)),
           ] else ...[
+            if ((_driverPhotoUrl ?? '').trim().isNotEmpty ||
+                (_driverCarModel ?? '').trim().isNotEmpty ||
+                (_driverCarColor ?? '').trim().isNotEmpty)
+              Card(
+                child: ListTile(
+                  leading: Builder(
+                    builder: (context) {
+                      final provider = _imageProviderFromString(_driverPhotoUrl);
+                      if (provider == null) return const Icon(Icons.directions_car);
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image(
+                          image: provider,
+                          width: 52,
+                          height: 52,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(Icons.directions_car),
+                        ),
+                      );
+                    },
+                  ),
+                  title: const Text('My vehicle'),
+                  subtitle: Text(
+                    'Type: ${(_driverCarModel ?? '').trim().isEmpty ? '-' : _driverCarModel} | '
+                    'Color: ${(_driverCarColor ?? '').trim().isEmpty ? '-' : _driverCarColor}',
+                  ),
+                ),
+              ),
             DropdownButtonFormField<String>(
               value: _selectedLocation.isEmpty ? null : _selectedLocation,
               decoration: InputDecoration(labelText: l.ridePickupLabel),
@@ -539,5 +584,20 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
         ],
       ),
     );
+  }
+
+  ImageProvider<Object>? _imageProviderFromString(String? value) {
+    final raw = (value ?? '').trim();
+    if (raw.isEmpty) return null;
+    if (raw.startsWith('data:image/')) {
+      final commaIdx = raw.indexOf(',');
+      if (commaIdx <= 0 || commaIdx + 1 >= raw.length) return null;
+      try {
+        return MemoryImage(base64Decode(raw.substring(commaIdx + 1)));
+      } catch (_) {
+        return null;
+      }
+    }
+    return NetworkImage(raw);
   }
 }
