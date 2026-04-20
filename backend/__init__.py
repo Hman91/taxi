@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 import logging
 import os
 import time
 
-from flask import Flask, g, request
+from flask import Flask, Response, g, jsonify, request
 from flask_cors import CORS
 
 from .config import Config
@@ -46,6 +47,38 @@ def create_app() -> Flask:
     app.register_blueprint(rides_bp)
     app.register_blueprint(chat_bp)
     app.register_blueprint(users_bp)
+
+    @app.get("/")
+    def _root() -> Any:
+        """Browsers opening http://host:port/ hit this; API lives under /api/."""
+        if request.accept_mimetypes.best_match(
+            ["application/json", "text/html"]
+        ) == "application/json":
+            return (
+                jsonify(
+                    {
+                        "service": "taxi-pro-api",
+                        "message": "REST API; JSON routes are under /api/.",
+                        "health": "/api/health",
+                    }
+                ),
+                200,
+            )
+        html = (
+            "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+            "<title>Taxi Pro API</title></head><body>"
+            "<h1>Taxi Pro API</h1>"
+            "<p>This process serves the <strong>REST API</strong> and Socket.IO. "
+            "There is no web app at the site root.</p>"
+            "<ul>"
+            "<li><a href='/api/health'>GET /api/health</a> — quick check</li>"
+            "</ul>"
+            "<p>For the Flutter client, set <code>API_BASE_URL</code> to this origin "
+            "(for example <code>http://127.0.0.1:5000</code>) and open the app from "
+            "<code>flutter run</code>, not by visiting this URL for the UI.</p>"
+            "</body></html>"
+        )
+        return Response(html, mimetype="text/html; charset=utf-8")
 
     @app.before_request
     def _request_timer_start() -> None:

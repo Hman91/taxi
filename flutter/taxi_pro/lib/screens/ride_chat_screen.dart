@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
@@ -29,11 +31,16 @@ class _RideChatScreenState extends State<RideChatScreen> {
   final _textCtrl = TextEditingController();
   final _scroll = ScrollController();
   final _seenIds = <int>{};
+  Timer? _pollTimer;
+  String _lastSyncedIdsSig = '';
 
   List<ChatMessage> _messages = [];
   String? _error;
   bool _loading = true;
   bool _sending = false;
+
+  String _idsSignature(List<ChatMessage> list) =>
+      list.map((m) => m.id).join(',');
 
   @override
   void initState() {
@@ -47,25 +54,30 @@ class _RideChatScreenState extends State<RideChatScreen> {
       _error = null;
     });
     try {
-      final list = await _repo.loadMessages(
-        token: widget.token,
-        conversationId: widget.conversationId,
-      );
-      for (final m in list) {
-        _seenIds.add(m.id);
-      }
+      await _loadMessagesFromServer();
       if (!mounted) return;
-      setState(() {
-        _messages = list;
-        _loading = false;
-      });
+      setState(() => _loading = false);
       _repo.socket.connect(
         widget.token,
         onReceiveMessage: _onIncoming,
         onRideStatus: _onRideStatus,
-        onError: (_) {},
+        onError: (data) {
+          if (!mounted) return;
+          final code = data['code']?.toString();
+          if (code != null && code.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Chat: $code')),
+            );
+          }
+        },
       );
       _repo.socket.joinConversation(widget.conversationId);
+      _lastSyncedIdsSig = _idsSignature(_messages);
+      _pollTimer?.cancel();
+      _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+        if (!mounted || _loading) return;
+        unawaited(_syncMessagesFromServerIfChanged());
+      });
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEnd());
     } catch (e) {
       if (!mounted) return;
@@ -76,13 +88,53 @@ class _RideChatScreenState extends State<RideChatScreen> {
     }
   }
 
-  void _onIncoming(Map<String, dynamic> data) {
-    final m = ChatMessage.fromJson(data);
-    if (_seenIds.contains(m.id)) return;
-    _seenIds.add(m.id);
+  Future<void> _loadMessagesFromServer() async {
+    final list = await _repo.loadMessages(
+      token: widget.token,
+      conversationId: widget.conversationId,
+    );
     if (!mounted) return;
-    setState(() => _messages = [..._messages, m]);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEnd());
+    _seenIds
+      ..clear()
+      ..addAll(list.map((m) => m.id));
+    _lastSyncedIdsSig = _idsSignature(list);
+    setState(() => _messages = list);
+  }
+
+  /// Picks up lines missed when Socket.IO hits the wrong client connection (e.g. two
+  /// sockets for the same user: driver shell + chat).
+  Future<void> _syncMessagesFromServerIfChanged() async {
+    try {
+      final list = await _repo.loadMessages(
+        token: widget.token,
+        conversationId: widget.conversationId,
+      );
+      if (!mounted) return;
+      final sig = _idsSignature(list);
+      if (sig == _lastSyncedIdsSig) return;
+      _lastSyncedIdsSig = sig;
+      _seenIds
+        ..clear()
+        ..addAll(list.map((m) => m.id));
+      setState(() => _messages = list);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEnd());
+    } catch (_) {
+      // Ignore transient network errors during background poll.
+    }
+  }
+
+  void _onIncoming(Map<String, dynamic> data) {
+    try {
+      final m = ChatMessage.fromJson(data);
+      if (_seenIds.contains(m.id)) return;
+      _seenIds.add(m.id);
+      if (!mounted) return;
+      setState(() => _messages = [..._messages, m]);
+      _lastSyncedIdsSig = _idsSignature(_messages);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEnd());
+    } catch (_) {
+      // Malformed socket payload; rely on REST refresh after send or reopen.
+    }
   }
 
   void _onRideStatus(Map<String, dynamic> data) {
@@ -125,8 +177,25 @@ class _RideChatScreenState extends State<RideChatScreen> {
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     try {
-      _repo.socket.sendMessage(conversationId: widget.conversationId, text: text);
+      // REST send is reliable on Web; Socket.IO remains for inbound pushes.
+      final m = await _api.postConversationMessage(
+        token: widget.token,
+        conversationId: widget.conversationId,
+        text: text,
+      );
       _textCtrl.clear();
+      if (!mounted) return;
+      if (!_seenIds.contains(m.id)) {
+        _seenIds.add(m.id);
+        setState(() => _messages = [..._messages, m]);
+        _lastSyncedIdsSig = _idsSignature(_messages);
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEnd());
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -134,6 +203,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     _repo.socket.leaveConversation(widget.conversationId);
     _repo.socket.disconnect();
     _textCtrl.dispose();

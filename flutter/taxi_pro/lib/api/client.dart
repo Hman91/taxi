@@ -286,6 +286,26 @@ class TaxiApiClient {
         .toList();
   }
 
+  Future<ChatMessage> postConversationMessage({
+    required String token,
+    required int conversationId,
+    required String text,
+  }) async {
+    final r = await _http.post(
+      _u('/api/conversations/$conversationId/messages'),
+      headers: _jsonHeaders(bearer: token),
+      body: jsonEncode({'text': text}),
+    );
+    if (r.statusCode != 201) {
+      throw TaxiApiException(
+        _errorCodeFromBody(r.body) ?? r.body,
+        r.statusCode,
+      );
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return ChatMessage.fromJson(body['message'] as Map<String, dynamic>);
+  }
+
   Future<void> patchPreferredLanguage({
     required String token,
     required String preferredLanguage,

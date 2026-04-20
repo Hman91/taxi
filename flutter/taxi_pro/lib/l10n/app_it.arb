@@ -91,5 +91,16 @@
   "chatScreenTitle": "Chat corsa",
   "messageFieldHint": "Scrivi un messaggio",
   "sendChatMessage": "Invia",
+  "passengerAirportCardTitle": "Transfer aeroportuali",
+  "passengerLoginDescription": "Accedi con email e password, o continua con Google sui dispositivi supportati.",
+  "continueWithGoogle": "Continua con Google",
+  "signedInWithGoogle": "Accesso con Google effettuato",
+  "signedInWithPassword": "Accesso effettuato",
+  "fillEmailPassword": "Inserisci email e password.",
+  "registerSuccessMessage": "Account creato. Ora puoi accedere.",
+  "googleUnavailableOnThisDevice": "Accesso Google non disponibile su questa piattaforma. Usa email e password.",
+  "orDivider": "oppure",
+  "confirmPasswordLabel": "Conferma password",
+  "passwordsDoNotMatch": "Le password non coincidono.",
   "accountDisabledContactAdmin": "Account disabilitato. Contatta un amministratore."
 }

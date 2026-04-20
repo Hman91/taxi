@@ -238,8 +238,6 @@ def register() -> Tuple[Any, int]:
     email = (data.get("email") or "").strip()
     password = data.get("password") or ""
     role = (data.get("role") or "user").strip().lower()
-    if role == "user":
-        return jsonify({"error": "use_google_login_required"}), 403
     user, err = users_service.register(email, password, role)
     if err:
         code = 409 if err == "email_taken" else 400
@@ -257,8 +255,6 @@ def login_app() -> Tuple[Any, int]:
     if err:
         code = 403 if err == "account_disabled" else 401
         return jsonify({"error": err}), code
-    if user["role"] == "user":
-        return jsonify({"error": "use_google_login_required"}), 403
     token = issue_token(user["role"], user_id=int(user["id"]))
     return (
         jsonify(

@@ -91,5 +91,16 @@
   "chatScreenTitle": "Чат поездки",
   "messageFieldHint": "Сообщение",
   "sendChatMessage": "Отправить",
+  "passengerAirportCardTitle": "Трансферы в аэропорт",
+  "passengerLoginDescription": "Войдите по электронной почте и паролю или продолжите через Google на поддерживаемых устройствах.",
+  "continueWithGoogle": "Продолжить с Google",
+  "signedInWithGoogle": "Вход через Google выполнен",
+  "signedInWithPassword": "Вход выполнен",
+  "fillEmailPassword": "Введите электронную почту и пароль.",
+  "registerSuccessMessage": "Аккаунт создан. Теперь можно войти.",
+  "googleUnavailableOnThisDevice": "Вход через Google недоступен на этой платформе. Используйте почту и пароль.",
+  "orDivider": "или",
+  "confirmPasswordLabel": "Подтвердите пароль",
+  "passwordsDoNotMatch": "Пароли не совпадают.",
   "accountDisabledContactAdmin": "Аккаунт отключён. Обратитесь к администратору."
 }

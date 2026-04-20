@@ -306,5 +306,38 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sendChatMessage => '发送';
 
   @override
+  String get passengerAirportCardTitle => '机场接送';
+
+  @override
+  String get passengerLoginDescription => '使用电子邮箱和密码登录，或在支持的设备上使用 Google 继续。';
+
+  @override
+  String get continueWithGoogle => '使用 Google 继续';
+
+  @override
+  String get signedInWithGoogle => '已使用 Google 登录';
+
+  @override
+  String get signedInWithPassword => '已登录';
+
+  @override
+  String get fillEmailPassword => '请输入邮箱和密码。';
+
+  @override
+  String get registerSuccessMessage => '账号已创建，现在可以登录。';
+
+  @override
+  String get googleUnavailableOnThisDevice => '此平台不支持 Google 登录，请使用邮箱和密码。';
+
+  @override
+  String get orDivider => '或';
+
+  @override
+  String get confirmPasswordLabel => '确认密码';
+
+  @override
+  String get passwordsDoNotMatch => '两次输入的密码不一致。';
+
+  @override
   String get accountDisabledContactAdmin => '账号已停用，请联系管理员。';
 }

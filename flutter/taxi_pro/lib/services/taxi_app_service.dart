@@ -128,6 +128,17 @@ class TaxiAppService {
         limit: limit,
       );
 
+  Future<ChatMessage> postConversationMessage({
+    required String token,
+    required int conversationId,
+    required String text,
+  }) =>
+      _client.postConversationMessage(
+        token: token,
+        conversationId: conversationId,
+        text: text,
+      );
+
   Future<void> patchPreferredLanguage({
     required String token,
     required String preferredLanguage,

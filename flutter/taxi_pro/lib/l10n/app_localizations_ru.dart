@@ -308,6 +308,41 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sendChatMessage => 'Отправить';
 
   @override
+  String get passengerAirportCardTitle => 'Трансферы в аэропорт';
+
+  @override
+  String get passengerLoginDescription =>
+      'Войдите по электронной почте и паролю или продолжите через Google на поддерживаемых устройствах.';
+
+  @override
+  String get continueWithGoogle => 'Продолжить с Google';
+
+  @override
+  String get signedInWithGoogle => 'Вход через Google выполнен';
+
+  @override
+  String get signedInWithPassword => 'Вход выполнен';
+
+  @override
+  String get fillEmailPassword => 'Введите электронную почту и пароль.';
+
+  @override
+  String get registerSuccessMessage => 'Аккаунт создан. Теперь можно войти.';
+
+  @override
+  String get googleUnavailableOnThisDevice =>
+      'Вход через Google недоступен на этой платформе. Используйте почту и пароль.';
+
+  @override
+  String get orDivider => 'или';
+
+  @override
+  String get confirmPasswordLabel => 'Подтвердите пароль';
+
+  @override
+  String get passwordsDoNotMatch => 'Пароли не совпадают.';
+
+  @override
   String get accountDisabledContactAdmin =>
       'Аккаунт отключён. Обратитесь к администратору.';
 }

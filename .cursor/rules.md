@@ -71,3 +71,4 @@
 * Add comments for important logic
 * All newly added texts must be available in these languages:
   [Arabic, French, English, German, Spanish, Chinese, Russian, Italian]
+* Allways restart active flutter uis after changes in the uis

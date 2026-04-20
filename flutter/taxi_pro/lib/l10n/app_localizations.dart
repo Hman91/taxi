@@ -656,6 +656,72 @@ abstract class AppLocalizations {
   /// **'Send'**
   String get sendChatMessage;
 
+  /// No description provided for @passengerAirportCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Airport transfers'**
+  String get passengerAirportCardTitle;
+
+  /// No description provided for @passengerLoginDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with your email and password, or continue with Google on supported devices.'**
+  String get passengerLoginDescription;
+
+  /// No description provided for @continueWithGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get continueWithGoogle;
+
+  /// No description provided for @signedInWithGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in with Google'**
+  String get signedInWithGoogle;
+
+  /// No description provided for @signedInWithPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in'**
+  String get signedInWithPassword;
+
+  /// No description provided for @fillEmailPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter email and password.'**
+  String get fillEmailPassword;
+
+  /// No description provided for @registerSuccessMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Account created. You can sign in now.'**
+  String get registerSuccessMessage;
+
+  /// No description provided for @googleUnavailableOnThisDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Google sign-in is not available on this platform. Use email and password.'**
+  String get googleUnavailableOnThisDevice;
+
+  /// No description provided for @orDivider.
+  ///
+  /// In en, this message translates to:
+  /// **'or'**
+  String get orDivider;
+
+  /// No description provided for @confirmPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get confirmPasswordLabel;
+
+  /// No description provided for @passwordsDoNotMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match.'**
+  String get passwordsDoNotMatch;
+
   /// No description provided for @accountDisabledContactAdmin.
   ///
   /// In en, this message translates to:

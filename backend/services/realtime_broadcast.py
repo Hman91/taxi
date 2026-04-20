@@ -11,6 +11,16 @@ def _emit_to_user(user_id: int, payload: Dict[str, Any]) -> None:
     socketio.emit("ride_status", payload, room=f"user:{int(user_id)}")
 
 
+def emit_chat_receive_to_participants(conversation_id: int, msg: Dict[str, Any]) -> None:
+    """Deliver `receive_message` / `message` to each participant (same as Socket.IO send path)."""
+    from ..services import chat_service, translation_service
+
+    for uid in chat_service.participant_user_ids_for_conversation(conversation_id):
+        personal = translation_service.enrich_message_for_viewer(msg, int(uid))
+        socketio.emit("receive_message", personal, room=f"user:{int(uid)}")
+        socketio.emit("message", personal, room=f"user:{int(uid)}")
+
+
 def broadcast_ride_update(
     ride: Dict[str, Any],
     *,

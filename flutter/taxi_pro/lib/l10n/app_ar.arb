@@ -91,5 +91,16 @@
   "chatScreenTitle": "محادثة الرحلة",
   "messageFieldHint": "اكتب رسالة",
   "sendChatMessage": "إرسال",
+  "passengerAirportCardTitle": "رحلات المطارات",
+  "passengerLoginDescription": "سجّل الدخول بالبريد وكلمة المرور، أو تابع عبر Google على الأجهزة المدعومة.",
+  "continueWithGoogle": "المتابعة مع Google",
+  "signedInWithGoogle": "تم تسجيل الدخول عبر Google",
+  "signedInWithPassword": "تم تسجيل الدخول",
+  "fillEmailPassword": "أدخل البريد الإلكتروني وكلمة المرور.",
+  "registerSuccessMessage": "تم إنشاء الحساب. يمكنك تسجيل الدخول الآن.",
+  "googleUnavailableOnThisDevice": "تسجيل الدخول عبر Google غير متاح على هذا النظام. استخدم البريد وكلمة المرور.",
+  "orDivider": "أو",
+  "confirmPasswordLabel": "تأكيد كلمة المرور",
+  "passwordsDoNotMatch": "كلمتا المرور غير متطابقتين.",
   "accountDisabledContactAdmin": "الحساب معطّل. تواصل مع المشرف."
 }

@@ -307,6 +307,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendChatMessage => 'Send';
 
   @override
+  String get passengerAirportCardTitle => 'Airport transfers';
+
+  @override
+  String get passengerLoginDescription =>
+      'Sign in with your email and password, or continue with Google on supported devices.';
+
+  @override
+  String get continueWithGoogle => 'Continue with Google';
+
+  @override
+  String get signedInWithGoogle => 'Signed in with Google';
+
+  @override
+  String get signedInWithPassword => 'Signed in';
+
+  @override
+  String get fillEmailPassword => 'Enter email and password.';
+
+  @override
+  String get registerSuccessMessage => 'Account created. You can sign in now.';
+
+  @override
+  String get googleUnavailableOnThisDevice =>
+      'Google sign-in is not available on this platform. Use email and password.';
+
+  @override
+  String get orDivider => 'or';
+
+  @override
+  String get confirmPasswordLabel => 'Confirm password';
+
+  @override
+  String get passwordsDoNotMatch => 'Passwords do not match.';
+
+  @override
   String get accountDisabledContactAdmin =>
       'Account disabled. Contact an administrator.';
 }

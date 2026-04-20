@@ -157,5 +157,16 @@
   "chatScreenTitle": "Ride chat",
   "messageFieldHint": "Type a message",
   "sendChatMessage": "Send",
+  "passengerAirportCardTitle": "Airport transfers",
+  "passengerLoginDescription": "Sign in with your email and password, or continue with Google on supported devices.",
+  "continueWithGoogle": "Continue with Google",
+  "signedInWithGoogle": "Signed in with Google",
+  "signedInWithPassword": "Signed in",
+  "fillEmailPassword": "Enter email and password.",
+  "registerSuccessMessage": "Account created. You can sign in now.",
+  "googleUnavailableOnThisDevice": "Google sign-in is not available on this platform. Use email and password.",
+  "orDivider": "or",
+  "confirmPasswordLabel": "Confirm password",
+  "passwordsDoNotMatch": "Passwords do not match.",
   "accountDisabledContactAdmin": "Account disabled. Contact an administrator."
 }

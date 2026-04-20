@@ -91,5 +91,16 @@
   "chatScreenTitle": "Fahrt-Chat",
   "messageFieldHint": "Nachricht eingeben",
   "sendChatMessage": "Senden",
+  "passengerAirportCardTitle": "Flughafentransfers",
+  "passengerLoginDescription": "Melden Sie sich mit E-Mail und Passwort an, oder fahren Sie mit Google auf unterstützten Geräten fort.",
+  "continueWithGoogle": "Mit Google fortfahren",
+  "signedInWithGoogle": "Mit Google angemeldet",
+  "signedInWithPassword": "Angemeldet",
+  "fillEmailPassword": "E-Mail und Passwort eingeben.",
+  "registerSuccessMessage": "Konto erstellt. Sie können sich jetzt anmelden.",
+  "googleUnavailableOnThisDevice": "Google-Anmeldung auf dieser Plattform nicht verfügbar. Bitte E-Mail und Passwort verwenden.",
+  "orDivider": "oder",
+  "confirmPasswordLabel": "Passwort bestätigen",
+  "passwordsDoNotMatch": "Passwörter stimmen nicht überein.",
   "accountDisabledContactAdmin": "Konto deaktiviert. Wenden Sie sich an einen Administrator."
 }

@@ -7,6 +7,8 @@ from flask import Blueprint, jsonify, request
 
 from .. import db as db_module
 from ..services import chat_service
+from ..services import realtime_broadcast
+from ..services import translation_service
 from .jwt_auth import json_error, require_jwt_with_uid
 
 bp = Blueprint("chat_api", __name__, url_prefix="/api/conversations")
@@ -50,3 +52,30 @@ def conversation_messages(conversation_id: int, **kwargs: Any) -> Tuple[Any, int
         return json_error("chat_not_open", 400)
     assert data is not None
     return jsonify({"messages": data}), 200
+
+
+@bp.post("/<int:conversation_id>/messages")
+@require_jwt_with_uid("user", "driver")
+def post_conversation_message(conversation_id: int, **kwargs: Any) -> Tuple[Any, int]:
+    """Persist a chat line (same rules as Socket.IO `send_message`) and push to Socket.IO."""
+    uid = kwargs["_uid"]
+    bad = _guard_enabled(uid)
+    if bad:
+        return bad
+    data = request.get_json(silent=True) or {}
+    text = data.get("text", "")
+    msg, err = chat_service.save_chat_message(uid, conversation_id, str(text))
+    if err == "empty_message":
+        return json_error("empty_message", 400)
+    if err == "message_too_long":
+        return json_error("message_too_long", 400)
+    if err == "not_found":
+        return json_error("not_found", 404)
+    if err == "forbidden":
+        return json_error("forbidden", 403)
+    if err == "chat_not_open":
+        return json_error("chat_not_open", 400)
+    assert msg is not None
+    realtime_broadcast.emit_chat_receive_to_participants(conversation_id, msg)
+    personal = translation_service.enrich_message_for_viewer(msg, uid)
+    return jsonify({"message": personal}), 201

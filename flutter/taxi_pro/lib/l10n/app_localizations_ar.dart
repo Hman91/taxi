@@ -307,5 +307,41 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sendChatMessage => 'إرسال';
 
   @override
+  String get passengerAirportCardTitle => 'رحلات المطارات';
+
+  @override
+  String get passengerLoginDescription =>
+      'سجّل الدخول بالبريد وكلمة المرور، أو تابع عبر Google على الأجهزة المدعومة.';
+
+  @override
+  String get continueWithGoogle => 'المتابعة مع Google';
+
+  @override
+  String get signedInWithGoogle => 'تم تسجيل الدخول عبر Google';
+
+  @override
+  String get signedInWithPassword => 'تم تسجيل الدخول';
+
+  @override
+  String get fillEmailPassword => 'أدخل البريد الإلكتروني وكلمة المرور.';
+
+  @override
+  String get registerSuccessMessage =>
+      'تم إنشاء الحساب. يمكنك تسجيل الدخول الآن.';
+
+  @override
+  String get googleUnavailableOnThisDevice =>
+      'تسجيل الدخول عبر Google غير متاح على هذا النظام. استخدم البريد وكلمة المرور.';
+
+  @override
+  String get orDivider => 'أو';
+
+  @override
+  String get confirmPasswordLabel => 'تأكيد كلمة المرور';
+
+  @override
+  String get passwordsDoNotMatch => 'كلمتا المرور غير متطابقتين.';
+
+  @override
   String get accountDisabledContactAdmin => 'الحساب معطّل. تواصل مع المشرف.';
 }

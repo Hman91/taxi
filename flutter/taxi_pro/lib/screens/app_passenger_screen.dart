@@ -1,7 +1,8 @@
 import 'dart:async' show StreamSubscription, Timer, unawaited;
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -40,6 +41,13 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   String? _message;
   bool _busy = false;
   bool _backendLoginInFlight = false;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  bool get _googleSignInSupportedPlatform =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
   StreamSubscription<GoogleSignInAccount?>? _googleUserSub;
   Timer? _ridesPollingTimer;
   static const Map<String, _ZoneCoord> _zoneCoords = {
@@ -75,6 +83,8 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     _ridesPollingTimer?.cancel();
     _socket.disconnect();
     _googleUserSub?.cancel();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -286,6 +296,66 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     );
   }
 
+  Future<void> _afterAppLogin(AppLoginResponse r, String successSnack) async {
+    _token = r.accessToken;
+    _userId = r.userId;
+    _connectRealtime();
+    _startRidesPolling();
+    _fares = await _api.getAirportFares();
+    await _detectPassengerLocation();
+    await _refreshRides();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(successSnack)),
+    );
+  }
+
+  Future<void> _loginWithEmailPassword(AppLocalizations l) async {
+    if (_backendLoginInFlight || _token != null) return;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    if (email.isEmpty || password.isEmpty) {
+      setState(() => _message = l.fillEmailPassword);
+      return;
+    }
+    _backendLoginInFlight = true;
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      final r = await _api.loginApp(email: email, password: password);
+      await _afterAppLogin(r, l.signedInWithPassword);
+    } on TaxiAccountDisabledException {
+      if (!mounted) return;
+      setState(() => _message = l.accountDisabledContactAdmin);
+    } catch (e) {
+      setState(() => _message = e.toString());
+    } finally {
+      _backendLoginInFlight = false;
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _openRegisterPassengerDialog(AppLocalizations l) async {
+    final emailOut = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _PassengerRegisterDialog(
+        strings: l,
+        onSubmit: (email, password) => _api.registerAppUser(
+          email: email,
+          password: password,
+          role: 'user',
+        ),
+      ),
+    );
+    if (!mounted || emailOut == null) return;
+    _emailController.text = emailOut;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l.registerSuccessMessage)),
+    );
+  }
+
   /// Interactive Google login for Android/iOS.
   /// Web uses GIS `renderButton` + `onCurrentUserChanged`.
   Future<void> _loginWithGoogle() async {
@@ -307,6 +377,8 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
 
   Future<void> _completeLoginWithGoogleAccount(GoogleSignInAccount account) async {
     if (_backendLoginInFlight || _token != null) return;
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     _backendLoginInFlight = true;
     setState(() {
       _busy = true;
@@ -326,17 +398,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         idToken: hasIdToken ? idToken : null,
         accessToken: hasAccessToken ? accessToken : null,
       );
-      _token = r.accessToken;
-      _userId = r.userId;
-      _connectRealtime();
-      _startRidesPolling();
-      _fares = await _api.getAirportFares();
-      await _detectPassengerLocation();
-      await _refreshRides();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Signed in with Google')),
-      );
+      await _afterAppLogin(r, l10n.signedInWithGoogle);
     } on TaxiAccountDisabledException {
       if (!mounted) return;
       final l = AppLocalizations.of(context)!;
@@ -736,28 +798,86 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '✈️ رحلات المطارات / Airport Transfers',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                    Text(
+                      '✈️ ${l.passengerAirportCardTitle}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Google login is required for passengers.',
+                      l.passengerLoginDescription,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        labelText: l.emailLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      autocorrect: false,
+                      textInputAction: TextInputAction.next,
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _passwordController,
+                      decoration: InputDecoration(
+                        labelText: l.passwordLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      obscureText: true,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => unawaited(_loginWithEmailPassword(l)),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: _busy ? null : () => unawaited(_loginWithEmailPassword(l)),
+                      child: Text(l.signInApp),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _busy
+                          ? null
+                          : () => unawaited(_openRegisterPassengerDialog(l)),
+                      child: Text(l.registerAppAccount),
+                    ),
+                    if (!_googleSignInSupportedPlatform) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        l.googleUnavailableOnThisDevice,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          const Expanded(child: Divider()),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              l.orDivider,
+                              style: Theme.of(context).textTheme.labelMedium,
+                            ),
+                          ),
+                          const Expanded(child: Divider()),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (kIsWeb)
+                        const PassengerGoogleGsiButton()
+                      else
+                        OutlinedButton.icon(
+                          onPressed: _busy ? null : _loginWithGoogle,
+                          icon: const Icon(Icons.login),
+                          label: Text(l.continueWithGoogle),
+                        ),
+                    ],
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 8),
-            if (kIsWeb)
-              const PassengerGoogleGsiButton()
-            else
-              OutlinedButton.icon(
-                onPressed: _busy ? null : _loginWithGoogle,
-                icon: const Icon(Icons.login),
-                label: const Text('Continue with Google'),
-              ),
           ] else ...[
             Card(
               color: Colors.black87,
@@ -899,6 +1019,120 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       }
     }
     return NetworkImage(raw);
+  }
+}
+
+class _PassengerRegisterDialog extends StatefulWidget {
+  const _PassengerRegisterDialog({
+    required this.strings,
+    required this.onSubmit,
+  });
+
+  final AppLocalizations strings;
+  final Future<void> Function(String email, String password) onSubmit;
+
+  @override
+  State<_PassengerRegisterDialog> createState() => _PassengerRegisterDialogState();
+}
+
+class _PassengerRegisterDialogState extends State<_PassengerRegisterDialog> {
+  final TextEditingController _email = TextEditingController();
+  final TextEditingController _password = TextEditingController();
+  final TextEditingController _confirm = TextEditingController();
+  String? _error;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final l = widget.strings;
+    final email = _email.text.trim();
+    final p1 = _password.text;
+    final p2 = _confirm.text;
+    if (email.isEmpty || p1.isEmpty) {
+      setState(() => _error = l.fillEmailPassword);
+      return;
+    }
+    if (p1 != p2) {
+      setState(() => _error = l.passwordsDoNotMatch);
+      return;
+    }
+    setState(() {
+      _error = null;
+      _busy = true;
+    });
+    try {
+      await widget.onSubmit(email, p1);
+      if (!mounted) return;
+      Navigator.of(context).pop(email);
+    } catch (e) {
+      setState(() {
+        _busy = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = widget.strings;
+    return AlertDialog(
+      title: Text(l.registerAppAccount),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _email,
+              decoration: InputDecoration(
+                labelText: l.emailLabel,
+                border: const OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _password,
+              decoration: InputDecoration(
+                labelText: l.passwordLabel,
+                border: const OutlineInputBorder(),
+              ),
+              obscureText: true,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _confirm,
+              decoration: InputDecoration(
+                labelText: l.confirmPasswordLabel,
+                border: const OutlineInputBorder(),
+              ),
+              obscureText: true,
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(_error!, style: const TextStyle(color: Colors.red)),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(),
+          child: Text(l.genericCancel),
+        ),
+        FilledButton(
+          onPressed: _busy ? null : () => unawaited(_submit()),
+          child: Text(l.registerAppAccount),
+        ),
+      ],
+    );
   }
 }
 

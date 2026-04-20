@@ -91,5 +91,16 @@
   "chatScreenTitle": "Chat del viaje",
   "messageFieldHint": "Escriba un mensaje",
   "sendChatMessage": "Enviar",
+  "passengerAirportCardTitle": "Traslados al aeropuerto",
+  "passengerLoginDescription": "Inicia sesión con correo y contraseña, o continúa con Google en dispositivos compatibles.",
+  "continueWithGoogle": "Continuar con Google",
+  "signedInWithGoogle": "Sesión iniciada con Google",
+  "signedInWithPassword": "Sesión iniciada",
+  "fillEmailPassword": "Introduce correo y contraseña.",
+  "registerSuccessMessage": "Cuenta creada. Ya puedes iniciar sesión.",
+  "googleUnavailableOnThisDevice": "El inicio de sesión con Google no está disponible en esta plataforma. Usa correo y contraseña.",
+  "orDivider": "o",
+  "confirmPasswordLabel": "Confirmar contraseña",
+  "passwordsDoNotMatch": "Las contraseñas no coinciden.",
   "accountDisabledContactAdmin": "Cuenta desactivada. Contacte a un administrador."
 }

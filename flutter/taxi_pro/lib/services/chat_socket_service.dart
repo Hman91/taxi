@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 
 import '../config.dart';
@@ -27,9 +28,11 @@ class ChatSocketService {
     _socket = socket_io.io(
       _base,
       socket_io.OptionBuilder()
-          // Flask dev server on Windows is more stable with long-polling transport.
-          // WebSocket upgrade can fail with Werkzeug and break live chat delivery.
-          .setTransports(transports ?? ['polling'])
+          // Web: prefer WebSocket (polling-only often fails in browsers). Desktop: polling first for Werkzeug quirks.
+          .setTransports(
+            transports ??
+                (kIsWeb ? <String>['websocket', 'polling'] : <String>['polling', 'websocket']),
+          )
           .disableAutoConnect()
           .setAuth({'token': token})
           .build(),
@@ -37,10 +40,20 @@ class ChatSocketService {
 
     void mapEvent(dynamic raw, void Function(JsonMap) handler) {
       JsonMap? payload;
-      if (raw is Map) {
-        payload = Map<String, dynamic>.from(raw);
-      } else if (raw is String) {
-        final text = raw.trim();
+      dynamic r = raw;
+      // socket_io_client sometimes passes a List (multi-arg server emit / engine decode).
+      if (r is List) {
+        for (final item in r) {
+          if (item is Map) {
+            r = item;
+            break;
+          }
+        }
+      }
+      if (r is Map) {
+        payload = Map<String, dynamic>.from(r);
+      } else if (r is String) {
+        final text = r.trim();
         if (text.isNotEmpty) {
           try {
             final decoded = jsonDecode(text);

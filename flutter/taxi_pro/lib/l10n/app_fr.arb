@@ -91,5 +91,16 @@
   "chatScreenTitle": "Chat de course",
   "messageFieldHint": "Écrire un message",
   "sendChatMessage": "Envoyer",
+  "passengerAirportCardTitle": "Transferts aéroport",
+  "passengerLoginDescription": "Connectez-vous avec e-mail et mot de passe, ou continuez avec Google sur les appareils pris en charge.",
+  "continueWithGoogle": "Continuer avec Google",
+  "signedInWithGoogle": "Connecté avec Google",
+  "signedInWithPassword": "Connecté",
+  "fillEmailPassword": "Saisissez l'e-mail et le mot de passe.",
+  "registerSuccessMessage": "Compte créé. Vous pouvez vous connecter.",
+  "googleUnavailableOnThisDevice": "La connexion Google n'est pas disponible sur cette plateforme. Utilisez l'e-mail et le mot de passe.",
+  "orDivider": "ou",
+  "confirmPasswordLabel": "Confirmer le mot de passe",
+  "passwordsDoNotMatch": "Les mots de passe ne correspondent pas.",
   "accountDisabledContactAdmin": "Compte désactivé. Contactez un administrateur."
 }

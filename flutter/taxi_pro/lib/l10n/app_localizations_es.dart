@@ -308,6 +308,42 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sendChatMessage => 'Enviar';
 
   @override
+  String get passengerAirportCardTitle => 'Traslados al aeropuerto';
+
+  @override
+  String get passengerLoginDescription =>
+      'Inicia sesión con correo y contraseña, o continúa con Google en dispositivos compatibles.';
+
+  @override
+  String get continueWithGoogle => 'Continuar con Google';
+
+  @override
+  String get signedInWithGoogle => 'Sesión iniciada con Google';
+
+  @override
+  String get signedInWithPassword => 'Sesión iniciada';
+
+  @override
+  String get fillEmailPassword => 'Introduce correo y contraseña.';
+
+  @override
+  String get registerSuccessMessage =>
+      'Cuenta creada. Ya puedes iniciar sesión.';
+
+  @override
+  String get googleUnavailableOnThisDevice =>
+      'El inicio de sesión con Google no está disponible en esta plataforma. Usa correo y contraseña.';
+
+  @override
+  String get orDivider => 'o';
+
+  @override
+  String get confirmPasswordLabel => 'Confirmar contraseña';
+
+  @override
+  String get passwordsDoNotMatch => 'Las contraseñas no coinciden.';
+
+  @override
   String get accountDisabledContactAdmin =>
       'Cuenta desactivada. Contacte a un administrador.';
 }
