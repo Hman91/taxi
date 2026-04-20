@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../app_locale.dart' show AppUiRole, restoreUiRoleLocale;
 import '../l10n/app_localizations.dart';
+import '../l10n/place_localization.dart';
+import '../l10n/ride_status_localization.dart';
 import '../services/taxi_app_service.dart';
+import '../widgets/locale_popup_menu.dart';
 
 class OwnerScreen extends StatefulWidget {
   const OwnerScreen({super.key});
@@ -133,6 +137,15 @@ class _OwnerScreenState extends State<OwnerScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      restoreUiRoleLocale(AppUiRole.owner);
+    });
+  }
+
+  @override
   void dispose() {
     _secretController.dispose();
     super.dispose();
@@ -143,8 +156,9 @@ class _OwnerScreenState extends State<OwnerScreen> {
     final l = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('👑 HQ Control Center'),
+        title: Text(l.ownerAppBarTitle),
         actions: [
+          const LocalePopupMenuButton(uiRole: AppUiRole.owner),
           if (_token != null)
             IconButton(
               onPressed: _busy ? null : _refreshAll,
@@ -161,9 +175,9 @@ class _OwnerScreenState extends State<OwnerScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '💰 مركز القيادة والتحكم (HQ)',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                  Text(
+                    l.ownerHqPortalHeading,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),
                   TextField(
@@ -189,26 +203,35 @@ class _OwnerScreenState extends State<OwnerScreen> {
                 Chip(
                   avatar: const Icon(Icons.payments, size: 16),
                   label: Text(
-                    'Profit: ${_metrics!['total_commission']} DT',
+                    l.ownerProfitChip(
+                      _metrics!['total_commission']?.toString() ?? '0',
+                    ),
                   ),
                 ),
                 Chip(
                   avatar: const Icon(Icons.route, size: 16),
-                  label: Text('Trips: ${_metrics!['trip_count']}'),
+                  label: Text(
+                    l.ownerTripsCountChip(
+                      _metrics!['trip_count']?.toString() ?? '0',
+                    ),
+                  ),
                 ),
                 Chip(
                   avatar: const Icon(Icons.star, size: 16),
                   label: Text(
-                    '${_metrics!['rating_average']} ⭐ (${_metrics!['rating_count']})',
+                    l.ownerRatingChip(
+                      _metrics!['rating_average']?.toString() ?? '0',
+                      _metrics!['rating_count']?.toString() ?? '0',
+                    ),
                   ),
                 ),
               ],
             ),
           ],
           const Divider(),
-          const Text(
-            '📑 الخزنة السحابية (سجل الرحلات)',
-            style: TextStyle(fontWeight: FontWeight.bold),
+          Text(
+            l.ownerVaultHeading,
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           if (_trips.isEmpty) Text(l.noTripsYet),
           ..._trips.map(
@@ -216,7 +239,12 @@ class _OwnerScreenState extends State<OwnerScreen> {
               child: ListTile(
                 dense: true,
                 leading: const Icon(Icons.receipt_long),
-                title: Text('${t['route']} — ${t['fare']} DT'),
+                title: Text(
+                  l.ownerTripRouteFareRow(
+                    t['route']?.toString() ?? '',
+                    t['fare']?.toString() ?? '',
+                  ),
+                ),
                 subtitle: Text(l.tripListSubtitle(
                   t['date'] as String,
                   t['commission'].toString(),
@@ -226,9 +254,9 @@ class _OwnerScreenState extends State<OwnerScreen> {
           ),
           if (_token != null) ...[
             const Divider(),
-            const Text(
-              '🛡️ Admin Oversight',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            Text(
+              l.ownerAdminOversightHeading,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             FilledButton.tonal(
               onPressed: _busy ? null : _refreshAll,
@@ -243,17 +271,26 @@ class _OwnerScreenState extends State<OwnerScreen> {
                   Chip(
                     avatar: const Icon(Icons.payments, size: 16),
                     label: Text(
-                      'Commission: ${_adminMetrics!['total_commission']} DT',
+                      l.ownerCommissionChip(
+                        _adminMetrics!['total_commission']?.toString() ?? '0',
+                      ),
                     ),
                   ),
                   Chip(
                     avatar: const Icon(Icons.route, size: 16),
-                    label: Text('Trips: ${_adminMetrics!['trip_count']}'),
+                    label: Text(
+                      l.ownerTripsCountChip(
+                        _adminMetrics!['trip_count']?.toString() ?? '0',
+                      ),
+                    ),
                   ),
                   Chip(
                     avatar: const Icon(Icons.star, size: 16),
                     label: Text(
-                      '${_adminMetrics!['rating_average']} ⭐ (${_adminMetrics!['rating_count']})',
+                      l.ownerRatingChip(
+                        _adminMetrics!['rating_average']?.toString() ?? '0',
+                        _adminMetrics!['rating_count']?.toString() ?? '0',
+                      ),
                     ),
                   ),
                 ],
@@ -267,11 +304,19 @@ class _OwnerScreenState extends State<OwnerScreen> {
               (r) => Card(
                 child: ListTile(
                   dense: true,
-                  title: Text(l.adminRideRow(
+                  title: Text(localizedRideRouteRow(
+                    l,
                     r['pickup']?.toString() ?? '',
                     r['destination']?.toString() ?? '',
                   )),
-                  subtitle: Text(l.rideStatusFmt(r['status']?.toString() ?? '')),
+                  subtitle: Text(
+                    l.rideStatusFmt(
+                      localizedRideStatusLabel(
+                        l,
+                        r['status']?.toString(),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -306,7 +351,11 @@ class _OwnerScreenState extends State<OwnerScreen> {
                 dense: true,
                 title: Text(b['route']?.toString() ?? ''),
                 subtitle: Text(
-                  '${b['guest_name'] ?? ''} • ${b['room_number'] ?? '-'} • ${b['fare']} DT',
+                  l.adminB2bBookingRowSubtitle(
+                    b['guest_name']?.toString() ?? '',
+                    b['room_number']?.toString() ?? '-',
+                    b['fare']?.toString() ?? '',
+                  ),
                 ),
               ),
             ),

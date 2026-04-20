@@ -3,10 +3,20 @@ import 'dart:convert';
 
 import '../api/client.dart';
 import '../api/models.dart';
+import '../app_locale.dart' show
+    AppUiRole,
+    applyPreferredLanguageToApp,
+    appLocale,
+    rememberCurrentLocaleForRole,
+    restoreUiRoleLocale,
+    userChoseLocaleThisSession;
 import '../l10n/app_localizations.dart';
+import '../l10n/place_localization.dart';
+import '../l10n/ride_status_localization.dart';
 import '../models/app_notification.dart';
 import '../services/chat_socket_service.dart';
 import '../services/taxi_app_service.dart';
+import '../widgets/locale_popup_menu.dart';
 import 'ride_chat_screen.dart';
 
 class AppDriverScreen extends StatefulWidget {
@@ -34,6 +44,15 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   bool _busy = false;
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      restoreUiRoleLocale(AppUiRole.driver);
+    });
+  }
 
   void _pushNotification({
     required String title,
@@ -68,7 +87,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
         child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.6,
           child: _notifications.isEmpty
-              ? const Center(child: Text('No notifications yet.'))
+              ? Center(child: Text(AppLocalizations.of(context)!.notificationsEmpty))
               : ListView.builder(
                   itemCount: _notifications.length,
                   itemBuilder: (context, index) {
@@ -111,20 +130,21 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   }
 
   void _showRideNotificationDetails(Ride ride) {
+    final loc = AppLocalizations.of(context)!;
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Ride Notification'),
+        title: Text(loc.passengerRideNotificationTitle),
         content: Text(
-          'Ride #${ride.id}\n'
-          'Status: ${ride.status}\n'
-          'Pickup: ${ride.pickup}\n'
-          'Destination: ${ride.destination}',
+          '${loc.passengerRideNumberLine(ride.id)}\n'
+          '${loc.rideStatusFmt(localizedRideStatusLabel(loc, ride.status))}\n'
+          '${loc.ridePickupLabel}: ${localizedPlaceName(loc, ride.pickup)}\n'
+          '${loc.rideDestinationLabel}: ${localizedPlaceName(loc, ride.destination)}',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: Text(loc.dialogOk),
           ),
         ],
       ),
@@ -152,9 +172,12 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
         final event = (data['event'] ?? '').toString();
         final message = (data['message'] ?? '').toString();
         if (event == 'ride_request_sent') {
+          final loc = AppLocalizations.of(context)!;
           _pushNotification(
-            title: 'New nearby ride',
-            body: message.isNotEmpty ? message : 'A nearby passenger requested a ride.',
+            title: loc.driverNotificationNewNearbyTitle,
+            body: message.isNotEmpty
+                ? message
+                : loc.driverNotificationNewNearbyBodyDefault,
             event: event,
             rideId: ride.id,
           );
@@ -164,22 +187,29 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
           if (accepterUserId != null && _userId != null && accepterUserId == _userId) {
             return;
           }
+          final loc = AppLocalizations.of(context)!;
           _pushNotification(
-            title: 'Request already accepted',
-            body: message.isNotEmpty ? message : 'Another driver accepted this request.',
+            title: loc.driverNotificationTakenTitle,
+            body: message.isNotEmpty
+                ? message
+                : loc.driverNotificationTakenBodyDefault,
             event: event,
             rideId: ride.id,
           );
         } else if (event == 'ride_cancelled_by_passenger' || event == 'ride_cancelled') {
+          final loc = AppLocalizations.of(context)!;
           _pushNotification(
-            title: 'Ride cancelled',
-            body: message.isNotEmpty ? message : 'Passenger cancelled this ride request.',
+            title: loc.driverNotificationCancelledTitle,
+            body: message.isNotEmpty
+                ? message
+                : loc.driverNotificationCancelledBodyDefault,
             event: event,
             rideId: ride.id,
           );
         } else if (message.isNotEmpty) {
+          final loc = AppLocalizations.of(context)!;
           _pushNotification(
-            title: 'Ride update',
+            title: loc.notificationRideUpdateTitle,
             body: message,
             event: event,
             rideId: ride.id,
@@ -190,6 +220,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   }
 
   Future<void> _login() async {
+    final loc = AppLocalizations.of(context)!;
     setState(() {
       _busy = true;
       _message = null;
@@ -199,11 +230,22 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
         email: _email.text.trim(),
         password: _password.text,
       );
+      if (!userChoseLocaleThisSession.value) {
+        applyPreferredLanguageToApp(r.preferredLanguage);
+      } else {
+        try {
+          await _api.patchPreferredLanguage(
+            token: r.accessToken,
+            preferredLanguage: appLocale.value.languageCode,
+          );
+        } catch (_) {}
+      }
+      rememberCurrentLocaleForRole(AppUiRole.driver);
       _token = r.accessToken;
       _userId = r.userId;
       _connectRealtime();
       final fares = await _api.getAirportFares();
-      _locations = _startsFromRouteKeys(fares.keys);
+      _locations = _startsFromRouteKeys(fares.keys, loc);
       if (_selectedLocation.isEmpty ||
           !_locations.contains(_selectedLocation)) {
         _selectedLocation = _locations.isNotEmpty ? _locations.first : '';
@@ -412,13 +454,16 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
           r.status == 'pending' && r.pickup.trim() == _selectedLocation.trim())
       .toList();
 
-  List<String> _startsFromRouteKeys(Iterable<String> routeKeys) {
+  List<String> _startsFromRouteKeys(
+      Iterable<String> routeKeys, AppLocalizations loc) {
     final starts = <String>{};
     for (final key in routeKeys) {
-      final parts = key.split('➡️');
+      final parts = key.split(airportRouteKeySeparator);
       if (parts.isNotEmpty) starts.add(parts.first.trim());
     }
-    return starts.toList()..sort();
+    return starts.toList()
+      ..sort((a, b) => localizedPlaceName(loc, a)
+          .compareTo(localizedPlaceName(loc, b)));
   }
 
   @override
@@ -436,6 +481,10 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
       appBar: AppBar(
         title: Text(l.appDriverTitle),
         actions: [
+          LocalePopupMenuButton(
+            authToken: _token,
+            uiRole: AppUiRole.driver,
+          ),
           if (_token != null) ...[
             IconButton(
               onPressed: _showNotifications,
@@ -512,10 +561,16 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
                       );
                     },
                   ),
-                  title: const Text('My vehicle'),
+                  title: Text(l.driverMyVehicleTitle),
                   subtitle: Text(
-                    'Type: ${(_driverCarModel ?? '').trim().isEmpty ? '-' : _driverCarModel} | '
-                    'Color: ${(_driverCarColor ?? '').trim().isEmpty ? '-' : _driverCarColor}',
+                    l.driverVehicleSummaryLine(
+                      (_driverCarModel ?? '').trim().isEmpty
+                          ? '—'
+                          : _driverCarModel!,
+                      (_driverCarColor ?? '').trim().isEmpty
+                          ? '—'
+                          : _driverCarColor!,
+                    ),
                   ),
                 ),
               ),
@@ -523,7 +578,10 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
               value: _selectedLocation.isEmpty ? null : _selectedLocation,
               decoration: InputDecoration(labelText: l.ridePickupLabel),
               items: _locations
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .map((e) => DropdownMenuItem(
+                        value: e,
+                        child: Text(localizedPlaceName(l, e)),
+                      ))
                   .toList(),
               onChanged: (v) =>
                   setState(() => _selectedLocation = v ?? _selectedLocation),
@@ -539,7 +597,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
             if (_activeMine().isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
-                l.rideStatusFmt('active'),
+                l.rideStatusFmt(localizedRideStatusLabel(l, 'active')),
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ],
@@ -551,8 +609,12 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(l.adminRideRow(r.pickup, r.destination)),
-                      Text(l.rideStatusFmt(r.status)),
+                      Text(localizedRideRouteRow(l, r.pickup, r.destination)),
+                      Text(
+                        l.rideStatusFmt(
+                          localizedRideStatusLabel(l, r.status),
+                        ),
+                      ),
                       Wrap(spacing: 4, children: _actionsFor(r)),
                     ],
                   ),
@@ -568,8 +630,12 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(l.adminRideRow(r.pickup, r.destination)),
-                      Text(l.rideStatusFmt(r.status)),
+                      Text(localizedRideRouteRow(l, r.pickup, r.destination)),
+                      Text(
+                        l.rideStatusFmt(
+                          localizedRideStatusLabel(l, r.status),
+                        ),
+                      ),
                       Wrap(spacing: 4, children: _actionsFor(r)),
                     ],
                   ),

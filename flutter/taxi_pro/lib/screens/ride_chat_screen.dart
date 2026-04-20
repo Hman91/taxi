@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../app_locale.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/ride_status_localization.dart';
 import '../models/chat_message.dart';
 import '../repositories/chat_repository.dart';
 import '../services/taxi_app_service.dart';
@@ -91,12 +93,14 @@ class _RideChatScreenState extends State<RideChatScreen> {
     final id = (ride['id'] as num?)?.toInt();
     if (id != widget.rideId || !mounted) return;
     final message = (data['message'] as String?)?.trim();
+    final l = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message?.isNotEmpty == true
             ? message!
-            : AppLocalizations.of(context)!
-                .rideStatusFmt(ride['status']?.toString() ?? '')),
+            : l.rideStatusFmt(
+                localizedRideStatusLabel(l, ride['status']?.toString()),
+              )),
       ),
     );
   }
@@ -108,6 +112,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
 
   Future<void> _syncLanguage(BuildContext context) async {
     final lang = Localizations.localeOf(context).languageCode;
+    applyPreferredLanguageToApp(lang);
     try {
       await _api.patchPreferredLanguage(token: widget.token, preferredLanguage: lang);
       if (!context.mounted) return;

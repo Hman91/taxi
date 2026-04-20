@@ -1,9 +1,14 @@
-import 'package:flutter/material.dart';
 import 'dart:convert';
+
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../app_locale.dart' show AppUiRole, restoreUiRoleLocale;
 import '../l10n/app_localizations.dart';
+import '../l10n/place_localization.dart';
+import '../l10n/ride_status_localization.dart';
 import '../services/taxi_app_service.dart';
+import '../widgets/locale_popup_menu.dart';
 
 class OperatorScreen extends StatefulWidget {
   const OperatorScreen({super.key});
@@ -122,8 +127,9 @@ class _OperatorScreenState extends State<OperatorScreen> {
     final phone = _newDriverPhone.text.trim();
     final name = _newDriverName.text.trim();
     final pin = _newDriverPin.text.trim();
+    final loc = AppLocalizations.of(context)!;
     if (phone.isEmpty || name.isEmpty || pin.isEmpty) {
-      setState(() => _message = 'missing_fields');
+      setState(() => _message = loc.operatorFillDriverFields);
       return;
     }
     setState(() {
@@ -172,9 +178,11 @@ class _OperatorScreenState extends State<OperatorScreen> {
     String selectedPhotoData = photoCtrl.text.trim();
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSt) => AlertDialog(
-          title: Text(row['driver_name']?.toString() ?? 'Driver'),
+      builder: (ctx) {
+        final loc = AppLocalizations.of(ctx)!;
+        return StatefulBuilder(
+          builder: (ctx, setSt) => AlertDialog(
+          title: Text(row['driver_name']?.toString() ?? loc.operatorDriverNameLabel),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -184,35 +192,35 @@ class _OperatorScreenState extends State<OperatorScreen> {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration:
-                      const InputDecoration(labelText: 'Wallet balance'),
+                      InputDecoration(labelText: loc.operatorWalletBalanceLabel),
                 ),
                 TextField(
                   controller: ownerRateCtrl,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration:
-                      const InputDecoration(labelText: 'Owner commission %'),
+                      InputDecoration(labelText: loc.operatorOwnerCommissionLabel),
                 ),
                 TextField(
                   controller: b2bRateCtrl,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration:
-                      const InputDecoration(labelText: 'B2B commission %'),
+                      InputDecoration(labelText: loc.operatorB2bCommissionLabel),
                 ),
                 SwitchListTile(
                   dense: true,
-                  title: const Text('Auto deduct enabled'),
+                  title: Text(loc.operatorAutoDeductEnabled),
                   value: autoDeduct,
                   onChanged: (v) => setSt(() => autoDeduct = v),
                 ),
                 TextField(
                   controller: modelCtrl,
-                  decoration: const InputDecoration(labelText: 'Car model'),
+                  decoration: InputDecoration(labelText: loc.operatorCarModelLabel),
                 ),
                 TextField(
                   controller: colorCtrl,
-                  decoration: const InputDecoration(labelText: 'Car color'),
+                  decoration: InputDecoration(labelText: loc.operatorCarColorLabel),
                 ),
                 const SizedBox(height: 8),
                 if (selectedPhotoData.isNotEmpty)
@@ -248,19 +256,19 @@ class _OperatorScreenState extends State<OperatorScreen> {
                     });
                   },
                   icon: const Icon(Icons.photo_library),
-                  label: const Text('Pick image from gallery'),
+                  label: Text(loc.operatorPickFromGallery),
                 ),
                 if (selectedPhotoData.isNotEmpty &&
                     selectedPhotoData.startsWith('data:image/'))
                   TextButton.icon(
                     onPressed: () => setSt(() => selectedPhotoData = ''),
                     icon: const Icon(Icons.delete_outline),
-                    label: const Text('Remove picked image'),
+                    label: Text(loc.operatorRemovePickedImage),
                   ),
                 TextField(
                   controller: photoCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Photo URL (optional)',
+                  decoration: InputDecoration(
+                    labelText: loc.operatorPhotoUrlOptional,
                   ),
                 ),
               ],
@@ -269,15 +277,16 @@ class _OperatorScreenState extends State<OperatorScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              child: Text(loc.operatorCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Save'),
+              child: Text(loc.operatorSave),
             ),
           ],
-        ),
-      ),
+          ),
+        );
+      },
     );
     if (ok != true) {
       walletCtrl.dispose();
@@ -325,6 +334,15 @@ class _OperatorScreenState extends State<OperatorScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      restoreUiRoleLocale(AppUiRole.operator);
+    });
+  }
+
+  @override
   void dispose() {
     _secretController.dispose();
     _newDriverPhone.dispose();
@@ -349,7 +367,12 @@ class _OperatorScreenState extends State<OperatorScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(l.operatorTitle)),
+      appBar: AppBar(
+        title: Text(l.operatorTitle),
+        actions: const [
+          LocalePopupMenuButton(uiRole: AppUiRole.operator),
+        ],
+      ),
       body: _token == null
           ? ListView(
               padding: const EdgeInsets.all(16),
@@ -371,12 +394,12 @@ class _OperatorScreenState extends State<OperatorScreen> {
               length: 4,
               child: Column(
                 children: [
-                  const TabBar(
+                  TabBar(
                     tabs: [
-                      Tab(text: '🎧 Dispatch'),
-                      Tab(text: '👥 Drivers'),
-                      Tab(text: '🏢 B2B'),
-                      Tab(text: '📑 Trip Vault'),
+                      Tab(text: l.operatorTabDispatch),
+                      Tab(text: l.operatorTabDrivers),
+                      Tab(text: l.operatorTabB2b),
+                      Tab(text: l.operatorTabTripVault),
                     ],
                   ),
                   Expanded(
@@ -391,9 +414,9 @@ class _OperatorScreenState extends State<OperatorScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      '🎧 مركز النداء والمراقبة (Dispatch)',
-                                      style: TextStyle(
+                                    Text(
+                                      l.operatorDispatchCenterHeading,
+                                      style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -402,8 +425,8 @@ class _OperatorScreenState extends State<OperatorScreen> {
                                     Text(
                                       _adminRides.any((r) =>
                                               (r['status'] ?? '').toString() == 'pending')
-                                          ? 'يوجد طلبات معلقة تحتاج توزيع على السائقين.'
-                                          : '✅ نظام الواتساب متصل. لا توجد حجوزات معلقة.',
+                                          ? l.operatorDispatchPendingBlurb
+                                          : l.operatorDispatchIdleBlurb,
                                     ),
                                     const SizedBox(height: 10),
                                     Wrap(
@@ -412,19 +435,23 @@ class _OperatorScreenState extends State<OperatorScreen> {
                                       children: [
                                         Chip(
                                           avatar: const Icon(Icons.hourglass_top, size: 16),
-                                          label: Text('Pending: ${_countByStatus('pending')} طلب'),
+                                          label: Text(l.operatorChipPending(
+                                              _countByStatus('pending'))),
                                         ),
                                         Chip(
                                           avatar: const Icon(Icons.local_taxi, size: 16),
-                                          label: Text('Accepted: ${_countByStatus('accepted')}'),
+                                          label: Text(l.operatorChipAccepted(
+                                              _countByStatus('accepted'))),
                                         ),
                                         Chip(
                                           avatar: const Icon(Icons.route, size: 16),
-                                          label: Text('Ongoing: ${_countByStatus('ongoing')}'),
+                                          label: Text(l.operatorChipOngoing(
+                                              _countByStatus('ongoing'))),
                                         ),
                                         Chip(
                                           avatar: const Icon(Icons.check_circle, size: 16),
-                                          label: Text('Completed: ${_countByStatus('completed')}'),
+                                          label: Text(l.operatorChipCompleted(
+                                              _countByStatus('completed'))),
                                         ),
                                       ],
                                     ),
@@ -443,14 +470,21 @@ class _OperatorScreenState extends State<OperatorScreen> {
                                 child: ListTile(
                                   dense: true,
                                   leading: const Icon(Icons.directions_car),
-                                  title: Text(l.adminRideRow(
+                                  title: Text(localizedRideRouteRow(
+                                    l,
                                     r['pickup']?.toString() ?? '',
                                     r['destination']?.toString() ?? '',
                                   )),
                                   subtitle: Text(
-                                    'Status: ${r['status']?.toString() ?? ''}'
-                                    '${(r['driver_name'] ?? '').toString().isEmpty ? '' : ' | Driver: ${r['driver_name']}'}'
-                                    '${(r['created_at'] ?? '').toString().isEmpty ? '' : '\nAt: ${r['created_at']}'}',
+                                    l.operatorRideSubtitleLine(
+                                      '${l.statusLinePrefix}${localizedRideStatusLabel(l, r['status']?.toString())}',
+                                      (r['driver_name'] ?? '').toString().trim().isEmpty
+                                          ? ''
+                                          : '${l.driverLabelPrefix}${r['driver_name']}',
+                                      (r['created_at'] ?? '').toString().trim().isEmpty
+                                          ? ''
+                                          : '${l.createdAtLinePrefix}${r['created_at']}',
+                                    ),
                                   ),
                                 ),
                               ),
@@ -469,7 +503,7 @@ class _OperatorScreenState extends State<OperatorScreen> {
                               child: Padding(
                                 padding: const EdgeInsets.all(10),
                                 child: Text(
-                                  'Drivers online view: ${_adminDrivers.length}',
+                                  l.operatorDriversOnlineCount(_adminDrivers.length),
                                   style: const TextStyle(fontWeight: FontWeight.w600),
                                 ),
                               ),
@@ -492,36 +526,51 @@ class _OperatorScreenState extends State<OperatorScreen> {
                             TextField(
                               controller: _newDriverPhone,
                               decoration:
-                                  const InputDecoration(labelText: 'Phone'),
+                                  InputDecoration(labelText: l.operatorPhoneLabel),
                             ),
                             TextField(
                               controller: _newDriverName,
-                              decoration: const InputDecoration(
-                                  labelText: 'Driver name'),
+                              decoration: InputDecoration(
+                                  labelText: l.operatorDriverNameLabel),
                             ),
                             TextField(
                               controller: _newDriverPin,
                               decoration:
-                                  const InputDecoration(labelText: 'PIN'),
+                                  InputDecoration(labelText: l.operatorPinLabel),
                               obscureText: true,
                             ),
                             const SizedBox(height: 8),
                             FilledButton(
                               onPressed: _busy ? null : _createDriverAccount,
-                              child: const Text('Create driver account'),
+                              child: Text(l.operatorCreateDriverAccount),
                             ),
                             ..._driverPinAccounts.map(
                               (d) => ListTile(
                                 dense: true,
                                 title: Text(
                                     '${d['driver_name'] ?? ''} (${d['phone'] ?? ''})'),
-                                subtitle: Text(
-                                  'Wallet: ${d['wallet_balance'] ?? 0} DT | '
-                                  'Owner %: ${d['owner_commission_rate'] ?? 10} | '
-                                  'B2B %: ${d['b2b_commission_rate'] ?? 5}'
-                                  '${(d['car_model'] ?? '').toString().isEmpty ? '' : '\nCar: ${d['car_model']}'}'
-                                  '${(d['car_color'] ?? '').toString().isEmpty ? '' : ' | Color: ${d['car_color']}'}',
-                                ),
+                                subtitle: Text(() {
+                                  final walletS =
+                                      (d['wallet_balance'] ?? 0).toString();
+                                  final ownerS =
+                                      (d['owner_commission_rate'] ?? 10).toString();
+                                  final b2bS =
+                                      (d['b2b_commission_rate'] ?? 5).toString();
+                                  var line = l.operatorDriverWalletLine(
+                                    walletS,
+                                    ownerS,
+                                    b2bS,
+                                  );
+                                  final model = (d['car_model'] ?? '').toString().trim();
+                                  final color = (d['car_color'] ?? '').toString().trim();
+                                  if (model.isNotEmpty) {
+                                    line += l.operatorDriverCarLine(model);
+                                  }
+                                  if (color.isNotEmpty) {
+                                    line += l.operatorDriverCarColorAppend(color);
+                                  }
+                                  return line;
+                                }()),
                                 trailing: IconButton(
                                   icon: const Icon(Icons.edit),
                                   onPressed: _busy
@@ -547,7 +596,7 @@ class _OperatorScreenState extends State<OperatorScreen> {
                           children: [
                             FilledButton.tonal(
                               onPressed: _busy ? null : _refreshAll,
-                              child: const Text('Refresh corporate bookings'),
+                              child: Text(l.operatorRefreshCorporateBookings),
                             ),
                             const SizedBox(height: 8),
                             if (_adminB2bBookings.isEmpty) Text(l.noTripsLoaded),
@@ -556,7 +605,11 @@ class _OperatorScreenState extends State<OperatorScreen> {
                                 dense: true,
                                 title: Text(b['route']?.toString() ?? ''),
                                 subtitle: Text(
-                                  '${b['guest_name'] ?? ''} • ${b['room_number'] ?? '-'} • ${b['fare']} DT',
+                                  l.adminB2bBookingRowSubtitle(
+                                    b['guest_name']?.toString() ?? '',
+                                    b['room_number']?.toString() ?? '-',
+                                    b['fare']?.toString() ?? '',
+                                  ),
                                 ),
                               ),
                             ),
@@ -569,8 +622,8 @@ class _OperatorScreenState extends State<OperatorScreen> {
                               children: [
                                 const Icon(Icons.inventory_2_outlined),
                                 const SizedBox(width: 8),
-                                const Text(
-                                  '📑 الخزنة السحابية (سجل الرحلات)',
+                                Text(
+                                  l.operatorTripVaultHeading,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -584,12 +637,12 @@ class _OperatorScreenState extends State<OperatorScreen> {
                               children: [
                                 Chip(
                                   avatar: const Icon(Icons.list_alt, size: 16),
-                                  label: Text('Trips: ${_trips.length}'),
+                                  label: Text(l.operatorTripVaultTripsChip(_trips.length)),
                                 ),
                                 Chip(
                                   avatar: const Icon(Icons.payments, size: 16),
-                                  label: Text(
-                                      'Revenue: ${_tripVaultRevenue.toStringAsFixed(3)} DT'),
+                                  label: Text(l.operatorTripVaultRevenueChip(
+                                      _tripVaultRevenue.toStringAsFixed(3))),
                                 ),
                               ],
                             ),

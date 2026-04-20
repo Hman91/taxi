@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../app_locale.dart' show AppUiRole, restoreUiRoleLocale;
 import '../l10n/app_localizations.dart';
+import '../l10n/place_localization.dart';
 import '../services/taxi_app_service.dart';
+import '../widgets/locale_popup_menu.dart';
 
 /// Corporate portal: login matches API; booking is UI-only until B2B billing API exists.
 class B2bScreen extends StatefulWidget {
@@ -71,12 +74,25 @@ class _B2bScreenState extends State<B2bScreen> {
         .then((booking) {
       if (!mounted) return;
       setState(() {
-        _message =
-            '${l.requestRideButton}: #${booking['id']} • $guest • $route';
+        _message = l.b2bBookingSuccessMessage(
+          l.requestRideButton,
+          booking['id'] as Object,
+          guest,
+          localizedRouteKeyForDisplay(l, route),
+        );
       });
     }).catchError((e) {
       if (!mounted) return;
       setState(() => _message = e.toString());
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      restoreUiRoleLocale(AppUiRole.b2b);
     });
   }
 
@@ -92,7 +108,12 @@ class _B2bScreenState extends State<B2bScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('🏢 Taxi Pro Corporate')),
+      appBar: AppBar(
+        title: Text(l.b2bAppBarTitle),
+        actions: const [
+          LocalePopupMenuButton(uiRole: AppUiRole.b2b),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -102,9 +123,9 @@ class _B2bScreenState extends State<B2bScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '💼 بوابة الشركات والنزل',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                  Text(
+                    l.b2bPortalHeading,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),
                   TextField(
@@ -133,7 +154,7 @@ class _B2bScreenState extends State<B2bScreen> {
                       dense: true,
                       leading: const Icon(Icons.verified_user, color: Colors.green),
                       title: Text(l.b2bConnectedStub),
-                      subtitle: const Text('✅ Connected to monthly billing workflow'),
+                      subtitle: Text(l.b2bConnectedWorkflowSubtitle),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -143,9 +164,9 @@ class _B2bScreenState extends State<B2bScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            '🚀 طلب سيارة على حساب الشركة',
-                            style: TextStyle(fontWeight: FontWeight.w700),
+                          Text(
+                            l.b2bBookOnAccountHeading,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 8),
                           TextField(
@@ -165,7 +186,11 @@ class _B2bScreenState extends State<B2bScreen> {
                               isExpanded: true,
                               underline: const SizedBox.shrink(),
                               items: _fares.keys
-                                  .map((k) => DropdownMenuItem(value: k, child: Text(k)))
+                                  .map((k) => DropdownMenuItem(
+                                        value: k,
+                                        child: Text(
+                                            localizedRouteKeyForDisplay(l, k)),
+                                      ))
                                   .toList(),
                               onChanged: (v) => setState(() => _routeKey = v),
                             ),
@@ -174,7 +199,7 @@ class _B2bScreenState extends State<B2bScreen> {
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: Text(
-                                '${l.fareDt((_fares[_routeKey] ?? 0).toStringAsFixed(2))} • 5%',
+                                '${l.fareDt((_fares[_routeKey] ?? 0).toStringAsFixed(2))} ${l.b2bFareAdminPercentSuffix}',
                               ),
                             ),
                           const SizedBox(height: 8),
@@ -190,8 +215,8 @@ class _B2bScreenState extends State<B2bScreen> {
                   Card(
                     child: ListTile(
                       leading: const Icon(Icons.bar_chart),
-                      title: const Text('📊 استهلاك الشهر الحالي'),
-                      subtitle: const Text('المبلغ المستحق (DT): 450.000'),
+                      title: Text(l.b2bMonthlyUsageTitle),
+                      subtitle: Text(l.b2bMonthlyAmountDue('450.000')),
                     ),
                   ),
                 ],

@@ -27,6 +27,14 @@ _B2B_TENANT_DEFAULTS = [
 ]
 
 
+def _preferred_language_for_uid(uid: int) -> str:
+    row = db_module.user_by_id(uid)
+    if not row:
+        return "en"
+    raw = str(row.get("preferred_language") or "en").strip()
+    return raw if raw else "en"
+
+
 def _bearer_token() -> Optional[str]:
     auth = request.headers.get("Authorization", "")
     if auth.startswith("Bearer "):
@@ -188,6 +196,7 @@ def login_driver_pin() -> Tuple[Any, int]:
                 "car_model": row.get("car_model"),
                 "car_color": row.get("car_color"),
                 "current_zone": row.get("current_zone"),
+                "preferred_language": _preferred_language_for_uid(uid),
             }
         ),
         200,
@@ -267,6 +276,8 @@ def login_app() -> Tuple[Any, int]:
                 "token_type": "Bearer",
                 "role": user["role"],
                 "user_id": user["id"],
+                "preferred_language": str(user.get("preferred_language") or "en").strip()
+                or "en",
             }
         ),
         200,
@@ -297,6 +308,8 @@ def login_google() -> Tuple[Any, int]:
                 "role": user["role"],
                 "user_id": user["id"],
                 "email": user["email"],
+                "preferred_language": str(user.get("preferred_language") or "en").strip()
+                or "en",
             }
         ),
         200,

@@ -69,6 +69,7 @@ class DriverPinLoginResponse {
     this.carModel,
     this.carColor,
     this.currentZone,
+    this.preferredLanguage,
   });
 
   final String accessToken;
@@ -85,6 +86,7 @@ class DriverPinLoginResponse {
   final String? carModel;
   final String? carColor;
   final String? currentZone;
+  final String? preferredLanguage;
 
   factory DriverPinLoginResponse.fromJson(Map<String, dynamic> json) {
     return DriverPinLoginResponse(
@@ -104,6 +106,7 @@ class DriverPinLoginResponse {
       carModel: json['car_model'] as String?,
       carColor: json['car_color'] as String?,
       currentZone: json['current_zone'] as String?,
+      preferredLanguage: json['preferred_language'] as String?,
     );
   }
 }
@@ -134,17 +137,20 @@ class AppLoginResponse {
     required this.accessToken,
     required this.role,
     required this.userId,
+    this.preferredLanguage,
   });
 
   final String accessToken;
   final String role;
   final int userId;
+  final String? preferredLanguage;
 
   factory AppLoginResponse.fromJson(Map<String, dynamic> json) {
     return AppLoginResponse(
       accessToken: json['access_token'] as String,
       role: json['role'] as String,
-      userId: json['user_id'] as int,
+      userId: (json['user_id'] as num).toInt(),
+      preferredLanguage: json['preferred_language'] as String?,
     );
   }
 }

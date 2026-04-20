@@ -293,6 +293,30 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get placeCarthageAirport => 'مطار قرطاج';
+
+  @override
+  String get placeEnfidhaAirport => 'مطار النفيضة';
+
+  @override
+  String get placeMonastirAirport => 'مطار المنستير';
+
+  @override
+  String get placeSousseCenter => 'وسط سوسة';
+
+  @override
+  String get placeHammamet => 'الحمامات';
+
+  @override
+  String get placeSousse => 'سوسة';
+
+  @override
+  String get placePortElKantaoui => 'القنطاوي';
+
+  @override
+  String get placeNabeul => 'نابل';
+
+  @override
   String driverLocationRow(String lat, String lng) {
     return 'خط العرض $lat، خط الطول $lng';
   }
@@ -308,4 +332,435 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get accountDisabledContactAdmin => 'الحساب معطّل. تواصل مع المشرف.';
+
+  @override
+  String get signedInWithGoogle => 'تم تسجيل الدخول باستخدام Google';
+
+  @override
+  String get passengerGoogleLoginRequired =>
+      'تسجيل الدخول عبر Google مطلوب للركاب.';
+
+  @override
+  String get continueWithGoogle => 'المتابعة باستخدام Google';
+
+  @override
+  String get passengerDispatchPanelTitle => 'لوحة التوزيع المميزة';
+
+  @override
+  String passengerActiveRidesChip(int count) {
+    return 'رحلات نشطة: $count';
+  }
+
+  @override
+  String passengerTotalRidesChip(int count) {
+    return 'إجمالي الرحلات: $count';
+  }
+
+  @override
+  String get passengerBookingSectionTitle => 'الحجز';
+
+  @override
+  String get passengerLocationCurrent => 'موقعك الحالي';
+
+  @override
+  String get passengerLocationDetecting => 'جاري تحديد الموقع...';
+
+  @override
+  String get passengerLocationUnavailable => 'الموقع غير متاح';
+
+  @override
+  String get passengerRefreshLocationTooltip => 'تحديث الموقع';
+
+  @override
+  String passengerDriverLine(String name) {
+    return 'السائق: $name';
+  }
+
+  @override
+  String passengerPhoneLine(String phone) {
+    return 'الهاتف: $phone';
+  }
+
+  @override
+  String get rideStatusPending => 'قيد الانتظار';
+
+  @override
+  String get rideStatusAccepted => 'مقبولة';
+
+  @override
+  String get rideStatusOngoing => 'جارية';
+
+  @override
+  String get rideStatusCompleted => 'مكتملة';
+
+  @override
+  String get rideStatusCancelled => 'ملغاة';
+
+  @override
+  String get rideStatusActive => 'نشطة';
+
+  @override
+  String get passengerLocationServiceDisabled => 'خدمة الموقع معطّلة.';
+
+  @override
+  String get passengerLocationPermissionDenied => 'لم يُمنح إذن الموقع.';
+
+  @override
+  String get passengerNoNotificationsYet => 'لا إشعارات بعد.';
+
+  @override
+  String get dialogOk => 'حسناً';
+
+  @override
+  String get passengerRideNotificationTitle => 'تفاصيل الرحلة';
+
+  @override
+  String passengerRideNumberLine(int id) {
+    return 'الرحلة #$id';
+  }
+
+  @override
+  String get notificationsEmpty => 'لا إشعارات بعد.';
+
+  @override
+  String get notificationRideUpdateTitle => 'تحديث الرحلة';
+
+  @override
+  String notificationRideUpdatedBody(int id) {
+    return 'تم تحديث الرحلة #$id.';
+  }
+
+  @override
+  String get errorGoogleSignInMissingToken =>
+      'فشل تسجيل الدخول عبر Google: رمز مفقود.';
+
+  @override
+  String get driverNameFallback => 'سائق';
+
+  @override
+  String get notificationDriverAcceptedTitle => 'قبِل السائق';
+
+  @override
+  String notificationDriverAcceptedBody(String driver, String phoneSuffix) {
+    return '$driver$phoneSuffix قبل طلبك.';
+  }
+
+  @override
+  String notificationDriverAcceptedSnack(String driver, String phoneSuffix) {
+    return 'قُبِل السائق: $driver$phoneSuffix';
+  }
+
+  @override
+  String get passengerDriverNearPickupSnack => 'السائق قريب من نقطة الانطلاق.';
+
+  @override
+  String get notificationDriverNearPickupTitle => 'السائق قريب';
+
+  @override
+  String notificationDriverNearPickupBody(String pickup) {
+    return 'سائقك قريب من الانطلاق في $pickup.';
+  }
+
+  @override
+  String get notificationRequestSentTitle => 'تم إرسال الطلب';
+
+  @override
+  String get notificationRequestSentBody =>
+      'أرسلنا طلبك إلى السائقين القريبين.';
+
+  @override
+  String requestSentSnackLine(String farePart, String promoPart) {
+    return 'تم الإرسال. $farePart$promoPart';
+  }
+
+  @override
+  String get promoCodeOptionalLabel => 'رمز ترويجي';
+
+  @override
+  String get driverNotificationNewNearbyTitle => 'رحلة جديدة قريبة';
+
+  @override
+  String get driverNotificationNewNearbyBodyDefault => 'طلب راكب قريباً رحلة.';
+
+  @override
+  String get driverNotificationTakenTitle => 'تم قبول الطلب مسبقاً';
+
+  @override
+  String get driverNotificationTakenBodyDefault => 'سائق آخر قبل هذا الطلب.';
+
+  @override
+  String get driverNotificationCancelledTitle => 'أُلغيت الرحلة';
+
+  @override
+  String get driverNotificationCancelledBodyDefault => 'ألغى الراكب الطلب.';
+
+  @override
+  String get driverNotificationRequestClosedTitle => 'أُغلق الطلب';
+
+  @override
+  String get driverNotificationRequestClosedBodyOther =>
+      'قبل سائق آخر هذا الطلب أو أُلغي.';
+
+  @override
+  String get driverNotificationRequestClosedBodyTaken =>
+      'قبل سائق آخر هذا الطلب.';
+
+  @override
+  String get driverNotificationNewRideTitle => 'طلب رحلة جديد';
+
+  @override
+  String get driverNotificationNewRideBodyDefault =>
+      'أرسل راكب قريب طلباً جديداً.';
+
+  @override
+  String get snackDriverNewNearbyRide => 'وصل طلب رحلة جديد قريباً.';
+
+  @override
+  String get snackDriverRideTakenOther => 'قبل سائق آخر هذه الرحلة.';
+
+  @override
+  String get snackDriverPassengerCancelled => 'ألغى الراكب الطلب.';
+
+  @override
+  String get snackDriverChatAfterAcceptance =>
+      'تُفتح المحادثة بعد قبول الرحلة.';
+
+  @override
+  String get driverMyVehicleTitle => 'مركبتي';
+
+  @override
+  String driverVehicleSummaryLine(String model, String color) {
+    return 'النوع: $model | اللون: $color';
+  }
+
+  @override
+  String get driverVehicleIdentityTitle => 'هوية المركبة';
+
+  @override
+  String driverOpenRequestsChip(int count) {
+    return 'طلبات مفتوحة: $count';
+  }
+
+  @override
+  String driverUnreadAlertsChip(int count) {
+    return 'تنبيهات غير مقروءة: $count';
+  }
+
+  @override
+  String get b2bAppBarTitle => 'تاكسي برو — الشركات';
+
+  @override
+  String get b2bPortalHeading => 'بوابة الشركات والنزل';
+
+  @override
+  String get b2bConnectedWorkflowSubtitle => 'متصل بمسار الفوترة الشهرية';
+
+  @override
+  String get b2bBookOnAccountHeading => 'احجز على حساب الشركة';
+
+  @override
+  String get b2bMonthlyUsageTitle => 'استهلاك الشهر الحالي (تجريبي)';
+
+  @override
+  String b2bMonthlyAmountDue(String amount) {
+    return 'المبلغ المستحق (د.ت): $amount';
+  }
+
+  @override
+  String b2bBookingSuccessMessage(
+      String action, Object id, String guest, String route) {
+    return '$action #$id • $guest • $route';
+  }
+
+  @override
+  String get b2bFareAdminPercentSuffix => '• 5٪ إداري';
+
+  @override
+  String adminB2bBookingRowSubtitle(String guest, String room, String fare) {
+    return '$guest • $room • $fare د.ت';
+  }
+
+  @override
+  String get ownerAppBarTitle => 'لوحة المالك';
+
+  @override
+  String ownerProfitChip(String amount) {
+    return 'الربح: $amount د.ت';
+  }
+
+  @override
+  String ownerTripsCountChip(String count) {
+    return 'الرحلات: $count';
+  }
+
+  @override
+  String ownerRatingChip(String avg, String votes) {
+    return '$avg ★ ($votes)';
+  }
+
+  @override
+  String get ownerVaultHeading => 'خزنة الرحلات';
+
+  @override
+  String get ownerAdminOversightHeading => 'مراقبة الإدارة';
+
+  @override
+  String ownerCommissionChip(String amount) {
+    return 'العمولة: $amount د.ت';
+  }
+
+  @override
+  String ownerTripRouteFareRow(String route, String fare) {
+    return '$route — $fare د.ت';
+  }
+
+  @override
+  String get ownerHqPortalHeading => 'مركز القيادة';
+
+  @override
+  String get operatorTabDispatch => 'الإرسال';
+
+  @override
+  String get operatorTabDrivers => 'السائقون';
+
+  @override
+  String get operatorTabB2b => 'شركات';
+
+  @override
+  String get operatorTabTripVault => 'سجل الرحلات';
+
+  @override
+  String get operatorDispatchCenterHeading => 'النداء والمراقبة';
+
+  @override
+  String get operatorDispatchPendingBlurb =>
+      'يوجد طلبات معلّقة تحتاج توزيعاً على السائقين.';
+
+  @override
+  String get operatorDispatchIdleBlurb => 'النظام متصل. لا طلبات معلّقة.';
+
+  @override
+  String operatorChipPending(int count) {
+    return 'معلّقة: $count';
+  }
+
+  @override
+  String operatorChipAccepted(int count) {
+    return 'مقبولة: $count';
+  }
+
+  @override
+  String operatorChipOngoing(int count) {
+    return 'جارية: $count';
+  }
+
+  @override
+  String operatorChipCompleted(int count) {
+    return 'مكتملة: $count';
+  }
+
+  @override
+  String operatorRideSubtitleLine(
+      String status, String driver, String created) {
+    return '$status$driver$created';
+  }
+
+  @override
+  String operatorDriversOnlineCount(int count) {
+    return 'سائقون متصلون: $count';
+  }
+
+  @override
+  String get operatorPhoneLabel => 'الهاتف';
+
+  @override
+  String get operatorDriverNameLabel => 'اسم السائق';
+
+  @override
+  String get operatorPinLabel => 'رمز PIN';
+
+  @override
+  String get operatorFillDriverFields =>
+      'أدخل الهاتف واسم السائق والرقم السري.';
+
+  @override
+  String get operatorCreateDriverAccount => 'إنشاء حساب سائق';
+
+  @override
+  String get operatorRefreshCorporateBookings => 'تحديث حجوزات الشركات';
+
+  @override
+  String get operatorTripVaultHeading => 'خزنة الرحلات';
+
+  @override
+  String operatorTripVaultTripsChip(int count) {
+    return 'الرحلات: $count';
+  }
+
+  @override
+  String operatorTripVaultRevenueChip(String amount) {
+    return 'الإيرادات: $amount د.ت';
+  }
+
+  @override
+  String get operatorWalletBalanceLabel => 'رصيد المحفظة';
+
+  @override
+  String get operatorOwnerCommissionLabel => 'عمولة المالك %';
+
+  @override
+  String get operatorB2bCommissionLabel => 'عمولة الشركات %';
+
+  @override
+  String get operatorAutoDeductEnabled => 'الخصم التلقائي مفعّل';
+
+  @override
+  String get operatorCarModelLabel => 'طراز السيارة';
+
+  @override
+  String get operatorCarColorLabel => 'لون السيارة';
+
+  @override
+  String get operatorPickFromGallery => 'اختيار صورة من المعرض';
+
+  @override
+  String get operatorRemovePickedImage => 'إزالة الصورة';
+
+  @override
+  String get operatorPhotoUrlOptional => 'رابط الصورة (اختياري)';
+
+  @override
+  String get operatorCancel => 'إلغاء';
+
+  @override
+  String get operatorSave => 'حفظ';
+
+  @override
+  String operatorDriverWalletLine(String wallet, String owner, String b2b) {
+    return 'المحفظة: $wallet د.ت | مالك %: $owner | شركات %: $b2b';
+  }
+
+  @override
+  String operatorDriverCarColorAppend(String color) {
+    return ' | اللون: $color';
+  }
+
+  @override
+  String operatorDriverCarLine(String model) {
+    return '\nالسيارة: $model';
+  }
+
+  @override
+  String get statusLinePrefix => 'الحالة: ';
+
+  @override
+  String get driverLabelPrefix => ' | السائق: ';
+
+  @override
+  String get createdAtLinePrefix => '\nالوقت: ';
+
+  @override
+  String walletWithAmount(String amount) {
+    return 'المحفظة: $amount د.ت';
+  }
 }

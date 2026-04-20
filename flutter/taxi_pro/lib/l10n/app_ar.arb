@@ -91,5 +91,509 @@
   "chatScreenTitle": "محادثة الرحلة",
   "messageFieldHint": "اكتب رسالة",
   "sendChatMessage": "إرسال",
-  "accountDisabledContactAdmin": "الحساب معطّل. تواصل مع المشرف."
+  "accountDisabledContactAdmin": "الحساب معطّل. تواصل مع المشرف.",
+  "signedInWithGoogle": "تم تسجيل الدخول باستخدام Google",
+  "passengerGoogleLoginRequired": "تسجيل الدخول عبر Google مطلوب للركاب.",
+  "continueWithGoogle": "المتابعة باستخدام Google",
+  "passengerDispatchPanelTitle": "لوحة التوزيع المميزة",
+  "passengerActiveRidesChip": "رحلات نشطة: {count}",
+  "passengerTotalRidesChip": "إجمالي الرحلات: {count}",
+  "passengerBookingSectionTitle": "الحجز",
+  "passengerLocationCurrent": "موقعك الحالي",
+  "passengerLocationDetecting": "جاري تحديد الموقع...",
+  "passengerLocationUnavailable": "الموقع غير متاح",
+  "passengerRefreshLocationTooltip": "تحديث الموقع",
+  "passengerDriverLine": "السائق: {name}",
+  "passengerPhoneLine": "الهاتف: {phone}",
+  "rideStatusPending": "قيد الانتظار",
+  "rideStatusAccepted": "مقبولة",
+  "rideStatusOngoing": "جارية",
+  "rideStatusCompleted": "مكتملة",
+  "rideStatusCancelled": "ملغاة",
+  "rideStatusActive": "نشطة",
+  "passengerLocationServiceDisabled": "خدمة الموقع معطّلة.",
+  "passengerLocationPermissionDenied": "لم يُمنح إذن الموقع.",
+  "passengerNoNotificationsYet": "لا إشعارات بعد.",
+  "dialogOk": "حسناً",
+  "passengerRideNotificationTitle": "تفاصيل الرحلة",
+  "passengerRideNumberLine": "الرحلة #{id}",
+  "notificationsEmpty": "لا إشعارات بعد.",
+  "notificationRideUpdateTitle": "تحديث الرحلة",
+  "notificationRideUpdatedBody": "تم تحديث الرحلة #{id}.",
+  "errorGoogleSignInMissingToken": "فشل تسجيل الدخول عبر Google: رمز مفقود.",
+  "driverNameFallback": "سائق",
+  "notificationDriverAcceptedTitle": "قبِل السائق",
+  "notificationDriverAcceptedBody": "{driver}{phoneSuffix} قبل طلبك.",
+  "notificationDriverAcceptedSnack": "قُبِل السائق: {driver}{phoneSuffix}",
+  "passengerDriverNearPickupSnack": "السائق قريب من نقطة الانطلاق.",
+  "notificationDriverNearPickupTitle": "السائق قريب",
+  "notificationDriverNearPickupBody": "سائقك قريب من الانطلاق في {pickup}.",
+  "notificationRequestSentTitle": "تم إرسال الطلب",
+  "notificationRequestSentBody": "أرسلنا طلبك إلى السائقين القريبين.",
+  "requestSentSnackLine": "تم الإرسال. {farePart}{promoPart}",
+  "promoCodeOptionalLabel": "رمز ترويجي",
+  "driverNotificationNewNearbyTitle": "رحلة جديدة قريبة",
+  "driverNotificationNewNearbyBodyDefault": "طلب راكب قريباً رحلة.",
+  "driverNotificationTakenTitle": "تم قبول الطلب مسبقاً",
+  "driverNotificationTakenBodyDefault": "سائق آخر قبل هذا الطلب.",
+  "driverNotificationCancelledTitle": "أُلغيت الرحلة",
+  "driverNotificationCancelledBodyDefault": "ألغى الراكب الطلب.",
+  "driverNotificationRequestClosedTitle": "أُغلق الطلب",
+  "driverNotificationRequestClosedBodyOther": "قبل سائق آخر هذا الطلب أو أُلغي.",
+  "driverNotificationRequestClosedBodyTaken": "قبل سائق آخر هذا الطلب.",
+  "driverNotificationNewRideTitle": "طلب رحلة جديد",
+  "driverNotificationNewRideBodyDefault": "أرسل راكب قريب طلباً جديداً.",
+  "snackDriverNewNearbyRide": "وصل طلب رحلة جديد قريباً.",
+  "snackDriverRideTakenOther": "قبل سائق آخر هذه الرحلة.",
+  "snackDriverPassengerCancelled": "ألغى الراكب الطلب.",
+  "snackDriverChatAfterAcceptance": "تُفتح المحادثة بعد قبول الرحلة.",
+  "driverMyVehicleTitle": "مركبتي",
+  "driverVehicleSummaryLine": "النوع: {model} | اللون: {color}",
+  "driverVehicleIdentityTitle": "هوية المركبة",
+  "driverOpenRequestsChip": "طلبات مفتوحة: {count}",
+  "driverUnreadAlertsChip": "تنبيهات غير مقروءة: {count}",
+  "b2bAppBarTitle": "تاكسي برو — الشركات",
+  "b2bPortalHeading": "بوابة الشركات والنزل",
+  "b2bConnectedWorkflowSubtitle": "متصل بمسار الفوترة الشهرية",
+  "b2bBookOnAccountHeading": "احجز على حساب الشركة",
+  "b2bMonthlyUsageTitle": "استهلاك الشهر الحالي (تجريبي)",
+  "b2bMonthlyAmountDue": "المبلغ المستحق (د.ت): {amount}",
+  "b2bBookingSuccessMessage": "{action} #{id} • {guest} • {route}",
+  "ownerAppBarTitle": "لوحة المالك",
+  "ownerProfitChip": "الربح: {amount} د.ت",
+  "ownerTripsCountChip": "الرحلات: {count}",
+  "ownerRatingChip": "{avg} ★ ({votes})",
+  "ownerVaultHeading": "خزنة الرحلات",
+  "ownerAdminOversightHeading": "مراقبة الإدارة",
+  "ownerCommissionChip": "العمولة: {amount} د.ت",
+  "ownerTripRouteFareRow": "{route} — {fare} د.ت",
+  "ownerHqPortalHeading": "مركز القيادة",
+  "operatorDispatchCenterHeading": "النداء والمراقبة",
+  "operatorDispatchPendingBlurb": "يوجد طلبات معلّقة تحتاج توزيعاً على السائقين.",
+  "operatorDispatchIdleBlurb": "النظام متصل. لا طلبات معلّقة.",
+  "operatorChipPending": "معلّقة: {count}",
+  "operatorChipAccepted": "مقبولة: {count}",
+  "operatorChipOngoing": "جارية: {count}",
+  "operatorChipCompleted": "مكتملة: {count}",
+  "operatorRideSubtitleLine": "{status}{driver}{created}",
+  "operatorDriversOnlineCount": "سائقون متصلون: {count}",
+  "operatorPhoneLabel": "الهاتف",
+  "operatorDriverNameLabel": "اسم السائق",
+  "operatorPinLabel": "رمز PIN",
+  "operatorCreateDriverAccount": "إنشاء حساب سائق",
+  "operatorRefreshCorporateBookings": "تحديث حجوزات الشركات",
+  "operatorTripVaultHeading": "خزنة الرحلات",
+  "operatorTripVaultTripsChip": "الرحلات: {count}",
+  "operatorTripVaultRevenueChip": "الإيرادات: {amount} د.ت",
+  "operatorWalletBalanceLabel": "رصيد المحفظة",
+  "operatorOwnerCommissionLabel": "عمولة المالك %",
+  "operatorB2bCommissionLabel": "عمولة الشركات %",
+  "operatorAutoDeductEnabled": "الخصم التلقائي مفعّل",
+  "operatorCarModelLabel": "طراز السيارة",
+  "operatorCarColorLabel": "لون السيارة",
+  "operatorPickFromGallery": "اختيار صورة من المعرض",
+  "operatorRemovePickedImage": "إزالة الصورة",
+  "operatorPhotoUrlOptional": "رابط الصورة (اختياري)",
+  "operatorCancel": "إلغاء",
+  "operatorSave": "حفظ",
+  "operatorDriverWalletLine": "المحفظة: {wallet} د.ت | مالك %: {owner} | شركات %: {b2b}",
+  "operatorDriverCarColorAppend": " | اللون: {color}",
+  "operatorDriverCarLine": "\nالسيارة: {model}",
+  "statusLinePrefix": "الحالة: ",
+  "driverLabelPrefix": " | السائق: ",
+  "createdAtLinePrefix": "\nالوقت: ",
+  "@distanceKm": {
+    "placeholders": {
+      "km": {
+        "type": "Object"
+      }
+    }
+  },
+  "@fareDt": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "@loggedInAs": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "@tripRecorded": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      },
+      "commission": {
+        "type": "Object"
+      }
+    }
+  },
+  "@commissionLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "@tripsCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@avgRatingLabel": {
+    "placeholders": {
+      "avg": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@tripListSubtitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "commission": {
+        "type": "Object"
+      }
+    }
+  },
+  "@operatorTripSubtitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "Object"
+      }
+    }
+  },
+  "@rideStatusFmt": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "@adminRideRow": {
+    "placeholders": {
+      "pickup": {
+        "type": "String"
+      },
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "@driverLocationRow": {
+    "placeholders": {
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
+    }
+  },
+  "@passengerActiveRidesChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@passengerTotalRidesChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@passengerDriverLine": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@passengerPhoneLine": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "@passengerRideNumberLine": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "@notificationRideUpdatedBody": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "@notificationDriverAcceptedBody": {
+    "placeholders": {
+      "driver": {
+        "type": "String"
+      },
+      "phoneSuffix": {
+        "type": "String"
+      }
+    }
+  },
+  "@notificationDriverAcceptedSnack": {
+    "placeholders": {
+      "driver": {
+        "type": "String"
+      },
+      "phoneSuffix": {
+        "type": "String"
+      }
+    }
+  },
+  "@notificationDriverNearPickupBody": {
+    "placeholders": {
+      "pickup": {
+        "type": "String"
+      }
+    }
+  },
+  "@requestSentSnackLine": {
+    "placeholders": {
+      "farePart": {
+        "type": "String"
+      },
+      "promoPart": {
+        "type": "String"
+      }
+    }
+  },
+  "@driverVehicleSummaryLine": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "color": {
+        "type": "String"
+      }
+    }
+  },
+  "@driverOpenRequestsChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@driverUnreadAlertsChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@b2bMonthlyAmountDue": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "@b2bBookingSuccessMessage": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "id": {
+        "type": "Object"
+      },
+      "guest": {
+        "type": "String"
+      },
+      "route": {
+        "type": "String"
+      }
+    }
+  },
+  "@ownerProfitChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "@ownerTripsCountChip": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "@ownerRatingChip": {
+    "placeholders": {
+      "avg": {
+        "type": "String"
+      },
+      "votes": {
+        "type": "String"
+      }
+    }
+  },
+  "@ownerCommissionChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "@ownerTripRouteFareRow": {
+    "placeholders": {
+      "route": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "String"
+      }
+    }
+  },
+  "@operatorChipPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@operatorChipAccepted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@operatorChipOngoing": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@operatorChipCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@operatorRideSubtitleLine": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "driver": {
+        "type": "String"
+      },
+      "created": {
+        "type": "String"
+      }
+    }
+  },
+  "@operatorDriversOnlineCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@operatorTripVaultTripsChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@operatorTripVaultRevenueChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "@operatorDriverWalletLine": {
+    "placeholders": {
+      "wallet": {
+        "type": "String"
+      },
+      "owner": {
+        "type": "String"
+      },
+      "b2b": {
+        "type": "String"
+      }
+    }
+  },
+  "@operatorDriverCarColorAppend": {
+    "placeholders": {
+      "color": {
+        "type": "String"
+      }
+    }
+  },
+  "@operatorDriverCarLine": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "walletWithAmount": "المحفظة: {amount} د.ت",
+  "@walletWithAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "b2bFareAdminPercentSuffix": "• 5٪ إداري",
+  "adminB2bBookingRowSubtitle": "{guest} • {room} • {fare} د.ت",
+  "@adminB2bBookingRowSubtitle": {
+    "placeholders": {
+      "guest": {
+        "type": "String"
+      },
+      "room": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorTabDispatch": "الإرسال",
+  "operatorTabDrivers": "السائقون",
+  "operatorTabB2b": "شركات",
+  "operatorTabTripVault": "سجل الرحلات",
+  "operatorFillDriverFields": "أدخل الهاتف واسم السائق والرقم السري.",
+  "placeCarthageAirport": "مطار قرطاج",
+  "placeEnfidhaAirport": "مطار النفيضة",
+  "placeMonastirAirport": "مطار المنستير",
+  "placeSousseCenter": "وسط سوسة",
+  "placeHammamet": "الحمامات",
+  "placeSousse": "سوسة",
+  "placePortElKantaoui": "القنطاوي",
+  "placeNabeul": "نابل"
 }

@@ -91,5 +91,509 @@
   "chatScreenTitle": "Fahrt-Chat",
   "messageFieldHint": "Nachricht eingeben",
   "sendChatMessage": "Senden",
-  "accountDisabledContactAdmin": "Konto deaktiviert. Wenden Sie sich an einen Administrator."
+  "accountDisabledContactAdmin": "Konto deaktiviert. Wenden Sie sich an einen Administrator.",
+  "signedInWithGoogle": "Mit Google angemeldet",
+  "passengerGoogleLoginRequired": "Für Fahrgäste ist die Anmeldung mit Google erforderlich.",
+  "continueWithGoogle": "Weiter mit Google",
+  "passengerDispatchPanelTitle": "Premium-Dispositionspanel",
+  "passengerActiveRidesChip": "Aktive Fahrten: {count}",
+  "passengerTotalRidesChip": "Fahrten gesamt: {count}",
+  "passengerBookingSectionTitle": "Buchung",
+  "passengerLocationCurrent": "Ihr aktueller Standort",
+  "passengerLocationDetecting": "Standort wird ermittelt…",
+  "passengerLocationUnavailable": "Standort nicht verfügbar",
+  "passengerRefreshLocationTooltip": "Standort aktualisieren",
+  "passengerDriverLine": "Fahrer: {name}",
+  "passengerPhoneLine": "Telefon: {phone}",
+  "rideStatusPending": "Ausstehend",
+  "rideStatusAccepted": "Angenommen",
+  "rideStatusOngoing": "Läuft",
+  "rideStatusCompleted": "Abgeschlossen",
+  "rideStatusCancelled": "Storniert",
+  "rideStatusActive": "Aktiv",
+  "passengerLocationServiceDisabled": "Standortdienst ist deaktiviert.",
+  "passengerLocationPermissionDenied": "Standortberechtigung verweigert.",
+  "passengerNoNotificationsYet": "Noch keine Benachrichtigungen.",
+  "dialogOk": "OK",
+  "passengerRideNotificationTitle": "Fahrtdetails",
+  "passengerRideNumberLine": "Fahrt Nr. {id}",
+  "@distanceKm": {
+    "placeholders": {
+      "km": {
+        "type": "Object"
+      }
+    }
+  },
+  "@fareDt": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "@loggedInAs": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "@tripRecorded": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      },
+      "commission": {
+        "type": "Object"
+      }
+    }
+  },
+  "@commissionLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "@tripsCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@avgRatingLabel": {
+    "placeholders": {
+      "avg": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@tripListSubtitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "commission": {
+        "type": "Object"
+      }
+    }
+  },
+  "@operatorTripSubtitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "Object"
+      }
+    }
+  },
+  "@rideStatusFmt": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "@adminRideRow": {
+    "placeholders": {
+      "pickup": {
+        "type": "String"
+      },
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "@driverLocationRow": {
+    "placeholders": {
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
+    }
+  },
+  "@passengerActiveRidesChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@passengerTotalRidesChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@passengerDriverLine": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@passengerPhoneLine": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "@passengerRideNumberLine": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsEmpty": "No notifications yet.",
+  "notificationRideUpdateTitle": "Ride update",
+  "notificationRideUpdatedBody": "Ride #{id} updated.",
+  "@notificationRideUpdatedBody": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "errorGoogleSignInMissingToken": "Google sign-in failed: missing Google token.",
+  "driverNameFallback": "Driver",
+  "notificationDriverAcceptedTitle": "Driver accepted",
+  "notificationDriverAcceptedBody": "{driver}{phoneSuffix} accepted your request.",
+  "@notificationDriverAcceptedBody": {
+    "placeholders": {
+      "driver": {
+        "type": "String"
+      },
+      "phoneSuffix": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationDriverAcceptedSnack": "Driver accepted: {driver}{phoneSuffix}",
+  "@notificationDriverAcceptedSnack": {
+    "placeholders": {
+      "driver": {
+        "type": "String"
+      },
+      "phoneSuffix": {
+        "type": "String"
+      }
+    }
+  },
+  "passengerDriverNearPickupSnack": "Driver is now near your pickup point.",
+  "notificationDriverNearPickupTitle": "Driver near pickup",
+  "notificationDriverNearPickupBody": "Your driver is near pickup in {pickup}.",
+  "@notificationDriverNearPickupBody": {
+    "placeholders": {
+      "pickup": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationRequestSentTitle": "Request sent",
+  "notificationRequestSentBody": "We sent your ride request to nearby drivers.",
+  "requestSentSnackLine": "Request sent. {farePart}{promoPart}",
+  "@requestSentSnackLine": {
+    "placeholders": {
+      "farePart": {
+        "type": "String"
+      },
+      "promoPart": {
+        "type": "String"
+      }
+    }
+  },
+  "promoCodeOptionalLabel": "Promo code",
+  "driverNotificationNewNearbyTitle": "New nearby ride",
+  "driverNotificationNewNearbyBodyDefault": "A nearby passenger requested a ride.",
+  "driverNotificationTakenTitle": "Request already accepted",
+  "driverNotificationTakenBodyDefault": "Another driver accepted this request.",
+  "driverNotificationCancelledTitle": "Ride cancelled",
+  "driverNotificationCancelledBodyDefault": "Passenger cancelled this ride request.",
+  "driverNotificationRequestClosedTitle": "Request closed",
+  "driverNotificationRequestClosedBodyOther": "This request was accepted by another driver or cancelled.",
+  "driverNotificationRequestClosedBodyTaken": "This request was accepted by another driver.",
+  "driverNotificationNewRideTitle": "New ride request",
+  "driverNotificationNewRideBodyDefault": "A nearby passenger sent a new request.",
+  "snackDriverNewNearbyRide": "New nearby ride request received.",
+  "snackDriverRideTakenOther": "Ride accepted by another driver.",
+  "snackDriverPassengerCancelled": "Passenger cancelled this request.",
+  "snackDriverChatAfterAcceptance": "Chat will open after ride acceptance",
+  "driverMyVehicleTitle": "My vehicle",
+  "driverVehicleSummaryLine": "Car: {model} | Color: {color}",
+  "@driverVehicleSummaryLine": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "color": {
+        "type": "String"
+      }
+    }
+  },
+  "driverVehicleIdentityTitle": "Vehicle identity",
+  "driverOpenRequestsChip": "Open requests: {count}",
+  "@driverOpenRequestsChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "driverUnreadAlertsChip": "Unread alerts: {count}",
+  "@driverUnreadAlertsChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "b2bAppBarTitle": "Taxi Pro Corporate",
+  "b2bPortalHeading": "Corporate & hotel portal",
+  "b2bConnectedWorkflowSubtitle": "Connected to monthly billing workflow",
+  "b2bBookOnAccountHeading": "Book on company account",
+  "b2bMonthlyUsageTitle": "Current month usage (stub)",
+  "b2bMonthlyAmountDue": "Amount due (DT): {amount}",
+  "@b2bMonthlyAmountDue": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "b2bBookingSuccessMessage": "{action} #{id} • {guest} • {route}",
+  "@b2bBookingSuccessMessage": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "id": {
+        "type": "Object"
+      },
+      "guest": {
+        "type": "String"
+      },
+      "route": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerAppBarTitle": "Owner HQ",
+  "ownerProfitChip": "Profit: {amount} DT",
+  "@ownerProfitChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerTripsCountChip": "Trips: {count}",
+  "@ownerTripsCountChip": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerRatingChip": "{avg} ★ ({votes})",
+  "@ownerRatingChip": {
+    "placeholders": {
+      "avg": {
+        "type": "String"
+      },
+      "votes": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerVaultHeading": "Trip vault",
+  "ownerAdminOversightHeading": "Admin oversight",
+  "ownerCommissionChip": "Commission: {amount} DT",
+  "@ownerCommissionChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerTripRouteFareRow": "{route} — {fare} DT",
+  "@ownerTripRouteFareRow": {
+    "placeholders": {
+      "route": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerHqPortalHeading": "HQ command center",
+  "operatorDispatchCenterHeading": "Dispatch & monitoring",
+  "operatorDispatchPendingBlurb": "There are pending requests that need assigning.",
+  "operatorDispatchIdleBlurb": "System is connected. No pending bookings.",
+  "operatorChipPending": "Pending: {count}",
+  "@operatorChipPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorChipAccepted": "Accepted: {count}",
+  "@operatorChipAccepted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorChipOngoing": "Ongoing: {count}",
+  "@operatorChipOngoing": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorChipCompleted": "Completed: {count}",
+  "@operatorChipCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorRideSubtitleLine": "{status}{driver}{created}",
+  "@operatorRideSubtitleLine": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "driver": {
+        "type": "String"
+      },
+      "created": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorDriversOnlineCount": "Drivers online: {count}",
+  "@operatorDriversOnlineCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorPhoneLabel": "Phone",
+  "operatorDriverNameLabel": "Driver name",
+  "operatorPinLabel": "PIN",
+  "operatorCreateDriverAccount": "Create driver account",
+  "operatorRefreshCorporateBookings": "Refresh corporate bookings",
+  "operatorTripVaultHeading": "Trip vault",
+  "operatorTripVaultTripsChip": "Trips: {count}",
+  "@operatorTripVaultTripsChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorTripVaultRevenueChip": "Revenue: {amount} DT",
+  "@operatorTripVaultRevenueChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorWalletBalanceLabel": "Wallet balance",
+  "operatorOwnerCommissionLabel": "Owner commission %",
+  "operatorB2bCommissionLabel": "B2B commission %",
+  "operatorAutoDeductEnabled": "Auto deduct enabled",
+  "operatorCarModelLabel": "Car model",
+  "operatorCarColorLabel": "Car color",
+  "operatorPickFromGallery": "Pick image from gallery",
+  "operatorRemovePickedImage": "Remove picked image",
+  "operatorPhotoUrlOptional": "Photo URL (optional)",
+  "operatorCancel": "Cancel",
+  "operatorSave": "Save",
+  "operatorDriverWalletLine": "Wallet: {wallet} DT | Owner %: {owner} | B2B %: {b2b}",
+  "@operatorDriverWalletLine": {
+    "placeholders": {
+      "wallet": {
+        "type": "String"
+      },
+      "owner": {
+        "type": "String"
+      },
+      "b2b": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorDriverCarColorAppend": " | Color: {color}",
+  "@operatorDriverCarColorAppend": {
+    "placeholders": {
+      "color": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorDriverCarLine": "\nCar: {model}",
+  "@operatorDriverCarLine": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "statusLinePrefix": "Status: ",
+  "driverLabelPrefix": " | Driver: ",
+  "createdAtLinePrefix": "\nAt: ",
+  "walletWithAmount": "Wallet: {amount} DT",
+  "@walletWithAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "b2bFareAdminPercentSuffix": "• 5% admin",
+  "adminB2bBookingRowSubtitle": "{guest} • {room} • {fare} DT",
+  "@adminB2bBookingRowSubtitle": {
+    "placeholders": {
+      "guest": {
+        "type": "String"
+      },
+      "room": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorTabDispatch": "Dispatch",
+  "operatorTabDrivers": "Drivers",
+  "operatorTabB2b": "B2B",
+  "operatorTabTripVault": "Trip vault",
+  "operatorFillDriverFields": "Enter phone, driver name, and PIN.",
+  "placeCarthageAirport": "Carthage Airport (Tunis)",
+  "placeEnfidhaAirport": "Enfidha–Hammamet Airport",
+  "placeMonastirAirport": "Monastir Airport",
+  "placeSousseCenter": "Sousse city center",
+  "placeHammamet": "Hammamet",
+  "placeSousse": "Sousse",
+  "placePortElKantaoui": "Port El Kantaoui",
+  "placeNabeul": "Nabeul"
 }

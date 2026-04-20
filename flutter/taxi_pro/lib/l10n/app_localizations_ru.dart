@@ -294,6 +294,30 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get placeCarthageAirport => 'Carthage Airport (Tunis)';
+
+  @override
+  String get placeEnfidhaAirport => 'Enfidha–Hammamet Airport';
+
+  @override
+  String get placeMonastirAirport => 'Monastir Airport';
+
+  @override
+  String get placeSousseCenter => 'Sousse city center';
+
+  @override
+  String get placeHammamet => 'Hammamet';
+
+  @override
+  String get placeSousse => 'Sousse';
+
+  @override
+  String get placePortElKantaoui => 'Port El Kantaoui';
+
+  @override
+  String get placeNabeul => 'Nabeul';
+
+  @override
   String driverLocationRow(String lat, String lng) {
     return 'Шир. $lat, Долг. $lng';
   }
@@ -310,4 +334,442 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get accountDisabledContactAdmin =>
       'Аккаунт отключён. Обратитесь к администратору.';
+
+  @override
+  String get signedInWithGoogle => 'Вход выполнен через Google';
+
+  @override
+  String get passengerGoogleLoginRequired =>
+      'Для пассажиров требуется вход через Google.';
+
+  @override
+  String get continueWithGoogle => 'Продолжить с Google';
+
+  @override
+  String get passengerDispatchPanelTitle => 'Премиум‑диспетчерская панель';
+
+  @override
+  String passengerActiveRidesChip(int count) {
+    return 'Активные поездки: $count';
+  }
+
+  @override
+  String passengerTotalRidesChip(int count) {
+    return 'Всего поездок: $count';
+  }
+
+  @override
+  String get passengerBookingSectionTitle => 'Бронирование';
+
+  @override
+  String get passengerLocationCurrent => 'Ваше текущее местоположение';
+
+  @override
+  String get passengerLocationDetecting => 'Определение местоположения...';
+
+  @override
+  String get passengerLocationUnavailable => 'Местоположение недоступно';
+
+  @override
+  String get passengerRefreshLocationTooltip => 'Обновить местоположение';
+
+  @override
+  String passengerDriverLine(String name) {
+    return 'Водитель: $name';
+  }
+
+  @override
+  String passengerPhoneLine(String phone) {
+    return 'Телефон: $phone';
+  }
+
+  @override
+  String get rideStatusPending => 'Ожидает';
+
+  @override
+  String get rideStatusAccepted => 'Принята';
+
+  @override
+  String get rideStatusOngoing => 'В пути';
+
+  @override
+  String get rideStatusCompleted => 'Завершена';
+
+  @override
+  String get rideStatusCancelled => 'Отменена';
+
+  @override
+  String get rideStatusActive => 'Активна';
+
+  @override
+  String get passengerLocationServiceDisabled => 'Служба геолокации отключена.';
+
+  @override
+  String get passengerLocationPermissionDenied =>
+      'Доступ к геолокации запрещён.';
+
+  @override
+  String get passengerNoNotificationsYet => 'Пока нет уведомлений.';
+
+  @override
+  String get dialogOk => 'OK';
+
+  @override
+  String get passengerRideNotificationTitle => 'Детали поездки';
+
+  @override
+  String passengerRideNumberLine(int id) {
+    return 'Поездка № $id';
+  }
+
+  @override
+  String get notificationsEmpty => 'No notifications yet.';
+
+  @override
+  String get notificationRideUpdateTitle => 'Ride update';
+
+  @override
+  String notificationRideUpdatedBody(int id) {
+    return 'Ride #$id updated.';
+  }
+
+  @override
+  String get errorGoogleSignInMissingToken =>
+      'Google sign-in failed: missing Google token.';
+
+  @override
+  String get driverNameFallback => 'Driver';
+
+  @override
+  String get notificationDriverAcceptedTitle => 'Driver accepted';
+
+  @override
+  String notificationDriverAcceptedBody(String driver, String phoneSuffix) {
+    return '$driver$phoneSuffix accepted your request.';
+  }
+
+  @override
+  String notificationDriverAcceptedSnack(String driver, String phoneSuffix) {
+    return 'Driver accepted: $driver$phoneSuffix';
+  }
+
+  @override
+  String get passengerDriverNearPickupSnack =>
+      'Driver is now near your pickup point.';
+
+  @override
+  String get notificationDriverNearPickupTitle => 'Driver near pickup';
+
+  @override
+  String notificationDriverNearPickupBody(String pickup) {
+    return 'Your driver is near pickup in $pickup.';
+  }
+
+  @override
+  String get notificationRequestSentTitle => 'Request sent';
+
+  @override
+  String get notificationRequestSentBody =>
+      'We sent your ride request to nearby drivers.';
+
+  @override
+  String requestSentSnackLine(String farePart, String promoPart) {
+    return 'Request sent. $farePart$promoPart';
+  }
+
+  @override
+  String get promoCodeOptionalLabel => 'Promo code';
+
+  @override
+  String get driverNotificationNewNearbyTitle => 'New nearby ride';
+
+  @override
+  String get driverNotificationNewNearbyBodyDefault =>
+      'A nearby passenger requested a ride.';
+
+  @override
+  String get driverNotificationTakenTitle => 'Request already accepted';
+
+  @override
+  String get driverNotificationTakenBodyDefault =>
+      'Another driver accepted this request.';
+
+  @override
+  String get driverNotificationCancelledTitle => 'Ride cancelled';
+
+  @override
+  String get driverNotificationCancelledBodyDefault =>
+      'Passenger cancelled this ride request.';
+
+  @override
+  String get driverNotificationRequestClosedTitle => 'Request closed';
+
+  @override
+  String get driverNotificationRequestClosedBodyOther =>
+      'This request was accepted by another driver or cancelled.';
+
+  @override
+  String get driverNotificationRequestClosedBodyTaken =>
+      'This request was accepted by another driver.';
+
+  @override
+  String get driverNotificationNewRideTitle => 'New ride request';
+
+  @override
+  String get driverNotificationNewRideBodyDefault =>
+      'A nearby passenger sent a new request.';
+
+  @override
+  String get snackDriverNewNearbyRide => 'New nearby ride request received.';
+
+  @override
+  String get snackDriverRideTakenOther => 'Ride accepted by another driver.';
+
+  @override
+  String get snackDriverPassengerCancelled =>
+      'Passenger cancelled this request.';
+
+  @override
+  String get snackDriverChatAfterAcceptance =>
+      'Chat will open after ride acceptance';
+
+  @override
+  String get driverMyVehicleTitle => 'My vehicle';
+
+  @override
+  String driverVehicleSummaryLine(String model, String color) {
+    return 'Car: $model | Color: $color';
+  }
+
+  @override
+  String get driverVehicleIdentityTitle => 'Vehicle identity';
+
+  @override
+  String driverOpenRequestsChip(int count) {
+    return 'Open requests: $count';
+  }
+
+  @override
+  String driverUnreadAlertsChip(int count) {
+    return 'Unread alerts: $count';
+  }
+
+  @override
+  String get b2bAppBarTitle => 'Taxi Pro Corporate';
+
+  @override
+  String get b2bPortalHeading => 'Corporate & hotel portal';
+
+  @override
+  String get b2bConnectedWorkflowSubtitle =>
+      'Connected to monthly billing workflow';
+
+  @override
+  String get b2bBookOnAccountHeading => 'Book on company account';
+
+  @override
+  String get b2bMonthlyUsageTitle => 'Current month usage (stub)';
+
+  @override
+  String b2bMonthlyAmountDue(String amount) {
+    return 'Amount due (DT): $amount';
+  }
+
+  @override
+  String b2bBookingSuccessMessage(
+      String action, Object id, String guest, String route) {
+    return '$action #$id • $guest • $route';
+  }
+
+  @override
+  String get b2bFareAdminPercentSuffix => '• 5% admin';
+
+  @override
+  String adminB2bBookingRowSubtitle(String guest, String room, String fare) {
+    return '$guest • $room • $fare DT';
+  }
+
+  @override
+  String get ownerAppBarTitle => 'Owner HQ';
+
+  @override
+  String ownerProfitChip(String amount) {
+    return 'Profit: $amount DT';
+  }
+
+  @override
+  String ownerTripsCountChip(String count) {
+    return 'Trips: $count';
+  }
+
+  @override
+  String ownerRatingChip(String avg, String votes) {
+    return '$avg ★ ($votes)';
+  }
+
+  @override
+  String get ownerVaultHeading => 'Trip vault';
+
+  @override
+  String get ownerAdminOversightHeading => 'Admin oversight';
+
+  @override
+  String ownerCommissionChip(String amount) {
+    return 'Commission: $amount DT';
+  }
+
+  @override
+  String ownerTripRouteFareRow(String route, String fare) {
+    return '$route — $fare DT';
+  }
+
+  @override
+  String get ownerHqPortalHeading => 'HQ command center';
+
+  @override
+  String get operatorTabDispatch => 'Dispatch';
+
+  @override
+  String get operatorTabDrivers => 'Drivers';
+
+  @override
+  String get operatorTabB2b => 'B2B';
+
+  @override
+  String get operatorTabTripVault => 'Trip vault';
+
+  @override
+  String get operatorDispatchCenterHeading => 'Dispatch & monitoring';
+
+  @override
+  String get operatorDispatchPendingBlurb =>
+      'There are pending requests that need assigning.';
+
+  @override
+  String get operatorDispatchIdleBlurb =>
+      'System is connected. No pending bookings.';
+
+  @override
+  String operatorChipPending(int count) {
+    return 'Pending: $count';
+  }
+
+  @override
+  String operatorChipAccepted(int count) {
+    return 'Accepted: $count';
+  }
+
+  @override
+  String operatorChipOngoing(int count) {
+    return 'Ongoing: $count';
+  }
+
+  @override
+  String operatorChipCompleted(int count) {
+    return 'Completed: $count';
+  }
+
+  @override
+  String operatorRideSubtitleLine(
+      String status, String driver, String created) {
+    return '$status$driver$created';
+  }
+
+  @override
+  String operatorDriversOnlineCount(int count) {
+    return 'Drivers online: $count';
+  }
+
+  @override
+  String get operatorPhoneLabel => 'Phone';
+
+  @override
+  String get operatorDriverNameLabel => 'Driver name';
+
+  @override
+  String get operatorPinLabel => 'PIN';
+
+  @override
+  String get operatorFillDriverFields => 'Enter phone, driver name, and PIN.';
+
+  @override
+  String get operatorCreateDriverAccount => 'Create driver account';
+
+  @override
+  String get operatorRefreshCorporateBookings => 'Refresh corporate bookings';
+
+  @override
+  String get operatorTripVaultHeading => 'Trip vault';
+
+  @override
+  String operatorTripVaultTripsChip(int count) {
+    return 'Trips: $count';
+  }
+
+  @override
+  String operatorTripVaultRevenueChip(String amount) {
+    return 'Revenue: $amount DT';
+  }
+
+  @override
+  String get operatorWalletBalanceLabel => 'Wallet balance';
+
+  @override
+  String get operatorOwnerCommissionLabel => 'Owner commission %';
+
+  @override
+  String get operatorB2bCommissionLabel => 'B2B commission %';
+
+  @override
+  String get operatorAutoDeductEnabled => 'Auto deduct enabled';
+
+  @override
+  String get operatorCarModelLabel => 'Car model';
+
+  @override
+  String get operatorCarColorLabel => 'Car color';
+
+  @override
+  String get operatorPickFromGallery => 'Pick image from gallery';
+
+  @override
+  String get operatorRemovePickedImage => 'Remove picked image';
+
+  @override
+  String get operatorPhotoUrlOptional => 'Photo URL (optional)';
+
+  @override
+  String get operatorCancel => 'Cancel';
+
+  @override
+  String get operatorSave => 'Save';
+
+  @override
+  String operatorDriverWalletLine(String wallet, String owner, String b2b) {
+    return 'Wallet: $wallet DT | Owner %: $owner | B2B %: $b2b';
+  }
+
+  @override
+  String operatorDriverCarColorAppend(String color) {
+    return ' | Color: $color';
+  }
+
+  @override
+  String operatorDriverCarLine(String model) {
+    return '\nCar: $model';
+  }
+
+  @override
+  String get statusLinePrefix => 'Status: ';
+
+  @override
+  String get driverLabelPrefix => ' | Driver: ';
+
+  @override
+  String get createdAtLinePrefix => '\nAt: ';
+
+  @override
+  String walletWithAmount(String amount) {
+    return 'Wallet: $amount DT';
+  }
 }

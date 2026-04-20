@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../app_locale.dart';
 import '../l10n/app_localizations.dart';
+import '../widgets/locale_popup_menu.dart';
 import 'app_passenger_screen.dart';
 import 'b2b_screen.dart';
 import 'driver_screen.dart';
@@ -8,32 +10,22 @@ import 'operator_screen.dart';
 import 'owner_screen.dart';
 
 /// 8 UI languages: AR, EN, FR, DE, ZH, IT, ES, RU
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, required this.onLocaleChanged});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
-  final ValueChanged<Locale> onLocaleChanged;
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
-  static const _locales = <Locale>[
-    Locale('ar'),
-    Locale('en'),
-    Locale('fr'),
-    Locale('de'),
-    Locale('zh'),
-    Locale('it'),
-    Locale('es'),
-    Locale('ru'),
-  ];
-
-  static const _localeLabels = <String>[
-    'العربية',
-    'English',
-    'Français',
-    'Deutsch',
-    '中文',
-    'Italiano',
-    'Español',
-    'Русский',
-  ];
+class _HomeScreenState extends State<HomeScreen> {
+  Future<void> _pushRole(BuildContext context, Widget page) async {
+    rememberCurrentLocaleForRole(AppUiRole.home);
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => page),
+    );
+    if (!context.mounted) return;
+    restoreUiRoleLocale(AppUiRole.home);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,19 +35,8 @@ class HomeScreen extends StatelessWidget {
         title: Text(l.appTitle),
         backgroundColor: Colors.amber.shade800,
         foregroundColor: Colors.black,
-        actions: [
-          PopupMenuButton<Locale>(
-            icon: const Icon(Icons.language),
-            tooltip: l.language,
-            onSelected: onLocaleChanged,
-            itemBuilder: (context) => List<PopupMenuEntry<Locale>>.generate(
-              _locales.length,
-              (i) => PopupMenuItem(
-                value: _locales[i],
-                child: Text(_localeLabels[i]),
-              ),
-            ),
-          ),
+        actions: const [
+          LocalePopupMenuButton(uiRole: AppUiRole.home),
         ],
       ),
       body: ListView(
@@ -90,10 +71,7 @@ class HomeScreen extends StatelessWidget {
         leading: Icon(icon),
         title: Text(title),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () {
-          Navigator.of(context)
-              .push(MaterialPageRoute<void>(builder: (_) => page));
-        },
+        onTap: () => _pushRole(context, page),
       ),
     );
   }

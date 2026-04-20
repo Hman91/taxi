@@ -4,11 +4,21 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../api/models.dart';
+import '../app_locale.dart' show
+    AppUiRole,
+    applyPreferredLanguageToApp,
+    appLocale,
+    rememberCurrentLocaleForRole,
+    restoreUiRoleLocale,
+    userChoseLocaleThisSession;
 import '../l10n/app_localizations.dart';
+import '../l10n/place_localization.dart';
+import '../l10n/ride_status_localization.dart';
 import '../models/app_notification.dart';
 import '../services/chat_socket_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/taxi_app_service.dart';
+import '../widgets/locale_popup_menu.dart';
 import 'ride_chat_screen.dart';
 
 class DriverScreen extends StatefulWidget {
@@ -45,6 +55,15 @@ class _DriverScreenState extends State<DriverScreen> {
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      restoreUiRoleLocale(AppUiRole.driver);
+    });
+  }
+
   void _pushNotification({
     required String title,
     required String body,
@@ -78,7 +97,7 @@ class _DriverScreenState extends State<DriverScreen> {
         child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.6,
           child: _notifications.isEmpty
-              ? const Center(child: Text('No notifications yet.'))
+              ? Center(child: Text(AppLocalizations.of(context)!.notificationsEmpty))
               : ListView.builder(
                   itemCount: _notifications.length,
                   itemBuilder: (context, index) {
@@ -119,6 +138,17 @@ class _DriverScreenState extends State<DriverScreen> {
         phone: _phoneController.text.trim(),
         pin: _pinController.text.trim(),
       );
+      if (!userChoseLocaleThisSession.value) {
+        applyPreferredLanguageToApp(r.preferredLanguage);
+      } else {
+        try {
+          await _api.patchPreferredLanguage(
+            token: r.accessToken,
+            preferredLanguage: appLocale.value.languageCode,
+          );
+        } catch (_) {}
+      }
+      rememberCurrentLocaleForRole(AppUiRole.driver);
       setState(() {
         _token = r.accessToken;
         _userId = r.userId;
@@ -131,7 +161,7 @@ class _DriverScreenState extends State<DriverScreen> {
         _message = l.loggedInAs(r.role);
       });
       final fares = await _api.getAirportFares();
-      final locations = _startsFromRouteKeys(fares.keys);
+      final locations = _startsFromRouteKeys(fares.keys, l);
       setState(() {
         _locations = locations;
         if (_location.isEmpty || !_locations.contains(_location)) {
@@ -187,6 +217,7 @@ class _DriverScreenState extends State<DriverScreen> {
   }
 
   void _processRideTransitions(Map<int, Ride> previousById, List<Ride> rides) {
+    final loc = AppLocalizations.of(context)!;
     final currentById = {for (final r in rides) r.id: r};
     final currentPendingRideIds = rides
         .where((r) => r.status == 'pending')
@@ -208,8 +239,8 @@ class _DriverScreenState extends State<DriverScreen> {
       if (_notifiedClosedRideIds.contains(rideId)) continue;
       _notifiedClosedRideIds.add(rideId);
       _pushNotification(
-        title: 'Request closed',
-        body: 'This request was accepted by another driver or cancelled.',
+        title: loc.driverNotificationRequestClosedTitle,
+        body: loc.driverNotificationRequestClosedBodyOther,
         event: 'ride_no_longer_visible',
         rideId: rideId,
       );
@@ -221,17 +252,17 @@ class _DriverScreenState extends State<DriverScreen> {
       if (prev == null && ride.status == 'pending') {
         _seenPendingRideIds.add(ride.id);
         _pushNotification(
-          title: 'New ride request',
-          body: 'A nearby passenger sent a new request.',
+          title: loc.driverNotificationNewRideTitle,
+          body: loc.driverNotificationNewRideBodyDefault,
           event: 'ride_request_sent',
           rideId: ride.id,
         );
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('New nearby ride request received.')),
+          SnackBar(content: Text(loc.snackDriverNewNearbyRide)),
         );
         LocalNotificationService.instance.show(
-          title: 'New ride request',
-          body: 'A nearby passenger sent a new request.',
+          title: loc.driverNotificationNewRideTitle,
+          body: loc.driverNotificationNewRideBodyDefault,
         );
       } else if (prev != null &&
           prev.status == 'pending' &&
@@ -243,34 +274,34 @@ class _DriverScreenState extends State<DriverScreen> {
             }
         _notifiedClosedRideIds.add(ride.id);
         _pushNotification(
-          title: 'Request closed',
-          body: 'This request was accepted by another driver.',
+          title: loc.driverNotificationRequestClosedTitle,
+          body: loc.driverNotificationRequestClosedBodyTaken,
           event: 'ride_taken_by_other_driver',
           rideId: ride.id,
         );
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ride accepted by another driver.')),
+          SnackBar(content: Text(loc.snackDriverRideTakenOther)),
         );
         LocalNotificationService.instance.show(
-          title: 'Request closed',
-          body: 'This request was accepted by another driver.',
+          title: loc.driverNotificationRequestClosedTitle,
+          body: loc.driverNotificationRequestClosedBodyTaken,
         );
       } else if (prev != null &&
           prev.status != 'cancelled' &&
           ride.status == 'cancelled') {
         _notifiedClosedRideIds.add(ride.id);
         _pushNotification(
-          title: 'Ride cancelled',
-          body: 'Passenger cancelled this ride request.',
+          title: loc.driverNotificationCancelledTitle,
+          body: loc.driverNotificationCancelledBodyDefault,
           event: 'ride_cancelled_by_passenger',
           rideId: ride.id,
         );
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Passenger cancelled this request.')),
+          SnackBar(content: Text(loc.snackDriverPassengerCancelled)),
         );
         LocalNotificationService.instance.show(
-          title: 'Ride cancelled',
-          body: 'Passenger cancelled this ride request.',
+          title: loc.driverNotificationCancelledTitle,
+          body: loc.driverNotificationCancelledBodyDefault,
         );
       }
       if (ride.status != 'pending') {
@@ -284,8 +315,8 @@ class _DriverScreenState extends State<DriverScreen> {
           !_notifiedClosedRideIds.contains(prev.id)) {
         _notifiedClosedRideIds.add(prev.id);
         _pushNotification(
-          title: 'Request closed',
-          body: 'This request was accepted by another driver or cancelled.',
+          title: loc.driverNotificationRequestClosedTitle,
+          body: loc.driverNotificationRequestClosedBodyOther,
           event: 'ride_no_longer_visible',
           rideId: prev.id,
         );
@@ -312,6 +343,7 @@ class _DriverScreenState extends State<DriverScreen> {
 
   void _onRideStatusEvent(Map<String, dynamic> payload) {
     if (!mounted) return;
+    final loc = AppLocalizations.of(context)!;
     final event = (payload['event'] ?? '').toString();
     if (event == 'ride_taken_by_other_driver') {
       final accepterUserId = (payload['accepted_driver_user_id'] as num?)?.toInt()
@@ -320,32 +352,32 @@ class _DriverScreenState extends State<DriverScreen> {
         return;
       }
       _pushNotification(
-        title: 'Request closed',
-        body: 'This request was accepted by another driver.',
+        title: loc.driverNotificationRequestClosedTitle,
+        body: loc.driverNotificationRequestClosedBodyTaken,
         event: event,
       );
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ride accepted by another driver.')),
+        SnackBar(content: Text(loc.snackDriverRideTakenOther)),
       );
       LocalNotificationService.instance.show(
-        title: 'Request closed',
-        body: 'This request was accepted by another driver.',
+        title: loc.driverNotificationRequestClosedTitle,
+        body: loc.driverNotificationRequestClosedBodyTaken,
       );
       _refreshRides();
       return;
     }
     if (event == 'ride_request_sent') {
       _pushNotification(
-        title: 'New ride request',
-        body: 'A nearby passenger sent a new request.',
+        title: loc.driverNotificationNewRideTitle,
+        body: loc.driverNotificationNewRideBodyDefault,
         event: event,
       );
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('New nearby ride request received.')),
+        SnackBar(content: Text(loc.snackDriverNewNearbyRide)),
       );
       LocalNotificationService.instance.show(
-        title: 'New ride request',
-        body: 'A nearby passenger sent a new request.',
+        title: loc.driverNotificationNewRideTitle,
+        body: loc.driverNotificationNewRideBodyDefault,
       );
       _refreshRides();
     }
@@ -418,7 +450,7 @@ class _DriverScreenState extends State<DriverScreen> {
       if (!mounted) return;
       if (info == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Chat will open after ride acceptance')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.snackDriverChatAfterAcceptance)),
         );
         return;
       }
@@ -459,8 +491,12 @@ class _DriverScreenState extends State<DriverScreen> {
         .toList();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('🚕 Driver Mission Control'),
+        title: Text(l.appDriverTitle),
         actions: [
+          LocalePopupMenuButton(
+            authToken: _token,
+            uiRole: AppUiRole.driver,
+          ),
           if (_token != null)
             IconButton(
               onPressed: _showNotifications,
@@ -500,9 +536,9 @@ class _DriverScreenState extends State<DriverScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '📡 بوابة السائق',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                  Text(
+                    l.roleAppDriver,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 10),
                   TextField(
@@ -531,7 +567,7 @@ class _DriverScreenState extends State<DriverScreen> {
                 padding: const EdgeInsets.all(10),
                 child: Text(
                   '${l.sessionActive}${_driverName == null ? '' : ' — $_driverName'}'
-                  ' | Wallet: ${_walletBalance.toStringAsFixed(3)} DT',
+                  ' | ${l.walletWithAmount(_walletBalance.toStringAsFixed(3))}',
                   style: TextStyle(color: Colors.green.shade900),
                 ),
               ),
@@ -542,8 +578,13 @@ class _DriverScreenState extends State<DriverScreen> {
               child: ListTile(
                 dense: true,
                 leading: const Icon(Icons.directions_car),
-                title: const Text('Vehicle identity'),
-                subtitle: Text('Car: ${_carModel ?? '-'} | Color: ${_carColor ?? '-'}'),
+                title: Text(l.driverVehicleIdentityTitle),
+                subtitle: Text(
+                  l.driverVehicleSummaryLine(
+                    (_carModel ?? '').trim().isEmpty ? '—' : _carModel!,
+                    (_carColor ?? '').trim().isEmpty ? '—' : _carColor!,
+                  ),
+                ),
               ),
             ),
           ],
@@ -571,9 +612,9 @@ class _DriverScreenState extends State<DriverScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '📍 رادار الرحلات',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                    Text(
+                      l.driverPendingRides,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 8),
                     InputDecorator(
@@ -583,7 +624,10 @@ class _DriverScreenState extends State<DriverScreen> {
                         isExpanded: true,
                         underline: const SizedBox.shrink(),
                         items: _locations
-                            .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                            .map((e) => DropdownMenuItem(
+                                  value: e,
+                                  child: Text(localizedPlaceName(l, e)),
+                                ))
                             .toList(),
                         onChanged: (v) async {
                           if (v == null) return;
@@ -604,11 +648,11 @@ class _DriverScreenState extends State<DriverScreen> {
                       children: [
                         Chip(
                           avatar: const Icon(Icons.list_alt, size: 16),
-                          label: Text('Open requests: ${trackedRides.length}'),
+                          label: Text(l.driverOpenRequestsChip(trackedRides.length)),
                         ),
                         Chip(
                           avatar: const Icon(Icons.notifications_active, size: 16),
-                          label: Text('Unread alerts: $_unreadCount'),
+                          label: Text(l.driverUnreadAlertsChip(_unreadCount)),
                         ),
                       ],
                     ),
@@ -624,8 +668,12 @@ class _DriverScreenState extends State<DriverScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(l.adminRideRow(r.pickup, r.destination)),
-                          Text(l.rideStatusFmt(r.status)),
+                          Text(localizedRideRouteRow(l, r.pickup, r.destination)),
+                          Text(
+                            l.rideStatusFmt(
+                              localizedRideStatusLabel(l, r.status),
+                            ),
+                          ),
                           Wrap(
                             spacing: 6,
                             children: [
@@ -675,15 +723,18 @@ class _DriverScreenState extends State<DriverScreen> {
     );
   }
 
-  List<String> _startsFromRouteKeys(Iterable<String> routeKeys) {
+  List<String> _startsFromRouteKeys(
+      Iterable<String> routeKeys, AppLocalizations l) {
     final starts = <String>{};
     for (final key in routeKeys) {
-      final parts = key.split('➡️');
+      final parts = key.split(airportRouteKeySeparator);
       if (parts.isNotEmpty) {
         starts.add(parts.first.trim());
       }
     }
-    return starts.toList()..sort();
+    return starts.toList()
+      ..sort((a, b) =>
+          localizedPlaceName(l, a).compareTo(localizedPlaceName(l, b)));
   }
 
   ImageProvider<Object>? _imageProviderFromString(String? value) {

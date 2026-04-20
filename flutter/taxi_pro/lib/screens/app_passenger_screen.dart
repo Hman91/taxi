@@ -7,13 +7,23 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../api/client.dart';
+import '../app_locale.dart' show
+    AppUiRole,
+    applyPreferredLanguageToApp,
+    appLocale,
+    rememberCurrentLocaleForRole,
+    restoreUiRoleLocale,
+    userChoseLocaleThisSession;
 import '../config.dart';
 import '../api/models.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/place_localization.dart';
+import '../l10n/ride_status_localization.dart';
 import '../models/app_notification.dart';
 import '../services/chat_socket_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/taxi_app_service.dart';
+import '../widgets/locale_popup_menu.dart';
 import '../widgets/passenger_google_sign_in_button.dart';
 import 'ride_chat_screen.dart';
 
@@ -61,6 +71,10 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      restoreUiRoleLocale(AppUiRole.passenger);
+    });
     if (kIsWeb) {
       _googleUserSub = _googleSignIn.onCurrentUserChanged.listen((account) {
         if (account != null && _token == null && mounted) {
@@ -87,6 +101,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   }
 
   Future<void> _detectPassengerLocation() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _locating = true;
       _locationError = null;
@@ -94,7 +109,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        setState(() => _locationError = 'Location service is disabled.');
+        setState(() => _locationError = l10n.passengerLocationServiceDisabled);
         return;
       }
 
@@ -104,7 +119,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        setState(() => _locationError = 'Location permission denied.');
+        setState(() => _locationError = l10n.passengerLocationPermissionDenied);
         return;
       }
 
@@ -181,6 +196,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   }
 
   void _showNotifications() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -188,7 +204,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.6,
           child: _notifications.isEmpty
-              ? const Center(child: Text('No notifications yet.'))
+              ? Center(child: Text(l10n.notificationsEmpty))
               : ListView.builder(
                   itemCount: _notifications.length,
                   itemBuilder: (context, index) {
@@ -231,20 +247,21 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   }
 
   void _showRideNotificationDetails(Ride ride) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Ride Notification'),
+        title: Text(l10n.passengerRideNotificationTitle),
         content: Text(
-          'Ride #${ride.id}\n'
-          'Status: ${ride.status}\n'
-          'Pickup: ${ride.pickup}\n'
-          'Destination: ${ride.destination}',
+          '${l10n.passengerRideNumberLine(ride.id)}\n'
+          '${l10n.rideStatusFmt(localizedRideStatusLabel(l10n, ride.status))}\n'
+          '${l10n.ridePickupLabel}: ${localizedPlaceName(l10n, ride.pickup)}\n'
+          '${l10n.rideDestinationLabel}: ${localizedPlaceName(l10n, ride.destination)}',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: Text(l10n.dialogOk),
           ),
         ],
       ),
@@ -273,9 +290,13 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
           final event = (data['event'] ?? '').toString();
           final message = (data['message'] ?? '').toString();
           if (event.isNotEmpty || message.isNotEmpty) {
+            if (!mounted) return;
+            final pl = AppLocalizations.of(context)!;
             _pushNotification(
-              title: 'Ride update',
-              body: message.isNotEmpty ? message : 'Ride #${ride.id} updated.',
+              title: pl.notificationRideUpdateTitle,
+              body: message.isNotEmpty
+                  ? message
+                  : pl.notificationRideUpdatedBody(ride.id),
               event: event,
               rideId: ride.id,
             );
@@ -319,13 +340,25 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       final hasIdToken = idToken != null && idToken.isNotEmpty;
       final hasAccessToken = accessToken != null && accessToken.isNotEmpty;
       if (!hasIdToken && !hasAccessToken) {
-        setState(() => _message = 'Google sign-in failed: missing Google token.');
+        if (!mounted) return;
+        setState(() => _message = AppLocalizations.of(context)!.errorGoogleSignInMissingToken);
         return;
       }
       final r = await _api.loginGoogle(
         idToken: hasIdToken ? idToken : null,
         accessToken: hasAccessToken ? accessToken : null,
       );
+      if (!userChoseLocaleThisSession.value) {
+        applyPreferredLanguageToApp(r.preferredLanguage);
+      } else {
+        try {
+          await _api.patchPreferredLanguage(
+            token: r.accessToken,
+            preferredLanguage: appLocale.value.languageCode,
+          );
+        } catch (_) {}
+      }
+      rememberCurrentLocaleForRole(AppUiRole.passenger);
       _token = r.accessToken;
       _userId = r.userId;
       _connectRealtime();
@@ -334,8 +367,9 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       await _detectPassengerLocation();
       await _refreshRides();
       if (!mounted) return;
+      final loc = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Signed in with Google')),
+        SnackBar(content: Text(loc.signedInWithGoogle)),
       );
     } on TaxiAccountDisabledException {
       if (!mounted) return;
@@ -363,15 +397,15 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         _message = null;
       });
       if (!mounted) return;
+      final loc = AppLocalizations.of(context)!;
       for (final ride in list) {
         final prev = previousById[ride.id];
         if (prev == null && ride.status == 'accepted' && !_acceptedNotifiedRideIds.contains(ride.id)) {
-          final driver = ride.driverName ?? 'Driver';
-          final phone =
-              (ride.driverPhone != null && ride.driverPhone!.isNotEmpty) ? ' (${ride.driverPhone})' : '';
+          final driver = ride.driverName ?? loc.driverNameFallback;
+          final ps = _phoneSuffix(ride.driverPhone);
           _pushNotification(
-            title: 'Driver accepted',
-            body: '$driver$phone accepted your request.',
+            title: loc.notificationDriverAcceptedTitle,
+            body: loc.notificationDriverAcceptedBody(driver, ps),
             event: 'ride_accepted',
             rideId: ride.id,
           );
@@ -381,21 +415,24 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
           continue;
         }
         if (prev.status == 'pending' && ride.status == 'accepted') {
-          final driver = ride.driverName ?? 'Driver';
-          final phone =
-              (ride.driverPhone != null && ride.driverPhone!.isNotEmpty) ? ' (${ride.driverPhone})' : '';
+          final driver = ride.driverName ?? loc.driverNameFallback;
+          final ps = _phoneSuffix(ride.driverPhone);
           _pushNotification(
-            title: 'Driver accepted',
-            body: '$driver$phone accepted your request.',
+            title: loc.notificationDriverAcceptedTitle,
+            body: loc.notificationDriverAcceptedBody(driver, ps),
             event: 'ride_accepted',
             rideId: ride.id,
           );
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Driver accepted: $driver$phone')),
+            SnackBar(
+              content: Text(
+                loc.notificationDriverAcceptedSnack(driver, ps),
+              ),
+            ),
           );
           LocalNotificationService.instance.show(
-            title: 'Driver accepted',
-            body: '$driver$phone accepted your request.',
+            title: loc.notificationDriverAcceptedTitle,
+            body: loc.notificationDriverAcceptedBody(driver, ps),
           );
           _acceptedNotifiedRideIds.add(ride.id);
         }
@@ -403,20 +440,19 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
             (ride.driverCurrentZone ?? '').trim().isNotEmpty &&
             ride.driverCurrentZone!.trim() == ride.pickup.trim()) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Driver is now near your pickup point.')),
+            SnackBar(content: Text(loc.passengerDriverNearPickupSnack)),
           );
           LocalNotificationService.instance.show(
-            title: 'Driver near pickup',
-            body: 'Your driver is near pickup in ${ride.pickup}.',
+            title: loc.notificationDriverNearPickupTitle,
+            body: loc.notificationDriverNearPickupBody(ride.pickup),
           );
         }
         if (ride.status == 'accepted' && !_acceptedNotifiedRideIds.contains(ride.id)) {
-          final driver = ride.driverName ?? 'Driver';
-          final phone =
-              (ride.driverPhone != null && ride.driverPhone!.isNotEmpty) ? ' (${ride.driverPhone})' : '';
+          final driver = ride.driverName ?? loc.driverNameFallback;
+          final ps = _phoneSuffix(ride.driverPhone);
           _pushNotification(
-            title: 'Driver accepted',
-            body: '$driver$phone accepted your request.',
+            title: loc.notificationDriverAcceptedTitle,
+            body: loc.notificationDriverAcceptedBody(driver, ps),
             event: 'ride_accepted',
             rideId: ride.id,
           );
@@ -439,7 +475,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       return;
     }
 
-    final starts = _startsFromFares();
+    final starts = _startsFromFares(l);
     if (starts.isEmpty) {
       setState(() => _message = l.noRidesYetApp);
       return;
@@ -448,7 +484,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     String selectedStart = _locationPlaceName != null && starts.contains(_locationPlaceName)
         ? _locationPlaceName!
         : starts.first;
-    final initialEnds = _endsForStart(selectedStart);
+    final initialEnds = _endsForStart(l, selectedStart);
     String? selectedEnd = initialEnds.isNotEmpty ? initialEnds.first : null;
     String promoCode = '';
     Map<String, dynamic>? quote;
@@ -456,10 +492,11 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     final promoCtrl = TextEditingController();
     String? _routeKey() {
       if (selectedEnd == null) return null;
-      final direct = '$selectedStart ➡️ $selectedEnd';
+      final direct =
+          '$selectedStart $airportRouteKeySeparator $selectedEnd';
       if (_fares.containsKey(direct)) return direct;
       for (final key in _fares.keys) {
-        final parts = key.split('➡️');
+        final parts = key.split(airportRouteKeySeparator);
         if (parts.length != 2) continue;
         if (parts[0].trim() == selectedStart &&
             parts[1].trim() == selectedEnd) {
@@ -503,13 +540,16 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                 DropdownButtonFormField<String>(
                   value: selectedStart,
                   decoration: InputDecoration(labelText: l.ridePickupLabel),
-                  items: _startsFromFares()
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                  items: _startsFromFares(l)
+                      .map((s) => DropdownMenuItem(
+                            value: s,
+                            child: Text(localizedPlaceName(l, s)),
+                          ))
                       .toList(),
                   onChanged: (v) async {
                     if (v == null) return;
                     selectedStart = v;
-                    final ends = _endsForStart(v);
+                    final ends = _endsForStart(l, v);
                     selectedEnd = ends.isNotEmpty ? ends.first : null;
                     await recalcQuote(setDialogState);
                     setDialogState(() {});
@@ -519,8 +559,11 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                   value: selectedEnd,
                   decoration:
                       InputDecoration(labelText: l.rideDestinationLabel),
-                  items: _endsForStart(selectedStart)
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  items: _endsForStart(l, selectedStart)
+                      .map((e) => DropdownMenuItem(
+                            value: e,
+                            child: Text(localizedPlaceName(l, e)),
+                          ))
                       .toList(),
                   onChanged: (v) async {
                     selectedEnd = v;
@@ -530,7 +573,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                 ),
                 TextField(
                   controller: promoCtrl,
-                  decoration: const InputDecoration(labelText: 'WELCOME26'),
+                  decoration: InputDecoration(labelText: l.promoCodeOptionalLabel),
                   onChanged: (_) async {
                     promoCode = promoCtrl.text.trim();
                     await recalcQuote(setDialogState);
@@ -539,7 +582,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                 const SizedBox(height: 8),
                 if (quote != null)
                   Text(
-                    '${l.fareDt((quote!['final_fare'] as num).toStringAsFixed(3))}\n${l.route}: ${quote!['route_key']}',
+                    '${l.fareDt((quote!['final_fare'] as num).toStringAsFixed(3))}\n${l.route}: ${localizedRouteKeyForDisplay(l, quote!['route_key'] as String)}',
                     textAlign: TextAlign.center,
                   ),
               ],
@@ -569,7 +612,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     if (t == null || q == null) return;
     final routeKey = q['route_key'] as String?;
     if (routeKey == null) return;
-    final parts = routeKey.split('➡️');
+    final parts = routeKey.split(airportRouteKeySeparator);
     final pu = parts.first.trim();
     final de = parts.length > 1 ? parts[1].trim() : '';
     setState(() => _busy = true);
@@ -578,18 +621,25 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       await _refreshRides();
       if (!mounted) return;
       final fareText = (q['final_fare'] as num).toStringAsFixed(3);
-      final promoLabel = promoCode.isEmpty ? '' : ' | $promoCode';
+      final promoPart = promoCode.isEmpty ? '' : ' | $promoCode';
       _pushNotification(
-        title: 'Request sent',
-        body: 'We sent your ride request to nearby drivers.',
+        title: l.notificationRequestSentTitle,
+        body: l.notificationRequestSentBody,
         event: 'ride_request_sent',
       );
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Request sent. ${l.fareDt(fareText)}$promoLabel')),
+        SnackBar(
+          content: Text(
+            l.requestSentSnackLine(
+              l.fareDt(fareText),
+              promoPart,
+            ),
+          ),
+        ),
       );
       LocalNotificationService.instance.show(
-        title: 'Request sent',
-        body: 'We sent your ride request to nearby drivers.',
+        title: l.notificationRequestSentTitle,
+        body: l.notificationRequestSentBody,
       );
     } catch (e) {
       setState(() => _message = e.toString());
@@ -662,23 +712,27 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     });
   }
 
-  List<String> _startsFromFares() {
+  List<String> _startsFromFares(AppLocalizations l) {
     final starts = <String>{};
     for (final key in _fares.keys) {
-      final parts = key.split('➡️');
+      final parts = key.split(airportRouteKeySeparator);
       if (parts.isNotEmpty) starts.add(parts.first.trim());
     }
-    return starts.toList()..sort();
+    return starts.toList()
+      ..sort((a, b) =>
+          localizedPlaceName(l, a).compareTo(localizedPlaceName(l, b)));
   }
 
-  List<String> _endsForStart(String start) {
+  List<String> _endsForStart(AppLocalizations l, String start) {
     final ends = <String>{};
     for (final key in _fares.keys) {
-      final parts = key.split('➡️');
+      final parts = key.split(airportRouteKeySeparator);
       if (parts.length != 2) continue;
       if (parts.first.trim() == start) ends.add(parts[1].trim());
     }
-    return ends.toList()..sort();
+    return ends.toList()
+      ..sort((a, b) =>
+          localizedPlaceName(l, a).compareTo(localizedPlaceName(l, b)));
   }
 
   @override
@@ -689,8 +743,12 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     final activeCount = _rides.where((r) => activeStatuses.contains(r.status)).length;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('🇹🇳 Taxi Pro VIP'),
+        title: Text(l.appPassengerTitle),
         actions: [
+          LocalePopupMenuButton(
+            authToken: _token,
+            uiRole: AppUiRole.passenger,
+          ),
           if (_token != null) ...[
             IconButton(
               onPressed: _showNotifications,
@@ -736,13 +794,13 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '✈️ رحلات المطارات / Airport Transfers',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                    Text(
+                      l.roleAppPassenger,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Google login is required for passengers.',
+                      l.passengerGoogleLoginRequired,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
@@ -756,7 +814,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
               OutlinedButton.icon(
                 onPressed: _busy ? null : _loginWithGoogle,
                 icon: const Icon(Icons.login),
-                label: const Text('Continue with Google'),
+                label: Text(l.continueWithGoogle),
               ),
           ] else ...[
             Card(
@@ -766,9 +824,9 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Premium Dispatch Panel',
-                      style: TextStyle(
+                    Text(
+                      l.passengerDispatchPanelTitle,
+                      style: const TextStyle(
                         color: Colors.amber,
                         fontWeight: FontWeight.w700,
                       ),
@@ -780,11 +838,11 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                       children: [
                         Chip(
                           avatar: const Icon(Icons.timelapse, size: 16),
-                          label: Text('Active rides: $activeCount'),
+                          label: Text(l.passengerActiveRidesChip(activeCount)),
                         ),
                         Chip(
                           avatar: const Icon(Icons.history, size: 16),
-                          label: Text('Total rides: ${_rides.length}'),
+                          label: Text(l.passengerTotalRidesChip(_rides.length)),
                         ),
                       ],
                     ),
@@ -797,17 +855,21 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
               child: ListTile(
                 dense: true,
                 leading: const Icon(Icons.my_location),
-                title: Text(_locationPlaceName ?? 'Your current location'),
+                title: Text(
+                  _locationPlaceName != null
+                      ? localizedPlaceName(l, _locationPlaceName)
+                      : l.passengerLocationCurrent,
+                ),
                 subtitle: Text(
                   _locationPlaceName != null
                       ? '($_locationText)'
                       : (_locationText ??
                           (_locating
-                              ? 'Detecting location...'
-                              : (_locationError ?? 'Location unavailable'))),
+                              ? l.passengerLocationDetecting
+                              : (_locationError ?? l.passengerLocationUnavailable))),
                 ),
                 trailing: IconButton(
-                  tooltip: 'Refresh location',
+                  tooltip: l.passengerRefreshLocationTooltip,
                   onPressed: _locating ? null : _detectPassengerLocation,
                   icon: const Icon(Icons.refresh),
                 ),
@@ -820,9 +882,15 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '✈️ Booking',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                    Row(
+                      children: [
+                        Icon(Icons.flight_takeoff, size: 20, color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          l.passengerBookingSectionTitle,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     FilledButton.icon(
@@ -835,9 +903,9 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              '📑 My ride vault',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            Text(
+              l.myRidesHeading,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             if (_rides.isEmpty) Text(l.noRidesYetApp),
             ..._rides.map(
@@ -847,11 +915,13 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                     horizontal: 12,
                     vertical: 6,
                   ),
-                  title: Text(l.adminRideRow(r.pickup, r.destination)),
+                  title: Text(localizedRideRouteRow(l, r.pickup, r.destination)),
                   subtitle: Text([
-                    l.rideStatusFmt(r.status),
-                    if ((r.driverName ?? '').isNotEmpty) 'Driver: ${r.driverName}',
-                    if ((r.driverPhone ?? '').isNotEmpty) 'Phone: ${r.driverPhone}',
+                    l.rideStatusFmt(localizedRideStatusLabel(l, r.status)),
+                    if ((r.driverName ?? '').isNotEmpty)
+                      l.passengerDriverLine(r.driverName!),
+                    if ((r.driverPhone ?? '').isNotEmpty)
+                      l.passengerPhoneLine(r.driverPhone!),
                   ].join('\n')),
                   isThreeLine: true,
                   leading: (() {
@@ -884,6 +954,11 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         ],
       ),
     );
+  }
+
+  String _phoneSuffix(String? phone) {
+    final p = (phone ?? '').trim();
+    return p.isEmpty ? '' : ' ($p)';
   }
 
   ImageProvider<Object>? _imageProviderFromString(String? value) {
