@@ -122,3 +122,65 @@ def admin_patch_b2b(tenant_id: int, **kwargs: Any) -> Tuple[Any, int]:
         return _json_error("not_found", 404)
     assert row is not None
     return jsonify({"b2b_tenant": row}), 200
+
+
+@bp.get("/b2b-bookings")
+@require_roles("owner", "operator")
+def admin_list_b2b_bookings(**kwargs: Any) -> Tuple[Any, int]:
+    limit_raw = request.args.get("limit", "200")
+    try:
+        limit = int(limit_raw)
+    except (TypeError, ValueError):
+        return _json_error("invalid_limit", 400)
+    data = admin_service.list_b2b_bookings(limit=limit)
+    return jsonify({"b2b_bookings": data}), 200
+
+
+@bp.get("/driver-pin-accounts")
+@require_roles("operator")
+def admin_list_driver_pin_accounts(**kwargs: Any) -> Tuple[Any, int]:
+    rows = db_module.list_driver_pin_accounts()
+    return jsonify({"driver_pin_accounts": rows}), 200
+
+
+@bp.post("/driver-pin-accounts")
+@require_roles("operator")
+def admin_create_driver_pin_account(**kwargs: Any) -> Tuple[Any, int]:
+    body = request.get_json(silent=True) or {}
+    phone = str(body.get("phone") or "").strip()
+    pin = str(body.get("pin") or "").strip()
+    driver_name = str(body.get("driver_name") or "").strip()
+    if not phone or not pin or not driver_name:
+        return _json_error("missing_fields", 400)
+    row = db_module.driver_pin_create(phone=phone, pin=pin, driver_name=driver_name)
+    if row is None:
+        return _json_error("phone_exists_or_invalid", 400)
+    return jsonify({"driver_pin_account": row}), 201
+
+
+@bp.patch("/driver-pin-accounts/<int:account_id>")
+@require_roles("operator")
+def admin_patch_driver_pin_account(account_id: int, **kwargs: Any) -> Tuple[Any, int]:
+    body = request.get_json(silent=True) or {}
+    payload: dict[str, Any] = {}
+    for key in (
+        "phone",
+        "pin",
+        "driver_name",
+        "wallet_balance",
+        "owner_commission_rate",
+        "b2b_commission_rate",
+        "auto_deduct_enabled",
+        "photo_url",
+        "car_model",
+        "car_color",
+        "current_zone",
+    ):
+        if key in body:
+            payload[key] = body.get(key)
+    if not payload:
+        return _json_error("no_fields", 400)
+    row = db_module.driver_pin_update(account_id, **payload)
+    if row is None:
+        return _json_error("not_found", 404)
+    return jsonify({"driver_pin_account": row}), 200

@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import select
 
 from ..extensions import db
-from ..models import B2BTenant, Conversation, Driver, Message, Ride, User
+from ..models import B2BBooking, B2BTenant, Conversation, Driver, Message, Ride, User
 
 
 def _ts(val: Any) -> Any:
@@ -163,3 +163,27 @@ def set_b2b_tenant_enabled(tenant_id: int, enabled: bool) -> Tuple[Optional[Dict
         "label": t.label,
         "is_enabled": t.is_enabled,
     }, None
+
+
+def list_b2b_bookings(*, limit: int = 200) -> List[Dict[str, Any]]:
+    limit = min(max(1, limit), 500)
+    rows = db.session.scalars(
+        select(B2BBooking).order_by(B2BBooking.id.desc()).limit(limit)
+    ).all()
+    return [
+        {
+            "id": int(r.id),
+            "tenant_id": int(r.tenant_id) if r.tenant_id is not None else None,
+            "route": r.route,
+            "pickup": r.pickup,
+            "destination": r.destination,
+            "guest_name": r.guest_name,
+            "room_number": r.room_number,
+            "fare": float(r.fare),
+            "status": r.status,
+            "source_code": r.source_code,
+            "ride_id": int(r.ride_id) if r.ride_id is not None else None,
+            "created_at": _ts(r.created_at),
+        }
+        for r in rows
+    ]

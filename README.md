@@ -49,8 +49,8 @@ On connect, the server joins the client to **`user:<user_id>`** for targeted pus
 | `FLASK_SECRET_KEY` | Signing key for API tokens | `dev-change-me-in-production` |
 | `OWNER_PASSWORD` | Owner login (code flow) | `NabeulGold2026` |
 | `DRIVER_CODE` | Driver login (code flow) | `Driver2026` |
-| `B2B_CODE` | B2B login | `Hotel2026` |
-| `OPERATOR_CODE` | Operator login | `Op2026` |
+| `B2B_CODE` | B2B login | `Biz2026` |
+| `OPERATOR_CODE` | Operator login | `Operator2026` |
 | `FLASK_DEBUG` | Set to `1` for debug | off |
 | `PORT` | Listen port | `5000` |
 | `TRANSLATION_PROVIDER` | `google` \| `none` \| `stub` \| `off` | `google` |

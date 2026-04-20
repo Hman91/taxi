@@ -90,11 +90,13 @@ class _RideChatScreenState extends State<RideChatScreen> {
     if (ride is! Map) return;
     final id = (ride['id'] as num?)?.toInt();
     if (id != widget.rideId || !mounted) return;
+    final message = (data['message'] as String?)?.trim();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          AppLocalizations.of(context)!.rideStatusFmt(ride['status']?.toString() ?? ''),
-        ),
+        content: Text(message?.isNotEmpty == true
+            ? message!
+            : AppLocalizations.of(context)!
+                .rideStatusFmt(ride['status']?.toString() ?? '')),
       ),
     );
   }

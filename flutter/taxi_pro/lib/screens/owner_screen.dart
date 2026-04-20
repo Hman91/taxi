@@ -18,6 +18,9 @@ class _OwnerScreenState extends State<OwnerScreen> {
   List<Map<String, dynamic>> _trips = [];
   List<Map<String, dynamic>> _adminRides = [];
   List<Map<String, dynamic>> _adminDrivers = [];
+  List<Map<String, dynamic>> _adminUsers = [];
+  List<Map<String, dynamic>> _adminB2b = [];
+  List<Map<String, dynamic>> _adminB2bBookings = [];
   Map<String, dynamic>? _adminMetrics;
   String? _message;
   bool _busy = false;
@@ -28,9 +31,10 @@ class _OwnerScreenState extends State<OwnerScreen> {
       _message = null;
     });
     try {
-      final r = await _api.login(role: 'owner', secret: _secretController.text.trim());
+      final r = await _api.login(
+          role: 'owner', secret: _secretController.text.trim());
       _token = r.accessToken;
-      await _refresh();
+      await _refreshAll();
     } catch (e) {
       setState(() => _message = e.toString());
     } finally {
@@ -38,15 +42,22 @@ class _OwnerScreenState extends State<OwnerScreen> {
     }
   }
 
-  Future<void> _refresh() async {
+  Future<void> _refreshAll() async {
     final t = _token;
     if (t == null) return;
     setState(() => _busy = true);
     try {
       final m = await _api.ownerMetrics(t);
       final trips = await _api.listTrips(t);
+      final adminRides = await _api.listAdminRides(t);
+      final adminDrivers = await _api.listAdminDriverLocations(t);
+      final adminUsers = await _api.listAdminUsers(t);
+      final adminB2b = await _api.listAdminB2bTenants(t);
+      final adminB2bBookings = await _api.listAdminB2bBookings(t);
+      final adminMetrics = await _api.adminOwnerMetrics(t);
       setState(() {
         _metrics = m;
+        _adminMetrics = adminMetrics;
         _trips = trips
             .map(
               (e) => {
@@ -59,6 +70,11 @@ class _OwnerScreenState extends State<OwnerScreen> {
               },
             )
             .toList();
+        _adminRides = adminRides;
+        _adminDrivers = adminDrivers;
+        _adminUsers = adminUsers;
+        _adminB2b = adminB2b;
+        _adminB2bBookings = adminB2bBookings;
         _message = null;
       });
     } catch (e) {
@@ -68,16 +84,23 @@ class _OwnerScreenState extends State<OwnerScreen> {
     }
   }
 
-  Future<void> _loadAdminRides() async {
+  Future<void> _toggleUser(Map<String, dynamic> user) async {
     final t = _token;
     if (t == null) return;
+    final idRaw = user['id'];
+    if (idRaw is! num) return;
+    final current = (user['is_enabled'] == true);
     setState(() {
       _busy = true;
       _message = null;
     });
     try {
-      final r = await _api.listAdminRides(t);
-      setState(() => _adminRides = r);
+      await _api.setAdminUserEnabled(
+        token: t,
+        userId: idRaw.toInt(),
+        isEnabled: !current,
+      );
+      await _refreshAll();
     } catch (e) {
       setState(() => _message = e.toString());
     } finally {
@@ -85,33 +108,23 @@ class _OwnerScreenState extends State<OwnerScreen> {
     }
   }
 
-  Future<void> _loadAdminDrivers() async {
+  Future<void> _toggleB2b(Map<String, dynamic> tenant) async {
     final t = _token;
     if (t == null) return;
+    final idRaw = tenant['id'];
+    if (idRaw is! num) return;
+    final current = (tenant['is_enabled'] == true);
     setState(() {
       _busy = true;
       _message = null;
     });
     try {
-      final r = await _api.listAdminDriverLocations(t);
-      setState(() => _adminDrivers = r);
-    } catch (e) {
-      setState(() => _message = e.toString());
-    } finally {
-      setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _loadAdminMetrics() async {
-    final t = _token;
-    if (t == null) return;
-    setState(() {
-      _busy = true;
-      _message = null;
-    });
-    try {
-      final m = await _api.adminOwnerMetrics(t);
-      setState(() => _adminMetrics = m);
+      await _api.setAdminB2bEnabled(
+        token: t,
+        tenantId: idRaw.toInt(),
+        isEnabled: !current,
+      );
+      await _refreshAll();
     } catch (e) {
       setState(() => _message = e.toString());
     } finally {
@@ -134,7 +147,7 @@ class _OwnerScreenState extends State<OwnerScreen> {
         actions: [
           if (_token != null)
             IconButton(
-              onPressed: _busy ? null : _refresh,
+              onPressed: _busy ? null : _refreshAll,
               icon: const Icon(Icons.refresh),
             ),
         ],
@@ -161,7 +174,8 @@ class _OwnerScreenState extends State<OwnerScreen> {
             )),
           ],
           const Divider(),
-          Text(l.tripsHeading, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(l.tripsHeading,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
           if (_trips.isEmpty) Text(l.noTripsYet),
           ..._trips.map(
             (t) => ListTile(
@@ -175,38 +189,25 @@ class _OwnerScreenState extends State<OwnerScreen> {
           ),
           if (_token != null) ...[
             const Divider(),
-            Text(l.adminOversightHeading, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(l.adminOversightHeading,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             FilledButton.tonal(
-              onPressed: _busy ? null : _loadAdminMetrics,
+              onPressed: _busy ? null : _refreshAll,
               child: Text(l.adminLoadOwnerMetricsBtn),
             ),
             if (_adminMetrics != null) ...[
               const SizedBox(height: 8),
-              Text(l.commissionLabel(_adminMetrics!['total_commission'].toString())),
+              Text(l.commissionLabel(
+                  _adminMetrics!['total_commission'].toString())),
               Text(l.tripsCount(_adminMetrics!['trip_count'].toString())),
               Text(l.avgRatingLabel(
                 _adminMetrics!['rating_average'].toString(),
                 _adminMetrics!['rating_count'].toString(),
               )),
             ],
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton.tonal(
-                    onPressed: _busy ? null : _loadAdminRides,
-                    child: Text(l.adminLoadRidesBtn),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: FilledButton.tonal(
-                    onPressed: _busy ? null : _loadAdminDrivers,
-                    child: Text(l.adminLoadDriversBtn),
-                  ),
-                ),
-              ],
-            ),
-            Text(l.adminRidesHeading, style: const TextStyle(fontWeight: FontWeight.w600)),
+            const Divider(),
+            Text(l.adminRidesHeading,
+                style: const TextStyle(fontWeight: FontWeight.w600)),
             if (_adminRides.isEmpty) Text(l.adminNoRidesLoaded),
             ..._adminRides.map(
               (r) => ListTile(
@@ -218,7 +219,8 @@ class _OwnerScreenState extends State<OwnerScreen> {
                 subtitle: Text(l.rideStatusFmt(r['status']?.toString() ?? '')),
               ),
             ),
-            Text(l.adminDriversHeading, style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(l.adminDriversHeading,
+                style: const TextStyle(fontWeight: FontWeight.w600)),
             if (_adminDrivers.isEmpty) Text(l.adminNoDriversData),
             ..._adminDrivers.map(
               (d) => ListTile(
@@ -232,8 +234,40 @@ class _OwnerScreenState extends State<OwnerScreen> {
                 ),
               ),
             ),
+            const Divider(),
+            ..._adminUsers.map(
+              (u) => SwitchListTile(
+                dense: true,
+                title: Text(u['email']?.toString() ?? ''),
+                subtitle: Text(u['role']?.toString() ?? ''),
+                value: u['is_enabled'] == true,
+                onChanged: _busy ? null : (_) => _toggleUser(u),
+              ),
+            ),
+            const Divider(),
+            ..._adminB2bBookings.map(
+              (b) => ListTile(
+                dense: true,
+                title: Text(b['route']?.toString() ?? ''),
+                subtitle: Text(
+                  '${b['guest_name'] ?? ''} • ${b['room_number'] ?? '-'} • ${b['fare']} DT',
+                ),
+              ),
+            ),
+            const Divider(),
+            ..._adminB2b.map(
+              (b) => SwitchListTile(
+                dense: true,
+                title:
+                    Text(b['label']?.toString() ?? b['code']?.toString() ?? ''),
+                subtitle: Text(b['code']?.toString() ?? ''),
+                value: b['is_enabled'] == true,
+                onChanged: _busy ? null : (_) => _toggleB2b(b),
+              ),
+            ),
           ],
-          if (_message != null) Text(_message!, style: const TextStyle(color: Colors.red)),
+          if (_message != null)
+            Text(_message!, style: const TextStyle(color: Colors.red)),
         ],
       ),
     );

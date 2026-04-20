@@ -49,6 +49,16 @@ def create_ride(**kwargs: Any) -> Tuple[Any, int]:
     return jsonify({"ride": ride}), 201
 
 
+@bp.post("/guest")
+def create_guest_ride() -> Tuple[Any, int]:
+    return jsonify({"error": "guest_passenger_disabled_use_google_login"}), 403
+
+
+@bp.post("/guest/<int:ride_id>/cancel")
+def cancel_guest_ride(ride_id: int) -> Tuple[Any, int]:
+    return jsonify({"error": "guest_passenger_disabled_use_google_login"}), 403
+
+
 @bp.get("/<int:ride_id>/conversation")
 @require_jwt_with_uid("user", "driver")
 def ride_conversation(ride_id: int, **kwargs: Any) -> Tuple[Any, int]:
@@ -135,3 +145,32 @@ def cancel(ride_id: int, **kwargs: Any) -> Tuple[Any, int]:
         st = 404 if err == "not_found" else 400
         return jsonify({"error": err}), st
     return jsonify({"ride": ride}), 200
+
+
+@bp.post("/driver/location")
+@require_jwt_with_uid("driver")
+def driver_location(**kwargs: Any) -> Tuple[Any, int]:
+    uid = kwargs["_uid"]
+    bad = _guard_enabled(uid)
+    if bad:
+        return bad
+    body = request.get_json(silent=True) or {}
+    current_zone = (body.get("current_zone") or "").strip()
+    lat_raw = body.get("lat")
+    lng_raw = body.get("lng")
+    lat = None
+    lng = None
+    try:
+        if lat_raw is not None:
+            lat = float(lat_raw)
+        if lng_raw is not None:
+            lng = float(lng_raw)
+    except (TypeError, ValueError):
+        return jsonify({"error": "invalid_coordinates"}), 400
+    rides_service.update_driver_live_location(
+        driver_user_id=uid,
+        current_zone=current_zone,
+        lat=lat,
+        lng=lng,
+    )
+    return jsonify({"ok": True}), 200

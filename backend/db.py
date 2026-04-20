@@ -1,13 +1,24 @@
 """PostgreSQL access via SQLAlchemy (replaces legacy SQLite helpers)."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func, select
 
 from .extensions import db
-from .models import Driver, Rating, Ride, Trip, User
+from .models import (
+    B2BBooking,
+    B2BTenant,
+    Driver,
+    DriverPinAccount,
+    FareRoute,
+    Rating,
+    Ride,
+    RideDispatchCandidate,
+    Trip,
+    User,
+)
 
 
 def _dt(val: Any) -> Any:
@@ -43,6 +54,34 @@ def _driver_dict(d: Driver) -> Dict[str, Any]:
 
 
 def _ride_dict(r: Ride) -> Dict[str, Any]:
+    driver_name = None
+    driver_vehicle = None
+    driver_phone = None
+    driver_photo_url = None
+    driver_car_model = None
+    driver_car_color = None
+    driver_current_zone = None
+    if r.driver_id is not None:
+        d = db.session.get(Driver, int(r.driver_id))
+        if d is not None:
+            driver_name = d.display_name or None
+            driver_vehicle = d.vehicle_info or None
+            u = db.session.get(User, int(d.user_id))
+            if u is not None:
+                email = (u.email or "").strip().lower()
+                prefix = "driverpin_"
+                suffix = "@taxipro.local"
+                if email.startswith(prefix) and email.endswith(suffix):
+                    phone = email[len(prefix) : -len(suffix)]
+                    pin_row = db.session.scalars(
+                        select(DriverPinAccount).where(DriverPinAccount.phone == phone)
+                    ).first()
+                    if pin_row is not None:
+                        driver_phone = pin_row.phone
+                        driver_photo_url = pin_row.photo_url
+                        driver_car_model = pin_row.car_model
+                        driver_car_color = pin_row.car_color
+                        driver_current_zone = pin_row.current_zone
     return {
         "id": int(r.id),
         "user_id": int(r.user_id),
@@ -50,14 +89,276 @@ def _ride_dict(r: Ride) -> Dict[str, Any]:
         "status": r.status,
         "pickup": r.pickup,
         "destination": r.destination,
+        "driver_name": driver_name,
+        "driver_vehicle": driver_vehicle,
+        "driver_phone": driver_phone,
+        "driver_photo_url": driver_photo_url,
+        "driver_car_model": driver_car_model,
+        "driver_car_color": driver_car_color,
+        "driver_current_zone": driver_current_zone,
         "created_at": _dt(r.created_at),
         "updated_at": _dt(r.updated_at),
+    }
+
+
+def _fare_route_dict(r: FareRoute) -> Dict[str, Any]:
+    return {
+        "id": int(r.id),
+        "start": r.start,
+        "destination": r.destination,
+        "distance_km": float(r.distance_km or 0.0),
+        "base_fare": float(r.base_fare),
+        "is_enabled": bool(r.is_enabled),
+        "sort_order": int(r.sort_order or 0),
+    }
+
+
+def _driver_pin_account_dict(r: DriverPinAccount) -> Dict[str, Any]:
+    return {
+        "id": int(r.id),
+        "phone": r.phone,
+        "pin": r.pin,
+        "driver_name": r.driver_name,
+        "wallet_balance": float(r.wallet_balance or 0.0),
+        "owner_commission_rate": float(r.owner_commission_rate or 10.0),
+        "b2b_commission_rate": float(r.b2b_commission_rate or 5.0),
+        "auto_deduct_enabled": bool(r.auto_deduct_enabled),
+        "photo_url": r.photo_url,
+        "car_model": r.car_model,
+        "car_color": r.car_color,
+        "current_zone": r.current_zone,
+    }
+
+
+def _b2b_booking_dict(r: B2BBooking) -> Dict[str, Any]:
+    return {
+        "id": int(r.id),
+        "tenant_id": int(r.tenant_id) if r.tenant_id is not None else None,
+        "route": r.route,
+        "pickup": r.pickup,
+        "destination": r.destination,
+        "guest_name": r.guest_name,
+        "room_number": r.room_number,
+        "fare": float(r.fare),
+        "status": r.status,
+        "source_code": r.source_code,
+        "ride_id": int(r.ride_id) if r.ride_id is not None else None,
+        "created_at": _dt(r.created_at),
     }
 
 
 def init_db() -> None:
     """Reserved for one-off setup; schema is applied with Alembic (`alembic upgrade head`)."""
     return
+
+
+# --- fare routes (airport / fixed transfers) ---
+
+
+def list_fare_routes(*, enabled_only: bool = True) -> List[Dict[str, Any]]:
+    stmt = select(FareRoute).order_by(FareRoute.sort_order.asc(), FareRoute.id.asc())
+    if enabled_only:
+        stmt = stmt.where(FareRoute.is_enabled.is_(True))
+    rows = db.session.scalars(stmt).all()
+    return [_fare_route_dict(x) for x in rows]
+
+
+def fare_route_by_segments(start: str, destination: str) -> Optional[Dict[str, Any]]:
+    row = db.session.scalars(
+        select(FareRoute).where(
+            FareRoute.start == start.strip(),
+            FareRoute.destination == destination.strip(),
+            FareRoute.is_enabled.is_(True),
+        )
+    ).first()
+    return _fare_route_dict(row) if row else None
+
+
+def fare_routes_seed_defaults(rows: List[Dict[str, Any]]) -> int:
+    existing = db.session.scalars(select(func.count(FareRoute.id))).one()
+    if int(existing or 0) > 0:
+        return 0
+    created = 0
+    for i, row in enumerate(rows, start=1):
+        db.session.add(
+            FareRoute(
+                start=str(row["start"]).strip(),
+                destination=str(row["destination"]).strip(),
+                distance_km=float(row.get("distance_km", 0.0) or 0.0),
+                base_fare=float(row["base_fare"]),
+                is_enabled=bool(row.get("is_enabled", True)),
+                sort_order=int(row.get("sort_order", i * 10)),
+            )
+        )
+        created += 1
+    db.session.commit()
+    return created
+
+
+def driver_pin_by_phone(phone: str) -> Optional[Dict[str, Any]]:
+    row = db.session.scalars(
+        select(DriverPinAccount).where(DriverPinAccount.phone == phone.strip())
+    ).first()
+    return _driver_pin_account_dict(row) if row else None
+
+
+def driver_pin_seed_defaults(rows: List[Dict[str, Any]]) -> int:
+    existing = db.session.scalars(select(func.count(DriverPinAccount.id))).one()
+    if int(existing or 0) > 0:
+        return 0
+    created = 0
+    for row in rows:
+        db.session.add(
+            DriverPinAccount(
+                phone=str(row["phone"]).strip(),
+                pin=str(row["pin"]).strip(),
+                driver_name=str(row["driver_name"]).strip(),
+                wallet_balance=float(row.get("wallet_balance", 0.0) or 0.0),
+                owner_commission_rate=float(row.get("owner_commission_rate", 10.0) or 10.0),
+                b2b_commission_rate=float(row.get("b2b_commission_rate", 5.0) or 5.0),
+                auto_deduct_enabled=bool(row.get("auto_deduct_enabled", True)),
+                photo_url=(str(row.get("photo_url") or "").strip() or None),
+                car_model=(str(row.get("car_model") or "").strip() or None),
+                car_color=(str(row.get("car_color") or "").strip() or None),
+                current_zone=(str(row.get("current_zone") or "").strip() or None),
+            )
+        )
+        created += 1
+    db.session.commit()
+    return created
+
+
+def list_driver_pin_accounts() -> List[Dict[str, Any]]:
+    rows = db.session.scalars(
+        select(DriverPinAccount).order_by(DriverPinAccount.id.asc())
+    ).all()
+    return [_driver_pin_account_dict(r) for r in rows]
+
+
+def driver_pin_create(*, phone: str, pin: str, driver_name: str) -> Optional[Dict[str, Any]]:
+    phone = phone.strip()
+    if not phone or not pin.strip() or not driver_name.strip():
+        return None
+    if driver_pin_by_phone(phone) is not None:
+        return None
+    row = DriverPinAccount(phone=phone, pin=pin.strip(), driver_name=driver_name.strip())
+    db.session.add(row)
+    db.session.commit()
+    db.session.refresh(row)
+    return _driver_pin_account_dict(row)
+
+
+def driver_pin_by_id(account_id: int) -> Optional[Dict[str, Any]]:
+    row = db.session.get(DriverPinAccount, account_id)
+    return _driver_pin_account_dict(row) if row else None
+
+
+def driver_pin_update(
+    account_id: int,
+    *,
+    phone: Optional[str] = None,
+    pin: Optional[str] = None,
+    driver_name: Optional[str] = None,
+    wallet_balance: Optional[float] = None,
+    owner_commission_rate: Optional[float] = None,
+    b2b_commission_rate: Optional[float] = None,
+    auto_deduct_enabled: Optional[bool] = None,
+    photo_url: Optional[str] = None,
+    car_model: Optional[str] = None,
+    car_color: Optional[str] = None,
+    current_zone: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    row = db.session.get(DriverPinAccount, account_id)
+    if row is None:
+        return None
+    if phone is not None:
+        row.phone = phone.strip()
+    if pin is not None:
+        row.pin = pin.strip()
+    if driver_name is not None:
+        row.driver_name = driver_name.strip()
+    if wallet_balance is not None:
+        row.wallet_balance = float(wallet_balance)
+    if owner_commission_rate is not None:
+        row.owner_commission_rate = float(owner_commission_rate)
+    if b2b_commission_rate is not None:
+        row.b2b_commission_rate = float(b2b_commission_rate)
+    if auto_deduct_enabled is not None:
+        row.auto_deduct_enabled = bool(auto_deduct_enabled)
+    if photo_url is not None:
+        row.photo_url = photo_url.strip() or None
+    if car_model is not None:
+        row.car_model = car_model.strip() or None
+    if car_color is not None:
+        row.car_color = car_color.strip() or None
+    if current_zone is not None:
+        row.current_zone = current_zone.strip() or None
+    db.session.commit()
+    db.session.refresh(row)
+    return _driver_pin_account_dict(row)
+
+
+def b2b_tenant_by_code(code: str) -> Optional[Dict[str, Any]]:
+    row = db.session.scalars(
+        select(B2BTenant).where(B2BTenant.code == code.strip())
+    ).first()
+    if row is None:
+        return None
+    return {
+        "id": int(row.id),
+        "code": row.code,
+        "label": row.label,
+        "is_enabled": bool(row.is_enabled),
+    }
+
+
+def b2b_tenant_seed_defaults(rows: List[Dict[str, Any]]) -> int:
+    existing = db.session.scalars(select(func.count(B2BTenant.id))).one()
+    if int(existing or 0) > 0:
+        return 0
+    created = 0
+    for row in rows:
+        db.session.add(
+            B2BTenant(
+                code=str(row["code"]).strip(),
+                label=str(row.get("label") or "").strip() or None,
+                is_enabled=bool(row.get("is_enabled", True)),
+            )
+        )
+        created += 1
+    db.session.commit()
+    return created
+
+
+def b2b_booking_insert(
+    *,
+    tenant_id: Optional[int],
+    route: str,
+    pickup: str,
+    destination: str,
+    guest_name: str,
+    room_number: str,
+    fare: float,
+    status: str,
+    source_code: str,
+    ride_id: Optional[int],
+) -> Dict[str, Any]:
+    row = B2BBooking(
+        tenant_id=tenant_id,
+        route=route,
+        pickup=pickup,
+        destination=destination,
+        guest_name=guest_name,
+        room_number=room_number or None,
+        fare=fare,
+        status=status,
+        source_code=source_code,
+        ride_id=ride_id,
+    )
+    db.session.add(row)
+    db.session.commit()
+    db.session.refresh(row)
+    return _b2b_booking_dict(row)
 
 
 # --- users / drivers (JWT app auth) ---
@@ -185,6 +486,120 @@ def rides_list_pending() -> List[Dict[str, Any]]:
     rows = db.session.scalars(
         select(Ride).where(Ride.status == "pending").order_by(Ride.id.asc())
     ).all()
+    return [_ride_dict(x) for x in rows]
+
+
+def driver_profiles_for_dispatch() -> List[Dict[str, Any]]:
+    rows = db.session.scalars(
+        select(Driver).where(Driver.is_available.is_(True)).order_by(Driver.id.asc())
+    ).all()
+    return [_driver_dict(x) for x in rows]
+
+
+def driver_profiles_for_dispatch_online(window_minutes: int = 30) -> List[Dict[str, Any]]:
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=max(1, window_minutes))
+    rows = db.session.scalars(
+        select(Driver)
+        .where(
+            Driver.is_available.is_(True),
+            Driver.last_seen_at.is_not(None),
+            Driver.last_seen_at >= cutoff,
+        )
+        .order_by(Driver.last_seen_at.desc(), Driver.id.asc())
+    ).all()
+    return [_driver_dict(x) for x in rows]
+
+
+def driver_mark_online(user_id: int, *, last_lat: float | None = None, last_lng: float | None = None) -> None:
+    row = db.session.scalars(select(Driver).where(Driver.user_id == user_id)).first()
+    if row is None:
+        return
+    row.is_available = True
+    if last_lat is not None:
+        row.last_lat = float(last_lat)
+    if last_lng is not None:
+        row.last_lng = float(last_lng)
+    row.last_seen_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+
+def driver_update_current_zone_by_user_id(user_id: int, current_zone: str) -> None:
+    u = db.session.get(User, user_id)
+    if u is None:
+        return
+    email = (u.email or "").strip().lower()
+    prefix = "driverpin_"
+    suffix = "@taxipro.local"
+    if not (email.startswith(prefix) and email.endswith(suffix)):
+        return
+    phone = email[len(prefix) : -len(suffix)]
+    row = db.session.scalars(
+        select(DriverPinAccount).where(DriverPinAccount.phone == phone)
+    ).first()
+    if row is None:
+        return
+    row.current_zone = (current_zone or "").strip() or None
+    db.session.commit()
+
+
+def driver_current_zone_by_user_id(user_id: int) -> Optional[str]:
+    u = db.session.get(User, user_id)
+    if u is None:
+        return None
+    email = (u.email or "").strip().lower()
+    prefix = "driverpin_"
+    suffix = "@taxipro.local"
+    if not (email.startswith(prefix) and email.endswith(suffix)):
+        return None
+    phone = email[len(prefix) : -len(suffix)]
+    row = db.session.scalars(
+        select(DriverPinAccount).where(DriverPinAccount.phone == phone)
+    ).first()
+    if row is None:
+        return None
+    zone = (row.current_zone or "").strip()
+    return zone or None
+
+
+def ride_dispatch_set_candidates(ride_id: int, driver_user_ids: List[int]) -> None:
+    if not driver_user_ids:
+        return
+    db.session.execute(
+        RideDispatchCandidate.__table__.delete().where(
+            RideDispatchCandidate.ride_id == ride_id
+        )
+    )
+    for rank, uid in enumerate(driver_user_ids, start=1):
+        db.session.add(
+            RideDispatchCandidate(
+                ride_id=ride_id,
+                driver_user_id=int(uid),
+                rank=rank,
+            )
+        )
+    db.session.commit()
+
+
+def ride_dispatch_candidates_for_ride(ride_id: int) -> List[int]:
+    rows = db.session.scalars(
+        select(RideDispatchCandidate.driver_user_id)
+        .where(RideDispatchCandidate.ride_id == ride_id)
+        .order_by(RideDispatchCandidate.rank.asc())
+    ).all()
+    return [int(x) for x in rows]
+
+
+def ride_dispatch_pending_for_driver_user(driver_user_id: int) -> List[Dict[str, Any]]:
+    stmt = (
+        select(Ride)
+        .join(RideDispatchCandidate, RideDispatchCandidate.ride_id == Ride.id)
+        .where(
+            Ride.status == "pending",
+            RideDispatchCandidate.driver_user_id == driver_user_id,
+        )
+        .order_by(Ride.id.desc())
+    )
+    rows = db.session.scalars(stmt).all()
     return [_ride_dict(x) for x in rows]
 
 

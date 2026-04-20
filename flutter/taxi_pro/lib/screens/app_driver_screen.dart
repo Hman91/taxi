@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../api/client.dart';
 import '../api/models.dart';
 import '../l10n/app_localizations.dart';
+import '../models/app_notification.dart';
+import '../services/chat_socket_service.dart';
 import '../services/taxi_app_service.dart';
 import 'ride_chat_screen.dart';
 
@@ -15,13 +17,173 @@ class AppDriverScreen extends StatefulWidget {
 
 class _AppDriverScreenState extends State<AppDriverScreen> {
   final _api = TaxiAppService();
+  final _socket = ChatSocketService();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  List<String> _locations = [];
   String? _token;
   int? _userId;
+  String _selectedLocation = '';
   List<Ride> _rides = [];
+  final List<AppNotification> _notifications = [];
   String? _message;
   bool _busy = false;
+
+  int get _unreadCount => _notifications.where((n) => !n.isRead).length;
+
+  void _pushNotification({
+    required String title,
+    required String body,
+    String? event,
+    int? rideId,
+  }) {
+    final now = DateTime.now();
+    setState(() {
+      _notifications.insert(
+        0,
+        AppNotification(
+          id: '${now.microsecondsSinceEpoch}-${event ?? 'manual'}-${rideId ?? 0}',
+          title: title,
+          body: body,
+          rideId: rideId,
+          event: event,
+          createdAt: now,
+        ),
+      );
+      if (_notifications.length > 60) {
+        _notifications.removeRange(60, _notifications.length);
+      }
+    });
+  }
+
+  void _showNotifications() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: _notifications.isEmpty
+              ? const Center(child: Text('No notifications yet.'))
+              : ListView.builder(
+                  itemCount: _notifications.length,
+                  itemBuilder: (context, index) {
+                    final n = _notifications[index];
+                    return ListTile(
+                      leading: Icon(
+                        n.isRead ? Icons.notifications_none : Icons.notifications_active,
+                        color: n.isRead ? null : Colors.amber.shade800,
+                      ),
+                      title: Text(
+                        n.title,
+                        style: TextStyle(
+                          fontWeight: n.isRead ? FontWeight.normal : FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(n.body),
+                      trailing: n.isRead ? null : const Icon(Icons.brightness_1, size: 10),
+                      onTap: () {
+                        setState(() => n.isRead = true);
+                        Navigator.of(context).pop();
+                        final ride = n.rideId == null
+                            ? null
+                            : _rides.where((r) => r.id == n.rideId).cast<Ride?>().firstWhere(
+                                  (r) => r != null,
+                                  orElse: () => null,
+                                );
+                        if (ride != null) {
+                          _showRideNotificationDetails(ride);
+                        } else {
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(SnackBar(content: Text(n.body)));
+                        }
+                      },
+                    );
+                  },
+                ),
+        ),
+      ),
+    );
+  }
+
+  void _showRideNotificationDetails(Ride ride) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Ride Notification'),
+        content: Text(
+          'Ride #${ride.id}\n'
+          'Status: ${ride.status}\n'
+          'Pickup: ${ride.pickup}\n'
+          'Destination: ${ride.destination}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _connectRealtime() {
+    final t = _token;
+    if (t == null) return;
+    _socket.connect(
+      t,
+      onRideStatus: (data) {
+        if (!mounted) return;
+        final rideMap = data['ride'];
+        if (rideMap is! Map) return;
+        final ride = Ride.fromJson(Map<String, dynamic>.from(rideMap));
+        setState(() {
+          final idx = _rides.indexWhere((r) => r.id == ride.id);
+          if (idx >= 0) {
+            _rides[idx] = ride;
+          } else {
+            _rides.insert(0, ride);
+          }
+        });
+        final event = (data['event'] ?? '').toString();
+        final message = (data['message'] ?? '').toString();
+        if (event == 'ride_request_sent') {
+          _pushNotification(
+            title: 'New nearby ride',
+            body: message.isNotEmpty ? message : 'A nearby passenger requested a ride.',
+            event: event,
+            rideId: ride.id,
+          );
+        } else if (event == 'ride_taken_by_other_driver') {
+          final accepterUserId = (data['accepted_driver_user_id'] as num?)?.toInt()
+              ?? (data['driver_id'] as num?)?.toInt();
+          if (accepterUserId != null && _userId != null && accepterUserId == _userId) {
+            return;
+          }
+          _pushNotification(
+            title: 'Request already accepted',
+            body: message.isNotEmpty ? message : 'Another driver accepted this request.',
+            event: event,
+            rideId: ride.id,
+          );
+        } else if (event == 'ride_cancelled_by_passenger' || event == 'ride_cancelled') {
+          _pushNotification(
+            title: 'Ride cancelled',
+            body: message.isNotEmpty ? message : 'Passenger cancelled this ride request.',
+            event: event,
+            rideId: ride.id,
+          );
+        } else if (message.isNotEmpty) {
+          _pushNotification(
+            title: 'Ride update',
+            body: message,
+            event: event,
+            rideId: ride.id,
+          );
+        }
+      },
+    );
+  }
 
   Future<void> _login() async {
     setState(() {
@@ -35,6 +197,13 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
       );
       _token = r.accessToken;
       _userId = r.userId;
+      _connectRealtime();
+      final fares = await _api.getAirportFares();
+      _locations = _startsFromRouteKeys(fares.keys);
+      if (_selectedLocation.isEmpty ||
+          !_locations.contains(_selectedLocation)) {
+        _selectedLocation = _locations.isNotEmpty ? _locations.first : '';
+      }
       await _refreshRides();
     } on TaxiAccountDisabledException {
       if (!mounted) return;
@@ -149,7 +318,8 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
       final info = await _api.getRideConversation(token: t, rideId: ride.id);
       if (!mounted) return;
       if (info == null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.chatUnavailable)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l.chatUnavailable)));
         return;
       }
       await Navigator.of(context).push<void>(
@@ -164,17 +334,22 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
       );
       await _refreshRides();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   void _logout() {
+    _socket.disconnect();
     setState(() {
       _token = null;
       _userId = null;
       _rides = [];
+      _notifications.clear();
       _message = null;
     });
   }
@@ -183,23 +358,55 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     final l10n = AppLocalizations.of(context)!;
     final w = <Widget>[];
     if (r.status == 'pending') {
-      w.add(TextButton(onPressed: _busy ? null : () => _accept(r), child: Text(l10n.acceptRide)));
+      w.add(TextButton(
+          onPressed: _busy ? null : () => _accept(r),
+          child: Text(l10n.acceptRide)));
     }
     if (r.status == 'accepted' || r.status == 'ongoing') {
-      w.add(TextButton(onPressed: _busy ? null : () => _reject(r), child: Text(l10n.rejectRide)));
+      w.add(TextButton(
+          onPressed: _busy ? null : () => _reject(r),
+          child: Text(l10n.rejectRide)));
     }
     if (r.status == 'accepted') {
-      w.add(TextButton(onPressed: _busy ? null : () => _start(r), child: Text(l10n.startRide)));
+      w.add(TextButton(
+          onPressed: _busy ? null : () => _start(r),
+          child: Text(l10n.startRide)));
     }
     if (r.status == 'ongoing') {
-      w.add(TextButton(onPressed: _busy ? null : () => _complete(r), child: Text(l10n.completeRide)));
+      w.add(TextButton(
+          onPressed: _busy ? null : () => _complete(r),
+          child: Text(l10n.completeRide)));
     }
-    w.add(TextButton(onPressed: _busy ? null : () => _openChat(r), child: Text(l10n.openChatButton)));
+    w.add(TextButton(
+        onPressed: _busy ? null : () => _openChat(r),
+        child: Text(l10n.openChatButton)));
     return w;
+  }
+
+  bool _isMine(Ride r) => _userId != null && r.driverId == _userId;
+
+  List<Ride> _activeMine() => _rides
+      .where((r) =>
+          _isMine(r) && (r.status == 'accepted' || r.status == 'ongoing'))
+      .toList();
+
+  List<Ride> _pendingForLocation() => _rides
+      .where((r) =>
+          r.status == 'pending' && r.pickup.trim() == _selectedLocation.trim())
+      .toList();
+
+  List<String> _startsFromRouteKeys(Iterable<String> routeKeys) {
+    final starts = <String>{};
+    for (final key in routeKeys) {
+      final parts = key.split('➡️');
+      if (parts.isNotEmpty) starts.add(parts.first.trim());
+    }
+    return starts.toList()..sort();
   }
 
   @override
   void dispose() {
+    _socket.disconnect();
     _email.dispose();
     _password.dispose();
     super.dispose();
@@ -213,7 +420,36 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
         title: Text(l.appDriverTitle),
         actions: [
           if (_token != null) ...[
-            IconButton(onPressed: _busy ? null : _refreshRides, icon: const Icon(Icons.refresh)),
+            IconButton(
+              onPressed: _showNotifications,
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.notifications),
+                  if (_unreadCount > 0)
+                    Positioned(
+                      right: -6,
+                      top: -6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: const BoxConstraints(minWidth: 18, minHeight: 14),
+                        child: Text(
+                          _unreadCount > 99 ? '99+' : '$_unreadCount',
+                          style: const TextStyle(color: Colors.white, fontSize: 10),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            IconButton(
+                onPressed: _busy ? null : _refreshRides,
+                icon: const Icon(Icons.refresh)),
             TextButton(onPressed: _logout, child: Text(l.logoutApp)),
           ],
         ],
@@ -232,12 +468,55 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
               obscureText: true,
               decoration: InputDecoration(labelText: l.passwordLabel),
             ),
-            FilledButton(onPressed: _busy ? null : _login, child: Text(l.signInApp)),
-            TextButton(onPressed: _busy ? null : _register, child: Text(l.registerDriverAccount)),
+            FilledButton(
+                onPressed: _busy ? null : _login, child: Text(l.signInApp)),
+            TextButton(
+                onPressed: _busy ? null : _register,
+                child: Text(l.registerDriverAccount)),
           ] else ...[
-            Text(l.driverPendingRides, style: const TextStyle(fontWeight: FontWeight.bold)),
-            if (_rides.isEmpty) Text(l.noRidesYetApp),
-            ..._rides.map(
+            DropdownButtonFormField<String>(
+              value: _selectedLocation.isEmpty ? null : _selectedLocation,
+              decoration: InputDecoration(labelText: l.ridePickupLabel),
+              items: _locations
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
+              onChanged: (v) =>
+                  setState(() => _selectedLocation = v ?? _selectedLocation),
+            ),
+            const SizedBox(height: 8),
+            FilledButton.tonal(
+              onPressed: _busy ? null : _refreshRides,
+              child: Text(l.adminLoadRidesBtn),
+            ),
+            const SizedBox(height: 8),
+            Text(l.driverPendingRides,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            if (_activeMine().isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                l.rideStatusFmt('active'),
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ],
+            ..._activeMine().map(
+              (r) => Card(
+                color: Colors.orange.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l.adminRideRow(r.pickup, r.destination)),
+                      Text(l.rideStatusFmt(r.status)),
+                      Wrap(spacing: 4, children: _actionsFor(r)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (_pendingForLocation().isEmpty && _activeMine().isEmpty)
+              Text(l.noRidesYetApp),
+            ..._pendingForLocation().map(
               (r) => Card(
                 child: Padding(
                   padding: const EdgeInsets.all(8),

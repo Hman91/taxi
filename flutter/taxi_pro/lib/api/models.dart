@@ -57,21 +57,73 @@ class DriverPinLoginResponse {
   DriverPinLoginResponse({
     required this.accessToken,
     required this.role,
+    required this.userId,
+    this.driverId,
     required this.driverName,
     required this.phone,
+    required this.walletBalance,
+    required this.ownerCommissionRate,
+    required this.b2bCommissionRate,
+    required this.autoDeductEnabled,
+    this.photoUrl,
+    this.carModel,
+    this.carColor,
+    this.currentZone,
   });
 
   final String accessToken;
   final String role;
+  final int userId;
+  final int? driverId;
   final String driverName;
   final String phone;
+  final double walletBalance;
+  final double ownerCommissionRate;
+  final double b2bCommissionRate;
+  final bool autoDeductEnabled;
+  final String? photoUrl;
+  final String? carModel;
+  final String? carColor;
+  final String? currentZone;
 
   factory DriverPinLoginResponse.fromJson(Map<String, dynamic> json) {
     return DriverPinLoginResponse(
       accessToken: json['access_token'] as String,
       role: json['role'] as String,
+      userId: (json['user_id'] as num?)?.toInt() ?? 0,
+      driverId: (json['driver_id'] as num?)?.toInt(),
       driverName: json['driver_name'] as String,
       phone: json['phone'] as String,
+      walletBalance: (json['wallet_balance'] as num?)?.toDouble() ?? 0.0,
+      ownerCommissionRate:
+          (json['owner_commission_rate'] as num?)?.toDouble() ?? 10.0,
+      b2bCommissionRate:
+          (json['b2b_commission_rate'] as num?)?.toDouble() ?? 5.0,
+      autoDeductEnabled: (json['auto_deduct_enabled'] as bool?) ?? true,
+      photoUrl: json['photo_url'] as String?,
+      carModel: json['car_model'] as String?,
+      carColor: json['car_color'] as String?,
+      currentZone: json['current_zone'] as String?,
+    );
+  }
+}
+
+class GuestRideCreateResponse {
+  GuestRideCreateResponse({
+    required this.ride,
+    required this.accessToken,
+    required this.userId,
+  });
+
+  final Ride ride;
+  final String accessToken;
+  final int userId;
+
+  factory GuestRideCreateResponse.fromJson(Map<String, dynamic> json) {
+    return GuestRideCreateResponse(
+      ride: Ride.fromJson(json['ride'] as Map<String, dynamic>),
+      accessToken: json['access_token'] as String,
+      userId: (json['user_id'] as num).toInt(),
     );
   }
 }
@@ -123,6 +175,13 @@ class Ride {
     required this.status,
     required this.pickup,
     required this.destination,
+    this.driverName,
+    this.driverVehicle,
+    this.driverPhone,
+    this.driverPhotoUrl,
+    this.driverCarModel,
+    this.driverCarColor,
+    this.driverCurrentZone,
     this.createdAt,
     this.updatedAt,
   });
@@ -133,6 +192,13 @@ class Ride {
   final String status;
   final String pickup;
   final String destination;
+  final String? driverName;
+  final String? driverVehicle;
+  final String? driverPhone;
+  final String? driverPhotoUrl;
+  final String? driverCarModel;
+  final String? driverCarColor;
+  final String? driverCurrentZone;
   final String? createdAt;
   final String? updatedAt;
 
@@ -144,6 +210,13 @@ class Ride {
       status: json['status'] as String,
       pickup: json['pickup'] as String,
       destination: json['destination'] as String,
+      driverName: json['driver_name'] as String?,
+      driverVehicle: json['driver_vehicle'] as String?,
+      driverPhone: json['driver_phone'] as String?,
+      driverPhotoUrl: json['driver_photo_url'] as String?,
+      driverCarModel: json['driver_car_model'] as String?,
+      driverCarColor: json['driver_car_color'] as String?,
+      driverCurrentZone: json['driver_current_zone'] as String?,
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
     );

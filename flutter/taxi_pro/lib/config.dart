@@ -1,5 +1,10 @@
 import 'package:flutter/foundation.dart';
 
+/// Google OAuth **Web application** client ID (same as backend `GOOGLE_OAUTH_CLIENT_ID`).
+/// Used as `serverClientId` on Android/iOS so the ID token audience matches backend verification.
+const String googleOAuthWebClientId =
+    '962065998165-o2v10060s3l65ve7n8leee7hn28ddh6d.apps.googleusercontent.com';
+
 /// API base URL.
 ///
 /// Override at build time with:

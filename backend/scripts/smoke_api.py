@@ -68,7 +68,7 @@ def main() -> None:
     )
     args = p.parse_args()
     base = args.base_url.rstrip("/")
-    op_secret = os.environ.get("OPERATOR_CODE", "Op2026")
+    op_secret = os.environ.get("OPERATOR_CODE", "Operator2026")
     owner_secret = os.environ.get("OWNER_PASSWORD", "NabeulGold2026")
     suffix = uuid4().hex[:10]
     pass_email = f"smoke_p_{suffix}@example.com"

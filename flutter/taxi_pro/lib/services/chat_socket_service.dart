@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 
 import '../config.dart';
@@ -19,20 +21,39 @@ class ChatSocketService {
     void Function(JsonMap data)? onRideStatus,
     void Function(JsonMap data)? onError,
     void Function(dynamic _)? onConnectError,
+    List<String>? transports,
   }) {
     disconnect();
     _socket = socket_io.io(
       _base,
       socket_io.OptionBuilder()
-          .setTransports(['websocket', 'polling'])
+          // Flask dev server on Windows is more stable with long-polling transport.
+          // WebSocket upgrade can fail with Werkzeug and break live chat delivery.
+          .setTransports(transports ?? ['polling'])
           .disableAutoConnect()
           .setAuth({'token': token})
           .build(),
     );
 
     void mapEvent(dynamic raw, void Function(JsonMap) handler) {
+      JsonMap? payload;
       if (raw is Map) {
-        handler(Map<String, dynamic>.from(raw));
+        payload = Map<String, dynamic>.from(raw);
+      } else if (raw is String) {
+        final text = raw.trim();
+        if (text.isNotEmpty) {
+          try {
+            final decoded = jsonDecode(text);
+            if (decoded is Map) {
+              payload = Map<String, dynamic>.from(decoded);
+            }
+          } catch (_) {
+            // Ignore non-JSON payloads.
+          }
+        }
+      }
+      if (payload != null) {
+        handler(payload);
       }
     }
 

@@ -33,6 +33,12 @@ class TaxiAppService {
   }) =>
       _client.loginApp(email: email, password: password);
 
+  Future<AppLoginResponse> loginGoogle({
+    String? idToken,
+    String? accessToken,
+  }) =>
+      _client.loginGoogle(idToken: idToken, accessToken: accessToken);
+
   Future<Map<String, dynamic>> registerAppUser({
     required String email,
     required String password,
@@ -47,7 +53,17 @@ class TaxiAppService {
     required String pickup,
     required String destination,
   }) =>
-      _client.createRide(token: token, pickup: pickup, destination: destination);
+      _client.createRide(
+          token: token, pickup: pickup, destination: destination);
+
+  Future<GuestRideCreateResponse> createGuestRide({
+    required String pickup,
+    required String destination,
+  }) =>
+      _client.createGuestRide(pickup: pickup, destination: destination);
+
+  Future<Ride> cancelGuestRide({required int rideId}) =>
+      _client.cancelGuestRide(rideId: rideId);
 
   Future<Ride> acceptRide({required String token, required int rideId}) =>
       _client.acceptRide(token: token, rideId: rideId);
@@ -64,13 +80,26 @@ class TaxiAppService {
   Future<Ride> cancelRide({required String token, required int rideId}) =>
       _client.cancelRide(token: token, rideId: rideId);
 
+  Future<void> updateDriverLocation({
+    required String token,
+    required String currentZone,
+  }) =>
+      _client.updateDriverLocation(token: token, currentZone: currentZone);
+
   Future<Trip> createTrip({
     required String token,
     required String route,
     required double fare,
+    String? driverPhone,
     String type = 'كاش / بطاقة',
   }) =>
-      _client.createTrip(token: token, route: route, fare: fare, type: type);
+      _client.createTrip(
+        token: token,
+        route: route,
+        fare: fare,
+        driverPhone: driverPhone,
+        type: type,
+      );
 
   Future<List<Trip>> listTrips(String token) => _client.listTrips(token);
 
@@ -119,4 +148,86 @@ class TaxiAppService {
 
   Future<Map<String, dynamic>> adminOwnerMetrics(String token) =>
       _client.adminOwnerMetrics(token);
+
+  Future<List<Map<String, dynamic>>> listAdminB2bBookings(
+    String token, {
+    int limit = 200,
+  }) =>
+      _client.listAdminB2bBookings(token, limit: limit);
+
+  Future<Map<String, dynamic>> createB2bBooking({
+    required String token,
+    required String route,
+    required String guestName,
+    required String roomNumber,
+    required double fare,
+    required String sourceCode,
+  }) =>
+      _client.createB2bBooking(
+        token: token,
+        route: route,
+        guestName: guestName,
+        roomNumber: roomNumber,
+        fare: fare,
+        sourceCode: sourceCode,
+      );
+
+  Future<List<Map<String, dynamic>>> listAdminUsers(
+    String token, {
+    int limit = 100,
+    int offset = 0,
+  }) =>
+      _client.listAdminUsers(token, limit: limit, offset: offset);
+
+  Future<Map<String, dynamic>> setAdminUserEnabled({
+    required String token,
+    required int userId,
+    required bool isEnabled,
+  }) =>
+      _client.setAdminUserEnabled(
+        token: token,
+        userId: userId,
+        isEnabled: isEnabled,
+      );
+
+  Future<List<Map<String, dynamic>>> listAdminB2bTenants(String token) =>
+      _client.listAdminB2bTenants(token);
+
+  Future<Map<String, dynamic>> setAdminB2bEnabled({
+    required String token,
+    required int tenantId,
+    required bool isEnabled,
+  }) =>
+      _client.setAdminB2bEnabled(
+        token: token,
+        tenantId: tenantId,
+        isEnabled: isEnabled,
+      );
+
+  Future<List<Map<String, dynamic>>> listAdminDriverPinAccounts(String token) =>
+      _client.listAdminDriverPinAccounts(token);
+
+  Future<Map<String, dynamic>> createAdminDriverPinAccount({
+    required String token,
+    required String phone,
+    required String pin,
+    required String driverName,
+  }) =>
+      _client.createAdminDriverPinAccount(
+        token: token,
+        phone: phone,
+        pin: pin,
+        driverName: driverName,
+      );
+
+  Future<Map<String, dynamic>> patchAdminDriverPinAccount({
+    required String token,
+    required int accountId,
+    Map<String, dynamic> payload = const {},
+  }) =>
+      _client.patchAdminDriverPinAccount(
+        token: token,
+        accountId: accountId,
+        payload: payload,
+      );
 }
