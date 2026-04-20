@@ -33,8 +33,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l.appTitle),
-        backgroundColor: Colors.amber.shade800,
-        foregroundColor: Colors.black,
         actions: const [
           LocalePopupMenuButton(uiRole: AppUiRole.home),
         ],
@@ -42,6 +40,27 @@ class _HomeScreenState extends State<HomeScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ExpansionTile(
+                  leading: const Icon(Icons.info_outline),
+                  title: Text(l.homeWhatIsTitle),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: SelectableText(l.homeWhatIsBody),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
           Text(
             l.loginAs,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),

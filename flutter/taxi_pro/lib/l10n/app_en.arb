@@ -1,6 +1,8 @@
 {
   "@@locale": "en",
   "appTitle": "Taxi Pro Tunisia",
+  "homeWhatIsTitle": "What is Taxi Pro?",
+  "homeWhatIsBody": "Taxi Pro Tunisia connects you with drivers for airport transfers and city rides. Prices are fixed per route in the app; a night surcharge may apply between 9 PM and 5 AM. Book in the app, track your ride, and use in-app help when needed.",
   "loginAs": "Login as",
   "language": "Language",
   "rolePassenger": "Passenger",
@@ -21,13 +23,17 @@
   "distanceKm": "Distance: {km} km",
   "@distanceKm": {
     "placeholders": {
-      "km": {"type": "Object"}
+      "km": {
+        "type": "Object"
+      }
     }
   },
   "fareDt": "Fare: {amount} DT",
   "@fareDt": {
     "placeholders": {
-      "amount": {"type": "Object"}
+      "amount": {
+        "type": "Object"
+      }
     }
   },
   "driverTitle": "Driver",
@@ -35,14 +41,19 @@
   "login": "Login",
   "sessionActive": "Session active",
   "fareAmount": "Fare (DT)",
-  "paymentType": "Payment type",
+  "paymentType": "Payment method",
+  "passengerFareFinalEstimate": "Final estimate for the ride",
+  "passengerPayCash": "Cash",
+  "passengerPayCardTpe": "Card (TPE)",
   "cashOrCard": "Cash / card",
   "b2bInvoice": "B2B invoice",
   "completeTripCommission": "Complete trip (10% commission)",
   "loggedInAs": "Logged in as {role}",
   "@loggedInAs": {
     "placeholders": {
-      "role": {"type": "String"}
+      "role": {
+        "type": "String"
+      }
     }
   },
   "loginFirst": "Login first",
@@ -50,8 +61,12 @@
   "tripRecorded": "Trip #{id} recorded. Commission {commission} DT",
   "@tripRecorded": {
     "placeholders": {
-      "id": {"type": "int"},
-      "commission": {"type": "Object"}
+      "id": {
+        "type": "int"
+      },
+      "commission": {
+        "type": "Object"
+      }
     }
   },
   "ownerTitle": "Owner HQ",
@@ -60,20 +75,28 @@
   "commissionLabel": "Commission (DT): {amount}",
   "@commissionLabel": {
     "placeholders": {
-      "amount": {"type": "Object"}
+      "amount": {
+        "type": "Object"
+      }
     }
   },
   "tripsCount": "Trips: {count}",
   "@tripsCount": {
     "placeholders": {
-      "count": {"type": "Object"}
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "avgRatingLabel": "Avg rating: {avg} ({count} votes)",
   "@avgRatingLabel": {
     "placeholders": {
-      "avg": {"type": "Object"},
-      "count": {"type": "Object"}
+      "avg": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "tripsHeading": "Trips",
@@ -81,8 +104,12 @@
   "tripListSubtitle": "{date} · comm {commission}",
   "@tripListSubtitle": {
     "placeholders": {
-      "date": {"type": "String"},
-      "commission": {"type": "Object"}
+      "date": {
+        "type": "String"
+      },
+      "commission": {
+        "type": "Object"
+      }
     }
   },
   "operatorTitle": "Operator / Dispatch",
@@ -92,8 +119,12 @@
   "operatorTripSubtitle": "{date} · {fare} DT",
   "@operatorTripSubtitle": {
     "placeholders": {
-      "date": {"type": "String"},
-      "fare": {"type": "Object"}
+      "date": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "Object"
+      }
     }
   },
   "b2bTitle": "B2B Corporate",
@@ -129,7 +160,9 @@
   "rideStatusFmt": "Status: {status}",
   "@rideStatusFmt": {
     "placeholders": {
-      "status": {"type": "String"}
+      "status": {
+        "type": "String"
+      }
     }
   },
   "adminOversightHeading": "Live app oversight",
@@ -143,8 +176,12 @@
   "adminRideRow": "{pickup} → {destination}",
   "@adminRideRow": {
     "placeholders": {
-      "pickup": {"type": "String"},
-      "destination": {"type": "String"}
+      "pickup": {
+        "type": "String"
+      },
+      "destination": {
+        "type": "String"
+      }
     }
   },
   "placeCarthageAirport": "Carthage Airport (Tunis)",
@@ -158,8 +195,12 @@
   "driverLocationRow": "Lat {lat}, Lng {lng}",
   "@driverLocationRow": {
     "placeholders": {
-      "lat": {"type": "String"},
-      "lng": {"type": "String"}
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
     }
   },
   "chatScreenTitle": "Ride chat",
@@ -173,13 +214,17 @@
   "passengerActiveRidesChip": "Active rides: {count}",
   "@passengerActiveRidesChip": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "passengerTotalRidesChip": "Total rides: {count}",
   "@passengerTotalRidesChip": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "passengerBookingSectionTitle": "Booking",
@@ -190,13 +235,17 @@
   "passengerDriverLine": "Driver: {name}",
   "@passengerDriverLine": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "passengerPhoneLine": "Phone: {phone}",
   "@passengerPhoneLine": {
     "placeholders": {
-      "phone": {"type": "String"}
+      "phone": {
+        "type": "String"
+      }
     }
   },
   "rideStatusPending": "Pending",
@@ -213,7 +262,9 @@
   "passengerRideNumberLine": "Ride #{id}",
   "@passengerRideNumberLine": {
     "placeholders": {
-      "id": {"type": "int"}
+      "id": {
+        "type": "int"
+      }
     }
   },
   "notificationsEmpty": "No notifications yet.",
@@ -221,7 +272,9 @@
   "notificationRideUpdatedBody": "Ride #{id} updated.",
   "@notificationRideUpdatedBody": {
     "placeholders": {
-      "id": {"type": "int"}
+      "id": {
+        "type": "int"
+      }
     }
   },
   "errorGoogleSignInMissingToken": "Google sign-in failed: missing Google token.",
@@ -230,15 +283,23 @@
   "notificationDriverAcceptedBody": "{driver}{phoneSuffix} accepted your request.",
   "@notificationDriverAcceptedBody": {
     "placeholders": {
-      "driver": {"type": "String"},
-      "phoneSuffix": {"type": "String"}
+      "driver": {
+        "type": "String"
+      },
+      "phoneSuffix": {
+        "type": "String"
+      }
     }
   },
   "notificationDriverAcceptedSnack": "Driver accepted: {driver}{phoneSuffix}",
   "@notificationDriverAcceptedSnack": {
     "placeholders": {
-      "driver": {"type": "String"},
-      "phoneSuffix": {"type": "String"}
+      "driver": {
+        "type": "String"
+      },
+      "phoneSuffix": {
+        "type": "String"
+      }
     }
   },
   "passengerDriverNearPickupSnack": "Driver is now near your pickup point.",
@@ -246,7 +307,9 @@
   "notificationDriverNearPickupBody": "Your driver is near pickup in {pickup}.",
   "@notificationDriverNearPickupBody": {
     "placeholders": {
-      "pickup": {"type": "String"}
+      "pickup": {
+        "type": "String"
+      }
     }
   },
   "notificationRequestSentTitle": "Request sent",
@@ -254,8 +317,12 @@
   "requestSentSnackLine": "Request sent. {farePart}{promoPart}",
   "@requestSentSnackLine": {
     "placeholders": {
-      "farePart": {"type": "String"},
-      "promoPart": {"type": "String"}
+      "farePart": {
+        "type": "String"
+      },
+      "promoPart": {
+        "type": "String"
+      }
     }
   },
   "promoCodeOptionalLabel": "Promo code",
@@ -278,21 +345,29 @@
   "driverVehicleSummaryLine": "Car: {model} | Color: {color}",
   "@driverVehicleSummaryLine": {
     "placeholders": {
-      "model": {"type": "String"},
-      "color": {"type": "String"}
+      "model": {
+        "type": "String"
+      },
+      "color": {
+        "type": "String"
+      }
     }
   },
   "driverVehicleIdentityTitle": "Vehicle identity",
   "driverOpenRequestsChip": "Open requests: {count}",
   "@driverOpenRequestsChip": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "driverUnreadAlertsChip": "Unread alerts: {count}",
   "@driverUnreadAlertsChip": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "b2bAppBarTitle": "Taxi Pro Corporate",
@@ -303,45 +378,69 @@
   "b2bMonthlyAmountDue": "Amount due (DT): {amount}",
   "@b2bMonthlyAmountDue": {
     "placeholders": {
-      "amount": {"type": "String"}
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "b2bBookingSuccessMessage": "{action} #{id} • {guest} • {route}",
   "@b2bBookingSuccessMessage": {
     "placeholders": {
-      "action": {"type": "String"},
-      "id": {"type": "Object"},
-      "guest": {"type": "String"},
-      "route": {"type": "String"}
+      "action": {
+        "type": "String"
+      },
+      "id": {
+        "type": "Object"
+      },
+      "guest": {
+        "type": "String"
+      },
+      "route": {
+        "type": "String"
+      }
     }
   },
   "b2bFareAdminPercentSuffix": "• 5% admin",
   "adminB2bBookingRowSubtitle": "{guest} • {room} • {fare} DT",
   "@adminB2bBookingRowSubtitle": {
     "placeholders": {
-      "guest": {"type": "String"},
-      "room": {"type": "String"},
-      "fare": {"type": "String"}
+      "guest": {
+        "type": "String"
+      },
+      "room": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "String"
+      }
     }
   },
   "ownerAppBarTitle": "Owner HQ",
   "ownerProfitChip": "Profit: {amount} DT",
   "@ownerProfitChip": {
     "placeholders": {
-      "amount": {"type": "String"}
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "ownerTripsCountChip": "Trips: {count}",
   "@ownerTripsCountChip": {
     "placeholders": {
-      "count": {"type": "String"}
+      "count": {
+        "type": "String"
+      }
     }
   },
   "ownerRatingChip": "{avg} ★ ({votes})",
   "@ownerRatingChip": {
     "placeholders": {
-      "avg": {"type": "String"},
-      "votes": {"type": "String"}
+      "avg": {
+        "type": "String"
+      },
+      "votes": {
+        "type": "String"
+      }
     }
   },
   "ownerVaultHeading": "Trip vault",
@@ -349,14 +448,20 @@
   "ownerCommissionChip": "Commission: {amount} DT",
   "@ownerCommissionChip": {
     "placeholders": {
-      "amount": {"type": "String"}
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "ownerTripRouteFareRow": "{route} — {fare} DT",
   "@ownerTripRouteFareRow": {
     "placeholders": {
-      "route": {"type": "String"},
-      "fare": {"type": "String"}
+      "route": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "String"
+      }
     }
   },
   "ownerHqPortalHeading": "HQ command center",
@@ -368,23 +473,59 @@
   "operatorDispatchPendingBlurb": "There are pending requests that need assigning.",
   "operatorDispatchIdleBlurb": "System is connected. No pending bookings.",
   "operatorChipPending": "Pending: {count}",
-  "@operatorChipPending": {"placeholders": {"count": {"type": "int"}}},
+  "@operatorChipPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "operatorChipAccepted": "Accepted: {count}",
-  "@operatorChipAccepted": {"placeholders": {"count": {"type": "int"}}},
+  "@operatorChipAccepted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "operatorChipOngoing": "Ongoing: {count}",
-  "@operatorChipOngoing": {"placeholders": {"count": {"type": "int"}}},
+  "@operatorChipOngoing": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "operatorChipCompleted": "Completed: {count}",
-  "@operatorChipCompleted": {"placeholders": {"count": {"type": "int"}}},
+  "@operatorChipCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "operatorRideSubtitleLine": "{status}{driver}{created}",
   "@operatorRideSubtitleLine": {
     "placeholders": {
-      "status": {"type": "String"},
-      "driver": {"type": "String"},
-      "created": {"type": "String"}
+      "status": {
+        "type": "String"
+      },
+      "driver": {
+        "type": "String"
+      },
+      "created": {
+        "type": "String"
+      }
     }
   },
   "operatorDriversOnlineCount": "Drivers online: {count}",
-  "@operatorDriversOnlineCount": {"placeholders": {"count": {"type": "int"}}},
+  "@operatorDriversOnlineCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "operatorPhoneLabel": "Phone",
   "operatorDriverNameLabel": "Driver name",
   "operatorPinLabel": "PIN",
@@ -393,11 +534,19 @@
   "operatorRefreshCorporateBookings": "Refresh corporate bookings",
   "operatorTripVaultHeading": "Trip vault",
   "operatorTripVaultTripsChip": "Trips: {count}",
-  "@operatorTripVaultTripsChip": {"placeholders": {"count": {"type": "int"}}},
+  "@operatorTripVaultTripsChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "operatorTripVaultRevenueChip": "Revenue: {amount} DT",
   "@operatorTripVaultRevenueChip": {
     "placeholders": {
-      "amount": {"type": "String"}
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "operatorWalletBalanceLabel": "Wallet balance",
@@ -414,22 +563,42 @@
   "operatorDriverWalletLine": "Wallet: {wallet} DT | Owner %: {owner} | B2B %: {b2b}",
   "@operatorDriverWalletLine": {
     "placeholders": {
-      "wallet": {"type": "String"},
-      "owner": {"type": "String"},
-      "b2b": {"type": "String"}
+      "wallet": {
+        "type": "String"
+      },
+      "owner": {
+        "type": "String"
+      },
+      "b2b": {
+        "type": "String"
+      }
     }
   },
   "operatorDriverCarColorAppend": " | Color: {color}",
-  "@operatorDriverCarColorAppend": {"placeholders": {"color": {"type": "String"}}},
+  "@operatorDriverCarColorAppend": {
+    "placeholders": {
+      "color": {
+        "type": "String"
+      }
+    }
+  },
   "operatorDriverCarLine": "\nCar: {model}",
-  "@operatorDriverCarLine": {"placeholders": {"model": {"type": "String"}}},
+  "@operatorDriverCarLine": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
   "statusLinePrefix": "Status: ",
   "driverLabelPrefix": " | Driver: ",
   "createdAtLinePrefix": "\nAt: ",
   "walletWithAmount": "Wallet: {amount} DT",
   "@walletWithAmount": {
     "placeholders": {
-      "amount": {"type": "String"}
+      "amount": {
+        "type": "String"
+      }
     }
   }
 }

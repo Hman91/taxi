@@ -5,6 +5,7 @@ import 'app_locale.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/home_screen.dart';
 import 'services/local_notification_service.dart';
+import 'theme/taxi_app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,10 +31,9 @@ class TaxiProApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
           ],
           supportedLocales: AppLocalizations.supportedLocales,
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.amber),
-            useMaterial3: true,
-          ),
+          theme: buildTaxiProTheme(),
+          builder: (context, child) =>
+              TaxiProBackground(child: child ?? const SizedBox.shrink()),
           home: const HomeScreen(),
         );
       },

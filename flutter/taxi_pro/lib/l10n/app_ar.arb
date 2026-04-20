@@ -595,5 +595,10 @@
   "placeHammamet": "الحمامات",
   "placeSousse": "سوسة",
   "placePortElKantaoui": "القنطاوي",
-  "placeNabeul": "نابل"
+  "placeNabeul": "نابل",
+  "homeWhatIsTitle": "ما هو تاكسي برو؟",
+  "homeWhatIsBody": "يربطك تاكسي برو تونس بالسائقين لنقل المطار والرحلات داخل المدينة. الأسعار ثابتة لكل مسار في التطبيق؛ وقد يُطبق رسم ليلي بين 9 مساءً و5 صباحًا. احجز في التطبيق، تتبع رحلتك، واستخدم المساعدة عند الحاجة.",
+  "passengerFareFinalEstimate": "تقدير نهائي للرحلة",
+  "passengerPayCash": "كاش",
+  "passengerPayCardTpe": "بطاقة (TPE)"
 }

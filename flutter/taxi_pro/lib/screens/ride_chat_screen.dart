@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_locale.dart';
 import '../l10n/app_localizations.dart';
+import '../theme/taxi_app_theme.dart';
 import '../l10n/ride_status_localization.dart';
 import '../models/chat_message.dart';
 import '../repositories/chat_repository.dart';
@@ -162,7 +163,11 @@ class _RideChatScreenState extends State<RideChatScreen> {
       ),
       body: Column(
         children: [
-          if (_loading) LinearProgressIndicator(minHeight: 2, color: Colors.amber.shade800),
+          if (_loading)
+            LinearProgressIndicator(
+              minHeight: 2,
+              color: Theme.of(context).colorScheme.tertiary,
+            ),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.all(8),
@@ -183,8 +188,13 @@ class _RideChatScreenState extends State<RideChatScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.82),
                     decoration: BoxDecoration(
-                      color: mine ? Colors.amber.shade100 : Colors.grey.shade200,
+                      color: mine
+                          ? TaxiAppColors.gradientMidA.withOpacity(0.95)
+                          : Colors.white.withOpacity(0.88),
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: TaxiAppColors.cardBorder,
+                      ),
                     ),
                     child: Text(m.displayText),
                   ),

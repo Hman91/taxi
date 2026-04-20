@@ -95,7 +95,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
                     return ListTile(
                       leading: Icon(
                         n.isRead ? Icons.notifications_none : Icons.notifications_active,
-                        color: n.isRead ? null : Colors.amber.shade800,
+                        color: n.isRead ? null : Theme.of(context).colorScheme.tertiary,
                       ),
                       title: Text(
                         n.title,

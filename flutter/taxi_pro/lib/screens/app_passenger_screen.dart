@@ -25,7 +25,10 @@ import '../services/local_notification_service.dart';
 import '../services/taxi_app_service.dart';
 import '../widgets/locale_popup_menu.dart';
 import '../widgets/passenger_google_sign_in_button.dart';
+import '../theme/taxi_app_theme.dart';
 import 'ride_chat_screen.dart';
+
+enum _PassengerPayMethod { cash, cardTpe }
 
 class AppPassengerScreen extends StatefulWidget {
   const AppPassengerScreen({super.key});
@@ -212,7 +215,9 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                     return ListTile(
                       leading: Icon(
                         n.isRead ? Icons.notifications_none : Icons.notifications_active,
-                        color: n.isRead ? null : Colors.amber.shade800,
+                        color: n.isRead
+                            ? null
+                            : Theme.of(context).colorScheme.tertiary,
                       ),
                       title: Text(
                         n.title,
@@ -488,6 +493,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     String? selectedEnd = initialEnds.isNotEmpty ? initialEnds.first : null;
     String promoCode = '';
     Map<String, dynamic>? quote;
+    var paymentMethod = _PassengerPayMethod.cash;
     bool? ok;
     final promoCtrl = TextEditingController();
     String? _routeKey() {
@@ -580,11 +586,24 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                   },
                 ),
                 const SizedBox(height: 8),
-                if (quote != null)
-                  Text(
-                    '${l.fareDt((quote!['final_fare'] as num).toStringAsFixed(3))}\n${l.route}: ${localizedRouteKeyForDisplay(l, quote!['route_key'] as String)}',
-                    textAlign: TextAlign.center,
+                if (quote != null) ...[
+                  _buildPassengerFareAndPayment(
+                    l,
+                    (quote!['final_fare'] as num).toDouble(),
+                    paymentMethod,
+                    (v) => setDialogState(
+                        () => paymentMethod = v ?? paymentMethod),
                   ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '${l.route}: ${localizedRouteKeyForDisplay(l, quote!['route_key'] as String)}',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                          color: TaxiAppColors.textStrong,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -622,6 +641,9 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       if (!mounted) return;
       final fareText = (q['final_fare'] as num).toStringAsFixed(3);
       final promoPart = promoCode.isEmpty ? '' : ' | $promoCode';
+      final payLabel = paymentMethod == _PassengerPayMethod.cash
+          ? l.passengerPayCash
+          : l.passengerPayCardTpe;
       _pushNotification(
         title: l.notificationRequestSentTitle,
         body: l.notificationRequestSentBody,
@@ -631,7 +653,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         SnackBar(
           content: Text(
             l.requestSentSnackLine(
-              l.fareDt(fareText),
+              '${l.fareDt(fareText)} · $payLabel',
               promoPart,
             ),
           ),
@@ -818,7 +840,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
               ),
           ] else ...[
             Card(
-              color: Colors.black87,
+              color: TaxiAppColors.darkPanel,
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
@@ -827,7 +849,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                     Text(
                       l.passengerDispatchPanelTitle,
                       style: const TextStyle(
-                        color: Colors.amber,
+                        color: TaxiAppColors.gradientEnd,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -953,6 +975,138 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildPassengerFareAndPayment(
+    AppLocalizations l,
+    double finalFare,
+    _PassengerPayMethod paymentMethod,
+    void Function(_PassengerPayMethod?) onPaymentChanged,
+  ) {
+    final fareStr = finalFare.toStringAsFixed(2);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          decoration: BoxDecoration(
+            color: TaxiAppColors.darkPanel,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              Text(
+                '$fareStr DT',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                l.passengerFareFinalEstimate,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '${l.paymentType}:',
+          style: const TextStyle(
+            color: TaxiAppColors.text,
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF8E1),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: const Color(0x338B1428)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () =>
+                      onPaymentChanged(_PassengerPayMethod.cash),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Radio<_PassengerPayMethod>(
+                          value: _PassengerPayMethod.cash,
+                          groupValue: paymentMethod,
+                          onChanged: onPaymentChanged,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        Icon(Icons.payments, color: Colors.green[700], size: 22),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            l.passengerPayCash,
+                            style: const TextStyle(
+                              color: TaxiAppColors.text,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: InkWell(
+                  onTap: () =>
+                      onPaymentChanged(_PassengerPayMethod.cardTpe),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Radio<_PassengerPayMethod>(
+                          value: _PassengerPayMethod.cardTpe,
+                          groupValue: paymentMethod,
+                          onChanged: onPaymentChanged,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        Icon(Icons.credit_card, color: Colors.blue[700], size: 22),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            l.passengerPayCardTpe,
+                            style: const TextStyle(
+                              color: TaxiAppColors.text,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

@@ -12,6 +12,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appTitle => 'Taxi Pro Tunesien';
 
   @override
+  String get homeWhatIsTitle => 'What is Taxi Pro?';
+
+  @override
+  String get homeWhatIsBody =>
+      'Taxi Pro Tunisia connects you with drivers for airport transfers and city rides. Prices are fixed per route in the app; a night surcharge may apply between 9 PM and 5 AM. Book in the app, track your ride, and use in-app help when needed.';
+
+  @override
   String get loginAs => 'Anmelden als';
 
   @override
@@ -90,6 +97,15 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get paymentType => 'Zahlungsart';
+
+  @override
+  String get passengerFareFinalEstimate => 'Final estimate for the ride';
+
+  @override
+  String get passengerPayCash => 'Cash';
+
+  @override
+  String get passengerPayCardTpe => 'Card (TPE)';
 
   @override
   String get cashOrCard => 'Bar / Karte';

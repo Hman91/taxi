@@ -595,5 +595,10 @@
   "placeHammamet": "Hammamet",
   "placeSousse": "Sousse",
   "placePortElKantaoui": "Port El Kantaoui",
-  "placeNabeul": "Nabeul"
+  "placeNabeul": "Nabeul",
+  "homeWhatIsTitle": "What is Taxi Pro?",
+  "homeWhatIsBody": "Taxi Pro Tunisia connects you with drivers for airport transfers and city rides. Prices are fixed per route in the app; a night surcharge may apply between 9 PM and 5 AM. Book in the app, track your ride, and use in-app help when needed.",
+  "passengerFareFinalEstimate": "Final estimate for the ride",
+  "passengerPayCash": "Cash",
+  "passengerPayCardTpe": "Card (TPE)"
 }

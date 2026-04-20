@@ -116,6 +116,18 @@ abstract class AppLocalizations {
   /// **'Taxi Pro Tunisia'**
   String get appTitle;
 
+  /// No description provided for @homeWhatIsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What is Taxi Pro?'**
+  String get homeWhatIsTitle;
+
+  /// No description provided for @homeWhatIsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Taxi Pro Tunisia connects you with drivers for airport transfers and city rides. Prices are fixed per route in the app; a night surcharge may apply between 9 PM and 5 AM. Book in the app, track your ride, and use in-app help when needed.'**
+  String get homeWhatIsBody;
+
   /// No description provided for @loginAs.
   ///
   /// In en, this message translates to:
@@ -263,8 +275,26 @@ abstract class AppLocalizations {
   /// No description provided for @paymentType.
   ///
   /// In en, this message translates to:
-  /// **'Payment type'**
+  /// **'Payment method'**
   String get paymentType;
+
+  /// No description provided for @passengerFareFinalEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'Final estimate for the ride'**
+  String get passengerFareFinalEstimate;
+
+  /// No description provided for @passengerPayCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash'**
+  String get passengerPayCash;
+
+  /// No description provided for @passengerPayCardTpe.
+  ///
+  /// In en, this message translates to:
+  /// **'Card (TPE)'**
+  String get passengerPayCardTpe;
 
   /// No description provided for @cashOrCard.
   ///

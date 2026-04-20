@@ -12,6 +12,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get appTitle => 'تاكسي برو تونس';
 
   @override
+  String get homeWhatIsTitle => 'ما هو تاكسي برو؟';
+
+  @override
+  String get homeWhatIsBody =>
+      'يربطك تاكسي برو تونس بالسائقين لنقل المطار والرحلات داخل المدينة. الأسعار ثابتة لكل مسار في التطبيق؛ وقد يُطبق رسم ليلي بين 9 مساءً و5 صباحًا. احجز في التطبيق، تتبع رحلتك، واستخدم المساعدة عند الحاجة.';
+
+  @override
   String get loginAs => 'تسجيل الدخول كـ';
 
   @override
@@ -89,6 +96,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get paymentType => 'طريقة الدفع';
+
+  @override
+  String get passengerFareFinalEstimate => 'تقدير نهائي للرحلة';
+
+  @override
+  String get passengerPayCash => 'كاش';
+
+  @override
+  String get passengerPayCardTpe => 'بطاقة (TPE)';
 
   @override
   String get cashOrCard => 'نقد / بطاقة';
