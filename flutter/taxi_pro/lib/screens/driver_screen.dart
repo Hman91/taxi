@@ -172,6 +172,7 @@ class _DriverScreenState extends State<DriverScreen> {
       _socket.connect(
         r.accessToken,
         onRideStatus: _onRideStatusEvent,
+        onDriverWallet: _onDriverWallet,
         transports: kIsWeb ? ['websocket'] : ['polling'],
       );
       _startRidesPolling();
@@ -339,6 +340,32 @@ class _DriverScreenState extends State<DriverScreen> {
     try {
       await _api.updateDriverLocation(token: t, currentZone: _location);
     } catch (_) {}
+  }
+
+  void _onDriverWallet(Map<String, dynamic> data) {
+    if (!mounted) return;
+    final loc = AppLocalizations.of(context)!;
+    final wb = data['wallet_balance'];
+    if (wb is num) {
+      setState(() => _walletBalance = wb.toDouble());
+    }
+    final event = (data['event'] ?? '').toString();
+    if (event != 'wallet_depleted') return;
+    final amount =
+        (data['required_topup_dt'] as num?)?.round() ?? 100;
+    final body = loc.driverWalletDepletedBody(amount);
+    _pushNotification(
+      title: loc.driverWalletDepletedTitle,
+      body: body,
+      event: 'wallet_depleted',
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(body)),
+    );
+    LocalNotificationService.instance.show(
+      title: loc.driverWalletDepletedTitle,
+      body: body,
+    );
   }
 
   void _onRideStatusEvent(Map<String, dynamic> payload) {

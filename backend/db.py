@@ -174,6 +174,18 @@ def fare_route_by_segments(start: str, destination: str) -> Optional[Dict[str, A
     return _fare_route_dict(row) if row else None
 
 
+def fare_route_update(
+    route_id: int, *, base_fare: Optional[float] = None
+) -> Optional[Dict[str, Any]]:
+    row = db.session.get(FareRoute, route_id)
+    if row is None:
+        return None
+    if base_fare is not None:
+        row.base_fare = float(base_fare)
+    db.session.commit()
+    return _fare_route_dict(row)
+
+
 def fare_routes_seed_defaults(rows: List[Dict[str, Any]]) -> int:
     existing = db.session.scalars(select(func.count(FareRoute.id))).one()
     if int(existing or 0) > 0:
@@ -200,6 +212,20 @@ def driver_pin_by_phone(phone: str) -> Optional[Dict[str, Any]]:
         select(DriverPinAccount).where(DriverPinAccount.phone == phone.strip())
     ).first()
     return _driver_pin_account_dict(row) if row else None
+
+
+def driver_pin_account_by_user_id(user_id: int) -> Optional[Dict[str, Any]]:
+    """Resolve PIN wallet row for drivers logged in as driverpin_{phone}@taxipro.local."""
+    u = db.session.get(User, user_id)
+    if u is None:
+        return None
+    email = (u.email or "").strip().lower()
+    prefix = "driverpin_"
+    suffix = "@taxipro.local"
+    if not (email.startswith(prefix) and email.endswith(suffix)):
+        return None
+    phone = email[len(prefix) : -len(suffix)]
+    return driver_pin_by_phone(phone)
 
 
 def driver_pin_seed_defaults(rows: List[Dict[str, Any]]) -> int:

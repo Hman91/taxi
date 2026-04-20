@@ -11,6 +11,10 @@ def _emit_to_user(user_id: int, payload: Dict[str, Any]) -> None:
     socketio.emit("ride_status", payload, room=f"user:{int(user_id)}")
 
 
+def emit_driver_wallet(user_id: int, payload: Dict[str, Any]) -> None:
+    socketio.emit("driver_wallet", payload, room=f"user:{int(user_id)}")
+
+
 def broadcast_ride_update(
     ride: Dict[str, Any],
     *,

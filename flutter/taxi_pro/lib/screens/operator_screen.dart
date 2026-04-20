@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
 import '../l10n/ride_status_localization.dart';
 import '../services/taxi_app_service.dart';
+import '../theme/taxi_app_theme.dart';
 import '../widgets/locale_popup_menu.dart';
 
 class OperatorScreen extends StatefulWidget {
@@ -17,21 +18,25 @@ class OperatorScreen extends StatefulWidget {
   State<OperatorScreen> createState() => _OperatorScreenState();
 }
 
-class _OperatorScreenState extends State<OperatorScreen> {
+class _OperatorScreenState extends State<OperatorScreen>
+    with SingleTickerProviderStateMixin {
   final _api = TaxiAppService();
   final _imagePicker = ImagePicker();
   final _secretController = TextEditingController(text: 'Operator2026');
   final _newDriverPhone = TextEditingController();
   final _newDriverName = TextEditingController();
   final _newDriverPin = TextEditingController();
+  final _topUpAmountController = TextEditingController(text: '10');
+  TabController? _tabController;
+  bool _obscureOperatorPassword = true;
   String? _token;
   String? _message;
   List<Map<String, dynamic>> _trips = [];
   List<Map<String, dynamic>> _adminRides = [];
-  List<Map<String, dynamic>> _adminDrivers = [];
-  List<Map<String, dynamic>> _adminUsers = [];
   List<Map<String, dynamic>> _driverPinAccounts = [];
   List<Map<String, dynamic>> _adminB2bBookings = [];
+  List<Map<String, dynamic>> _flightArrivals = [];
+  int? _topUpAccountId;
   bool _busy = false;
 
   int _countByStatus(String status) => _adminRides
@@ -68,10 +73,9 @@ class _OperatorScreenState extends State<OperatorScreen> {
     try {
       final trips = await _api.listTrips(t);
       final rides = await _api.listAdminRides(t);
-      final drivers = await _api.listAdminDriverLocations(t);
-      final users = await _api.listAdminUsers(t);
       final driverPins = await _api.listAdminDriverPinAccounts(t);
       final b2bBookings = await _api.listAdminB2bBookings(t);
+      final flights = await _api.listAdminTunisiaFlightArrivals(t);
       setState(() {
         _trips = trips
             .map(
@@ -85,35 +89,19 @@ class _OperatorScreenState extends State<OperatorScreen> {
             )
             .toList();
         _adminRides = rides;
-        _adminDrivers = drivers;
-        _adminUsers = users;
         _driverPinAccounts = driverPins;
         _adminB2bBookings = b2bBookings;
+        _flightArrivals = flights;
+        final ids = driverPins
+            .map((e) => (e['id'] as num?)?.toInt())
+            .whereType<int>()
+            .toList();
+        if (_topUpAccountId != null &&
+            !ids.contains(_topUpAccountId)) {
+          _topUpAccountId = null;
+        }
+        _topUpAccountId ??= ids.isEmpty ? null : ids.first;
       });
-    } catch (e) {
-      setState(() => _message = e.toString());
-    } finally {
-      setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _toggleUser(Map<String, dynamic> user) async {
-    final t = _token;
-    if (t == null) return;
-    final idRaw = user['id'];
-    if (idRaw is! num) return;
-    final current = (user['is_enabled'] == true);
-    setState(() {
-      _busy = true;
-      _message = null;
-    });
-    try {
-      await _api.setAdminUserEnabled(
-        token: t,
-        userId: idRaw.toInt(),
-        isEnabled: !current,
-      );
-      await _refreshAll();
     } catch (e) {
       setState(() => _message = e.toString());
     } finally {
@@ -336,6 +324,7 @@ class _OperatorScreenState extends State<OperatorScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 4, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       restoreUiRoleLocale(AppUiRole.operator);
@@ -344,10 +333,12 @@ class _OperatorScreenState extends State<OperatorScreen> {
 
   @override
   void dispose() {
+    _tabController?.dispose();
     _secretController.dispose();
     _newDriverPhone.dispose();
     _newDriverName.dispose();
     _newDriverPin.dispose();
+    _topUpAmountController.dispose();
     super.dispose();
   }
 
@@ -363,9 +354,731 @@ class _OperatorScreenState extends State<OperatorScreen> {
     return NetworkImage(trimmed);
   }
 
+  TextStyle _operatorHeadingTextStyle() => const TextStyle(
+        color: TaxiAppColors.text,
+        fontWeight: FontWeight.w700,
+        fontSize: 15,
+      );
+
+  InputDecoration _operatorFieldDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(
+        color: TaxiAppColors.textStrong,
+        fontWeight: FontWeight.w600,
+      ),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(14)),
+        borderSide: BorderSide(color: Color(0x448B1428)),
+      ),
+      enabledBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(14)),
+        borderSide: BorderSide(color: Color(0x66991B1B)),
+      ),
+      focusedBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(14)),
+        borderSide: BorderSide(color: TaxiAppColors.text, width: 1.75),
+      ),
+    );
+  }
+
+  Widget _driverMgmtSectionCard({
+    required IconData icon,
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Card(
+      elevation: 0,
+      color: TaxiAppColors.cardFill,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: TaxiAppColors.cardBorder),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0x408B1428)),
+                  ),
+                  child: Icon(icon, color: TaxiAppColors.text, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: TaxiAppColors.textStrong,
+                      height: 1.25,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _driverPinAccountTile(AppLocalizations l, Map<String, dynamic> d) {
+    final title =
+        '${d['driver_name'] ?? ''} (${d['phone'] ?? ''})'.trim();
+    final letter = () {
+      final n = (d['driver_name'] ?? '').toString().trim();
+      if (n.isNotEmpty) return n[0].toUpperCase();
+      final p = (d['phone'] ?? '').toString().trim();
+      if (p.isNotEmpty) return p[0];
+      return '?';
+    }();
+    final subtitle = () {
+      final walletS = (d['wallet_balance'] ?? 0).toString();
+      final ownerS = (d['owner_commission_rate'] ?? 10).toString();
+      final b2bS = (d['b2b_commission_rate'] ?? 5).toString();
+      var line =
+          l.operatorDriverWalletLine(walletS, ownerS, b2bS);
+      final model = (d['car_model'] ?? '').toString().trim();
+      final color = (d['car_color'] ?? '').toString().trim();
+      if (model.isNotEmpty) line += l.operatorDriverCarLine(model);
+      if (color.isNotEmpty) line += l.operatorDriverCarColorAppend(color);
+      return line;
+    }();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0x55991B1B)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: _busy ? null : () => _editDriverAccount(d),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: TaxiAppColors.appBarFill,
+                  foregroundColor: TaxiAppColors.textStrong,
+                  child: Text(
+                    letter,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title.isEmpty ? '—' : title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: TaxiAppColors.textStrong,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          height: 1.35,
+                          color: TaxiAppColors.textSoft,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  color: TaxiAppColors.text,
+                  onPressed: _busy ? null : () => _editDriverAccount(d),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _rechargeDriverWallet() async {
+    final t = _token;
+    final id = _topUpAccountId;
+    if (t == null || id == null) return;
+    final add = double.tryParse(
+          _topUpAmountController.text.trim().replaceAll(',', '.'),
+        ) ??
+        0;
+    if (add <= 0) return;
+    Map<String, dynamic>? row;
+    for (final d in _driverPinAccounts) {
+      if ((d['id'] as num?)?.toInt() == id) {
+        row = d;
+        break;
+      }
+    }
+    if (row == null) return;
+    final cur = (row['wallet_balance'] as num?)?.toDouble() ?? 0;
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      await _api.patchAdminDriverPinAccount(
+        token: t,
+        accountId: id,
+        payload: <String, dynamic>{
+          'wallet_balance': cur + add,
+        },
+      );
+      await _refreshAll();
+    } catch (e) {
+      setState(() => _message = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  String _arrivalAirportLabel(Map<String, dynamic> row) {
+    final code = Localizations.localeOf(context).languageCode;
+    if (code == 'ar') {
+      return row['arrival_airport_ar']?.toString() ??
+          row['arrival_airport_en']?.toString() ??
+          '';
+    }
+    return row['arrival_airport_en']?.toString() ??
+        row['arrival_airport_ar']?.toString() ??
+        '';
+  }
+
+  Widget _buildArrivalsTab(AppLocalizations l) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        FilledButton.tonal(
+          onPressed: _busy ? null : _refreshAll,
+          child: Text(l.adminLoadRidesBtn),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          l.operatorArrivalsDemoHeading,
+          style: _operatorHeadingTextStyle(),
+        ),
+        const SizedBox(height: 10),
+        if (_flightArrivals.isEmpty)
+          Text(l.operatorNoFlightArrivals)
+        else
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              headingRowColor: WidgetStateProperty.all(Colors.grey.shade200),
+              border: TableBorder.all(color: Colors.grey.shade400),
+              columns: [
+                DataColumn(label: Text(l.operatorColFlightNumber)),
+                DataColumn(label: Text(l.operatorColDepartureAirport)),
+                DataColumn(label: Text(l.operatorColTakeoffTime)),
+                DataColumn(label: Text(l.operatorColExpectedArrival)),
+                DataColumn(label: Text(l.operatorColArrivalAirportTn)),
+              ],
+              rows: _flightArrivals.map((r) {
+                return DataRow(
+                  cells: [
+                    DataCell(Text(r['flight_number']?.toString() ?? '')),
+                    DataCell(Text(r['departure_airport']?.toString() ?? '')),
+                    DataCell(Text(r['takeoff_time']?.toString() ?? '')),
+                    DataCell(Text(r['expected_arrival']?.toString() ?? '')),
+                    DataCell(Text(_arrivalAirportLabel(r))),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildLiveOrdersTab(AppLocalizations l) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Card(
+          color: TaxiAppColors.cardFill,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: TaxiAppColors.cardBorder),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l.operatorDispatchCenterHeading,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: TaxiAppColors.textStrong,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _adminRides.any(
+                          (r) => (r['status'] ?? '').toString() == 'pending')
+                      ? l.operatorDispatchPendingBlurb
+                      : l.operatorDispatchIdleBlurb,
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    Chip(
+                      avatar: const Icon(Icons.hourglass_top, size: 16),
+                      label:
+                          Text(l.operatorChipPending(_countByStatus('pending'))),
+                    ),
+                    Chip(
+                      avatar: const Icon(Icons.local_taxi, size: 16),
+                      label: Text(
+                          l.operatorChipAccepted(_countByStatus('accepted'))),
+                    ),
+                    Chip(
+                      avatar: const Icon(Icons.route, size: 16),
+                      label:
+                          Text(l.operatorChipOngoing(_countByStatus('ongoing'))),
+                    ),
+                    Chip(
+                      avatar: const Icon(Icons.check_circle, size: 16),
+                      label: Text(
+                          l.operatorChipCompleted(_countByStatus('completed'))),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        FilledButton.tonal(
+          onPressed: _busy ? null : _refreshAll,
+          child: Text(l.adminLoadRidesBtn),
+        ),
+        const SizedBox(height: 8),
+        if (_adminRides.isEmpty) Text(l.adminNoRidesLoaded),
+        ..._adminRides.map(
+          (r) => Card(
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ListTile(
+              dense: true,
+              leading: const Icon(Icons.directions_car),
+              title: Text(
+                localizedRideRouteRow(
+                  l,
+                  r['pickup']?.toString() ?? '',
+                  r['destination']?.toString() ?? '',
+                ),
+              ),
+              subtitle: Text(
+                l.operatorRideSubtitleLine(
+                  '${l.statusLinePrefix}${localizedRideStatusLabel(l, r['status']?.toString())}',
+                  (r['driver_name'] ?? '').toString().trim().isEmpty
+                      ? ''
+                      : '${l.driverLabelPrefix}${r['driver_name']}',
+                  (r['created_at'] ?? '').toString().trim().isEmpty
+                      ? ''
+                      : '${l.createdAtLinePrefix}${r['created_at']}',
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          l.operatorCorporateBookingsSection,
+          style: _operatorHeadingTextStyle(),
+        ),
+        const SizedBox(height: 8),
+        FilledButton.tonal(
+          onPressed: _busy ? null : _refreshAll,
+          child: Text(l.operatorRefreshCorporateBookings),
+        ),
+        const SizedBox(height: 8),
+        if (_adminB2bBookings.isEmpty) Text(l.noTripsLoaded),
+        ..._adminB2bBookings.map(
+          (b) => Card(
+            color: Colors.white,
+            child: ListTile(
+              dense: true,
+              title: Text(b['route']?.toString() ?? ''),
+              subtitle: Text(
+                l.adminB2bBookingRowSubtitle(
+                  b['guest_name']?.toString() ?? '',
+                  b['room_number']?.toString() ?? '-',
+                  b['fare']?.toString() ?? '',
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDriverManagementTab(AppLocalizations l) {
+    final pinIds = _driverPinAccounts
+        .map((e) => (e['id'] as num?)?.toInt())
+        .whereType<int>()
+        .toList();
+
+    final topUpStepper = Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0x66991B1B)),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: _busy
+                ? null
+                : () {
+                    final v = double.tryParse(
+                          _topUpAmountController.text
+                              .trim()
+                              .replaceAll(',', '.'),
+                        ) ??
+                        0;
+                    _topUpAmountController.text =
+                        (v > 1 ? v - 1 : 0).toStringAsFixed(2);
+                  },
+            icon: const Icon(Icons.remove_rounded),
+            color: TaxiAppColors.textStrong,
+          ),
+          Expanded(
+            child: TextField(
+              controller: _topUpAmountController,
+              textAlign: TextAlign.center,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                color: TaxiAppColors.textStrong,
+              ),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: _busy
+                ? null
+                : () {
+                    final v = double.tryParse(
+                          _topUpAmountController.text
+                              .trim()
+                              .replaceAll(',', '.'),
+                        ) ??
+                        0;
+                    _topUpAmountController.text =
+                        (v + 1).toStringAsFixed(2);
+                  },
+            icon: const Icon(Icons.add_rounded),
+            color: TaxiAppColors.textStrong,
+          ),
+        ],
+      ),
+    );
+
+    return RefreshIndicator(
+      color: TaxiAppColors.text,
+      onRefresh: () async {
+        await _refreshAll();
+      },
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.groups_outlined, color: TaxiAppColors.text),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l.operatorTabDriverManagement,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: TaxiAppColors.textStrong,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _driverMgmtSectionCard(
+            icon: Icons.person_add_alt_1_outlined,
+            title: l.operatorCreateDriverAccount,
+            children: [
+              TextField(
+                controller: _newDriverPhone,
+                keyboardType: TextInputType.phone,
+                decoration: _operatorFieldDecoration(l.operatorPhoneLabel),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _newDriverName,
+                textCapitalization: TextCapitalization.words,
+                decoration: _operatorFieldDecoration(l.operatorDriverNameLabel),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _newDriverPin,
+                obscureText: true,
+                decoration: _operatorFieldDecoration(l.operatorPinLabel),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: TaxiAppColors.buttonDark,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: _busy ? null : _createDriverAccount,
+                  icon: const Icon(Icons.add_rounded),
+                  label: Text(l.operatorCreateDriverAccount),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _driverMgmtSectionCard(
+            icon: Icons.account_balance_wallet_outlined,
+            title: l.operatorChooseDriverTopUp,
+            children: [
+              DropdownButtonFormField<int>(
+                value: _topUpAccountId != null &&
+                        pinIds.contains(_topUpAccountId)
+                    ? _topUpAccountId
+                    : null,
+                decoration: _operatorFieldDecoration(l.operatorDriverNameLabel),
+                hint: Text(
+                  l.operatorDriverNameLabel,
+                  style: const TextStyle(color: TaxiAppColors.textSoft),
+                ),
+                isExpanded: true,
+                items: _driverPinAccounts
+                    .map((d) {
+                      final id = (d['id'] as num?)?.toInt();
+                      if (id == null) return null;
+                      return DropdownMenuItem<int>(
+                        value: id,
+                        child: Text(
+                          '${d['driver_name'] ?? ''} (${d['phone'] ?? ''})',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    })
+                    .whereType<DropdownMenuItem<int>>()
+                    .toList(),
+                onChanged: _busy
+                    ? null
+                    : (v) => setState(() => _topUpAccountId = v),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                l.operatorAmountReceivedDt,
+                style: _operatorHeadingTextStyle(),
+              ),
+              const SizedBox(height: 8),
+              topUpStepper,
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: TaxiAppColors.text,
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: TaxiAppColors.text, width: 2),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 14,
+                      horizontal: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: _busy || _topUpAccountId == null
+                      ? null
+                      : _rechargeDriverWallet,
+                  icon: const Icon(Icons.savings_outlined),
+                  label: Text(l.operatorRechargeBalance),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.local_taxi_outlined,
+                color: TaxiAppColors.text,
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '${l.roleDriver} (${_driverPinAccounts.length})',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: TaxiAppColors.textStrong,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_driverPinAccounts.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.local_taxi_outlined,
+                      size: 44,
+                      color: TaxiAppColors.textSoft.withValues(alpha: 0.65),
+                    ),
+                    const SizedBox(height: 10),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        l.operatorFillDriverFields,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: TaxiAppColors.textSoft,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ..._driverPinAccounts.map(
+              (d) => _driverPinAccountTile(l, d),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTripHistoryTab(AppLocalizations l) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.inventory_2_outlined, color: TaxiAppColors.text),
+            const SizedBox(width: 8),
+            Text(
+              l.operatorTripVaultHeading,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: TaxiAppColors.textStrong,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            Chip(
+              avatar: const Icon(Icons.list_alt, size: 16),
+              label: Text(l.operatorTripVaultTripsChip(_trips.length)),
+            ),
+            Chip(
+              avatar: const Icon(Icons.payments, size: 16),
+              label: Text(
+                l.operatorTripVaultRevenueChip(
+                  _tripVaultRevenue.toStringAsFixed(3),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        FilledButton.tonal(
+          onPressed: _busy ? null : _refreshAll,
+          child: Text(l.loginLoadTrips),
+        ),
+        const SizedBox(height: 8),
+        if (_trips.isEmpty) Text(l.noTripsLoaded),
+        ..._trips.map(
+          (t) => Card(
+            color: Colors.white,
+            child: ListTile(
+              title: Text('${t['route']}'),
+              subtitle: Text(
+                l.operatorTripSubtitle(
+                  t['date'] as String,
+                  t['fare'].toString(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final tc = _tabController;
     return Scaffold(
       appBar: AppBar(
         title: Text(l.operatorTitle),
@@ -377,300 +1090,128 @@ class _OperatorScreenState extends State<OperatorScreen> {
           ? ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                Text(
+                  l.operatorEmployeePasswordLabel,
+                  style: _operatorHeadingTextStyle(),
+                ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: _secretController,
-                  obscureText: true,
-                  decoration: InputDecoration(labelText: l.operatorCode),
+                  obscureText: _obscureOperatorPassword,
+                  decoration: InputDecoration(
+                    labelText: l.operatorCode,
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureOperatorPassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      onPressed: () => setState(() {
+                        _obscureOperatorPassword = !_obscureOperatorPassword;
+                      }),
+                    ),
+                  ),
                 ),
-                FilledButton(
-                  onPressed: _busy ? null : _login,
-                  child: Text(l.loginLoadTrips),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: TaxiAppColors.buttonDark,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: _busy ? null : _login,
+                    child: Text(l.loginLoadTrips),
+                  ),
                 ),
-                if (_message != null)
+                if (_message != null) ...[
+                  const SizedBox(height: 12),
                   Text(_message!, style: const TextStyle(color: Colors.red)),
+                ],
               ],
             )
-          : DefaultTabController(
-              length: 4,
-              child: Column(
-                children: [
-                  TabBar(
-                    tabs: [
-                      Tab(text: l.operatorTabDispatch),
-                      Tab(text: l.operatorTabDrivers),
-                      Tab(text: l.operatorTabB2b),
-                      Tab(text: l.operatorTabTripVault),
-                    ],
-                  ),
-                  Expanded(
-                    child: TabBarView(
-                      children: [
-                        ListView(
-                          padding: const EdgeInsets.all(12),
-                          children: [
-                            Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      l.operatorDispatchCenterHeading,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      _adminRides.any((r) =>
-                                              (r['status'] ?? '').toString() == 'pending')
-                                          ? l.operatorDispatchPendingBlurb
-                                          : l.operatorDispatchIdleBlurb,
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: [
-                                        Chip(
-                                          avatar: const Icon(Icons.hourglass_top, size: 16),
-                                          label: Text(l.operatorChipPending(
-                                              _countByStatus('pending'))),
-                                        ),
-                                        Chip(
-                                          avatar: const Icon(Icons.local_taxi, size: 16),
-                                          label: Text(l.operatorChipAccepted(
-                                              _countByStatus('accepted'))),
-                                        ),
-                                        Chip(
-                                          avatar: const Icon(Icons.route, size: 16),
-                                          label: Text(l.operatorChipOngoing(
-                                              _countByStatus('ongoing'))),
-                                        ),
-                                        Chip(
-                                          avatar: const Icon(Icons.check_circle, size: 16),
-                                          label: Text(l.operatorChipCompleted(
-                                              _countByStatus('completed'))),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+          : tc == null
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD1FAE5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF34D399)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle, color: Color(0xFF065F46)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              l.operatorWelcomeOperatingRoom,
+                              style: const TextStyle(
+                                color: Color(0xFF065F46),
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            FilledButton.tonal(
-                              onPressed: _busy ? null : _refreshAll,
-                              child: Text(l.adminLoadRidesBtn),
-                            ),
-                            if (_adminRides.isEmpty) Text(l.adminNoRidesLoaded),
-                            ..._adminRides.map(
-                              (r) => Card(
-                                child: ListTile(
-                                  dense: true,
-                                  leading: const Icon(Icons.directions_car),
-                                  title: Text(localizedRideRouteRow(
-                                    l,
-                                    r['pickup']?.toString() ?? '',
-                                    r['destination']?.toString() ?? '',
-                                  )),
-                                  subtitle: Text(
-                                    l.operatorRideSubtitleLine(
-                                      '${l.statusLinePrefix}${localizedRideStatusLabel(l, r['status']?.toString())}',
-                                      (r['driver_name'] ?? '').toString().trim().isEmpty
-                                          ? ''
-                                          : '${l.driverLabelPrefix}${r['driver_name']}',
-                                      (r['created_at'] ?? '').toString().trim().isEmpty
-                                          ? ''
-                                          : '${l.createdAtLinePrefix}${r['created_at']}',
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        ListView(
-                          padding: const EdgeInsets.all(12),
-                          children: [
-                            FilledButton.tonal(
-                              onPressed: _busy ? null : _refreshAll,
-                              child: Text(l.adminLoadDriversBtn),
-                            ),
-                            const SizedBox(height: 8),
-                            Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(10),
-                                child: Text(
-                                  l.operatorDriversOnlineCount(_adminDrivers.length),
-                                  style: const TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                            ),
-                            if (_adminDrivers.isEmpty)
-                              Text(l.adminNoDriversData),
-                            ..._adminDrivers.map(
-                              (d) => ListTile(
-                                dense: true,
-                                title: Text(d['email']?.toString() ?? ''),
-                                subtitle: Text(
-                                  l.driverLocationRow(
-                                    d['last_lat']?.toString() ?? '—',
-                                    d['last_lng']?.toString() ?? '—',
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const Divider(),
-                            TextField(
-                              controller: _newDriverPhone,
-                              decoration:
-                                  InputDecoration(labelText: l.operatorPhoneLabel),
-                            ),
-                            TextField(
-                              controller: _newDriverName,
-                              decoration: InputDecoration(
-                                  labelText: l.operatorDriverNameLabel),
-                            ),
-                            TextField(
-                              controller: _newDriverPin,
-                              decoration:
-                                  InputDecoration(labelText: l.operatorPinLabel),
-                              obscureText: true,
-                            ),
-                            const SizedBox(height: 8),
-                            FilledButton(
-                              onPressed: _busy ? null : _createDriverAccount,
-                              child: Text(l.operatorCreateDriverAccount),
-                            ),
-                            ..._driverPinAccounts.map(
-                              (d) => ListTile(
-                                dense: true,
-                                title: Text(
-                                    '${d['driver_name'] ?? ''} (${d['phone'] ?? ''})'),
-                                subtitle: Text(() {
-                                  final walletS =
-                                      (d['wallet_balance'] ?? 0).toString();
-                                  final ownerS =
-                                      (d['owner_commission_rate'] ?? 10).toString();
-                                  final b2bS =
-                                      (d['b2b_commission_rate'] ?? 5).toString();
-                                  var line = l.operatorDriverWalletLine(
-                                    walletS,
-                                    ownerS,
-                                    b2bS,
-                                  );
-                                  final model = (d['car_model'] ?? '').toString().trim();
-                                  final color = (d['car_color'] ?? '').toString().trim();
-                                  if (model.isNotEmpty) {
-                                    line += l.operatorDriverCarLine(model);
-                                  }
-                                  if (color.isNotEmpty) {
-                                    line += l.operatorDriverCarColorAppend(color);
-                                  }
-                                  return line;
-                                }()),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.edit),
-                                  onPressed: _busy
-                                      ? null
-                                      : () => _editDriverAccount(d),
-                                ),
-                              ),
-                            ),
-                            const Divider(),
-                            ..._adminUsers.map(
-                              (u) => SwitchListTile(
-                                dense: true,
-                                title: Text(u['email']?.toString() ?? ''),
-                                subtitle: Text(u['role']?.toString() ?? ''),
-                                value: u['is_enabled'] == true,
-                                onChanged: _busy ? null : (_) => _toggleUser(u),
-                              ),
-                            ),
-                          ],
-                        ),
-                        ListView(
-                          padding: const EdgeInsets.all(12),
-                          children: [
-                            FilledButton.tonal(
-                              onPressed: _busy ? null : _refreshAll,
-                              child: Text(l.operatorRefreshCorporateBookings),
-                            ),
-                            const SizedBox(height: 8),
-                            if (_adminB2bBookings.isEmpty) Text(l.noTripsLoaded),
-                            ..._adminB2bBookings.map(
-                              (b) => ListTile(
-                                dense: true,
-                                title: Text(b['route']?.toString() ?? ''),
-                                subtitle: Text(
-                                  l.adminB2bBookingRowSubtitle(
-                                    b['guest_name']?.toString() ?? '',
-                                    b['room_number']?.toString() ?? '-',
-                                    b['fare']?.toString() ?? '',
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        ListView(
-                          padding: const EdgeInsets.all(12),
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.inventory_2_outlined),
-                                const SizedBox(width: 8),
-                                Text(
-                                  l.operatorTripVaultHeading,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                Chip(
-                                  avatar: const Icon(Icons.list_alt, size: 16),
-                                  label: Text(l.operatorTripVaultTripsChip(_trips.length)),
-                                ),
-                                Chip(
-                                  avatar: const Icon(Icons.payments, size: 16),
-                                  label: Text(l.operatorTripVaultRevenueChip(
-                                      _tripVaultRevenue.toStringAsFixed(3))),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            if (_trips.isEmpty) Text(l.noTripsLoaded),
-                            ..._trips.map(
-                              (t) => ListTile(
-                                title: Text('${t['route']}'),
-                                subtitle: Text(l.operatorTripSubtitle(
-                                  t['date'] as String,
-                                  t['fare'].toString(),
-                                )),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  if (_message != null)
+                    const SizedBox(height: 10),
                     Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Text(_message!,
-                          style: const TextStyle(color: Colors.red)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: TaxiAppColors.appBarFill,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: TaxiAppColors.cardBorder),
+                        ),
+                        child: TabBar(
+                          controller: tc,
+                          isScrollable: true,
+                          indicatorColor: TaxiAppColors.text,
+                          indicatorWeight: 3,
+                          labelColor: TaxiAppColors.text,
+                          unselectedLabelColor: TaxiAppColors.textStrong,
+                          tabs: [
+                            Tab(text: '✈️  ${l.operatorTabTodaysArrivals}'),
+                            Tab(text: '💸 ${l.operatorTabLiveOrders}'),
+                            Tab(text: '👤 ${l.operatorTabDriverManagement}'),
+                            Tab(text: '🗒️ ${l.operatorTabTripHistory}'),
+                          ],
+                        ),
+                      ),
                     ),
-                ],
-              ),
-            ),
+                    Expanded(
+                      child: TabBarView(
+                        controller: tc,
+                        children: [
+                          _buildArrivalsTab(l),
+                          _buildLiveOrdersTab(l),
+                          _buildDriverManagementTab(l),
+                          _buildTripHistoryTab(l),
+                        ],
+                      ),
+                    ),
+                    if (_message != null)
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(
+                          _message!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
+                  ],
+                ),
     );
   }
 }

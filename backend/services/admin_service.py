@@ -1,6 +1,7 @@
 """Operator / owner oversight (no HTTP concerns)."""
 from __future__ import annotations
 
+from datetime import date
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import select
@@ -186,4 +187,35 @@ def list_b2b_bookings(*, limit: int = 200) -> List[Dict[str, Any]]:
             "created_at": _ts(r.created_at),
         }
         for r in rows
+    ]
+
+
+def list_tunisia_flight_arrivals_demo() -> List[Dict[str, Any]]:
+    """Curated demo schedule for operator 'Today's arrivals' (not a live flight radar)."""
+    today = date.today().isoformat()
+    return [
+        {
+            "flight_number": "TB101",
+            "departure_airport": "Paris Orly",
+            "takeoff_time": "05:40",
+            "expected_arrival": f"{today} 08:15",
+            "arrival_airport_ar": "مطار النفيضة",
+            "arrival_airport_en": "Enfidha Airport (NBE)",
+        },
+        {
+            "flight_number": "TU214",
+            "departure_airport": "Brussels",
+            "takeoff_time": "06:10",
+            "expected_arrival": f"{today} 09:40",
+            "arrival_airport_ar": "مطار قرطاج",
+            "arrival_airport_en": "Tunis–Carthage Airport (TUN)",
+        },
+        {
+            "flight_number": "AF987",
+            "departure_airport": "Paris CDG",
+            "takeoff_time": "07:25",
+            "expected_arrival": f"{today} 10:50",
+            "arrival_airport_ar": "مطار المنستير",
+            "arrival_airport_en": "Monastir Airport (MIR)",
+        },
     ]

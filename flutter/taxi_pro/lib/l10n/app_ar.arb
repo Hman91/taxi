@@ -600,5 +600,45 @@
   "homeWhatIsBody": "يربطك تاكسي برو تونس بالسائقين لنقل المطار والرحلات داخل المدينة. الأسعار ثابتة لكل مسار في التطبيق؛ وقد يُطبق رسم ليلي بين 9 مساءً و5 صباحًا. احجز في التطبيق، تتبع رحلتك، واستخدم المساعدة عند الحاجة.",
   "passengerFareFinalEstimate": "تقدير نهائي للرحلة",
   "passengerPayCash": "كاش",
-  "passengerPayCardTpe": "بطاقة (TPE)"
+  "passengerPayCardTpe": "بطاقة (TPE)",
+  "operatorEntryGateLabel": "بوابة الدخول:",
+  "operatorEmployeePasswordLabel": "كلمة مرور الموظف:",
+  "operatorWelcomeOperatingRoom": "مرحبًا بك في غرفة العمليات.",
+  "operatorTabTodaysArrivals": "وصولات اليوم",
+  "operatorTabLiveOrders": "طلبات مباشرة",
+  "operatorTabDriverManagement": "إدارة السائقين",
+  "operatorTabTripHistory": "سجل الرحلات",
+  "operatorArrivalsDemoHeading": "وصولات اليوم — تونس (بيانات تجريبية)",
+  "operatorColFlightNumber": "رقم الرحلة",
+  "operatorColDepartureAirport": "مطار المغادرة",
+  "operatorColTakeoffTime": "وقت الإقلاع",
+  "operatorColExpectedArrival": "الوصول المتوقع (اليوم)",
+  "operatorColArrivalAirportTn": "مطار الوصول (تونس)",
+  "operatorChooseDriverTopUp": "اختر السائق لشحن الرصيد:",
+  "operatorAmountReceivedDt": "المبلغ المستلم (د.ت):",
+  "operatorRechargeBalance": "شحن الرصيد",
+  "operatorCorporateBookingsSection": "حجوزات الشركات (B2B)",
+  "operatorRoleAdminHq": "الإدارة المركزية",
+  "operatorNoFlightArrivals": "لا توجد بيانات وصول محمّلة.",
+  "operatorUserAccountsHeading": "حسابات مستخدمي التطبيق",
+  "ownerPasswordCeoLabel": "كلمة مرور المالك (المدير التنفيذي):",
+  "ownerWelcomeHq": "مرحبًا بك في مقر الملكية.",
+  "ownerTabTreasury": "الخزينة والأرباح",
+  "ownerTabSettings": "الإعدادات",
+  "ownerTabHostelB2b": "حسابات الفنادق (B2B)",
+  "ownerSettingsCommissionLabel": "نسبة العمولة المقتطعة (%):",
+  "ownerSettingsCommissionHint": "للعرض فقط — تُحدَّث نسب السائقين من حساباتهم.",
+  "ownerSettingsRouteFaresHeading": "أجور المسارات الأساسية (د.ت)",
+  "ownerSaveRouteFare": "حفظ",
+  "driverWalletDepletedTitle": "المحفظة فارغة",
+  "driverWalletDepletedBody": "ادفع {amount} د.ت للمالك (عبر المشغّل) لإعادة الشحن.",
+  "@driverWalletDepletedBody": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerDriverPinWalletsHeading": "محافظ السائقين (PIN)",
+  "ownerDriverPinWalletsEmpty": "لا توجد حسابات سائقين (PIN) محمّلة."
 }

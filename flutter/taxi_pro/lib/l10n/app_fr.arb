@@ -600,5 +600,45 @@
   "homeWhatIsBody": "Taxi Pro Tunisia connects you with drivers for airport transfers and city rides. Prices are fixed per route in the app; a night surcharge may apply between 9 PM and 5 AM. Book in the app, track your ride, and use in-app help when needed.",
   "passengerFareFinalEstimate": "Final estimate for the ride",
   "passengerPayCash": "Cash",
-  "passengerPayCardTpe": "Card (TPE)"
+  "passengerPayCardTpe": "Card (TPE)",
+  "operatorEntryGateLabel": "Entry gate:",
+  "operatorEmployeePasswordLabel": "Employee password:",
+  "operatorWelcomeOperatingRoom": "Welcome to the operating room.",
+  "operatorTabTodaysArrivals": "Today's arrivals",
+  "operatorTabLiveOrders": "Live orders",
+  "operatorTabDriverManagement": "Driver management",
+  "operatorTabTripHistory": "Trip history",
+  "operatorArrivalsDemoHeading": "Today's arrivals — Tunisia (demo data)",
+  "operatorColFlightNumber": "Flight number",
+  "operatorColDepartureAirport": "Departure airport",
+  "operatorColTakeoffTime": "Take-off time",
+  "operatorColExpectedArrival": "Expected arrival (today)",
+  "operatorColArrivalAirportTn": "Arrival airport (Tunisia)",
+  "operatorChooseDriverTopUp": "Choose the driver to top up:",
+  "operatorAmountReceivedDt": "Amount received (DT):",
+  "operatorRechargeBalance": "Recharge the balance",
+  "operatorCorporateBookingsSection": "Corporate (B2B) bookings",
+  "operatorRoleAdminHq": "Admin HQ",
+  "operatorNoFlightArrivals": "No arrival rows loaded.",
+  "operatorUserAccountsHeading": "App user accounts",
+  "ownerPasswordCeoLabel": "Owner (CEO) password:",
+  "ownerWelcomeHq": "Welcome to Owner HQ.",
+  "ownerTabTreasury": "Treasury and profits",
+  "ownerTabSettings": "Settings",
+  "ownerTabHostelB2b": "Hostel Accounts (B2B)",
+  "ownerSettingsCommissionLabel": "Commission deducted percentage (%):",
+  "ownerSettingsCommissionHint": "Display only — link to driver accounts for live rates.",
+  "ownerSettingsRouteFaresHeading": "Route base fares (DT)",
+  "ownerSaveRouteFare": "Save",
+  "driverWalletDepletedTitle": "Portefeuille vide",
+  "driverWalletDepletedBody": "Payez {amount} DT au propriétaire (via l’opérateur) pour recharger.",
+  "@driverWalletDepletedBody": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerDriverPinWalletsHeading": "Portefeuilles conducteurs",
+  "ownerDriverPinWalletsEmpty": "Aucun compte conducteur PIN chargé."
 }

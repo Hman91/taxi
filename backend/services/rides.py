@@ -6,7 +6,15 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from .. import db as db_module
 from . import chat_service
+from . import pricing
 from . import realtime_broadcast
+
+# 10% of route base fare when a PIN driver accepts a passenger ride.
+_ACCEPT_COMMISSION_RATE = 0.10
+# If pickup/destination do not match a FareRoute row, assume this base for the 10% cut.
+_FALLBACK_BASE_FARE_DT = 70.0
+# One-shot alert payload when balance crosses from positive to depleted (≤0).
+_REQUIRED_TOPUP_DT = 100.0
 
 _ZONE_COORDS: Dict[str, tuple[float, float]] = {
     "مطار قرطاج": (36.8508, 10.2272),
@@ -79,6 +87,47 @@ def request_ride(
     return ride, None
 
 
+def _apply_wallet_on_accept(
+    driver_user_id: int,
+    ride_before_accept: Dict[str, Any],
+) -> None:
+    acct = db_module.driver_pin_account_by_user_id(driver_user_id)
+    if acct is None:
+        return
+    pickup = (ride_before_accept.get("pickup") or "").strip()
+    dest = (ride_before_accept.get("destination") or "").strip()
+    route_key = f"{pickup} ➡️ {dest}"
+    gr = pricing.get_airport_route(route_key)
+    base_fare = float(gr["base_fare"]) if gr is not None else _FALLBACK_BASE_FARE_DT
+    deduct = round(base_fare * _ACCEPT_COMMISSION_RATE, 3)
+    old_bal = float(acct["wallet_balance"] or 0.0)
+    new_bal = round(old_bal - deduct, 3)
+    db_module.driver_pin_update(int(acct["id"]), wallet_balance=new_bal)
+    realtime_broadcast.emit_driver_wallet(
+        driver_user_id,
+        {
+            "event": "wallet_updated",
+            "wallet_balance": new_bal,
+            "deducted": deduct,
+            "base_fare_reference": base_fare,
+            "ride_id": int(ride_before_accept["id"]),
+        },
+    )
+    if new_bal <= 0 < old_bal:
+        realtime_broadcast.emit_driver_wallet(
+            driver_user_id,
+            {
+                "event": "wallet_depleted",
+                "wallet_balance": new_bal,
+                "required_topup_dt": _REQUIRED_TOPUP_DT,
+                "ride_id": int(ride_before_accept["id"]),
+                "message": (
+                    "Wallet empty. Pay 100 DT to the owner (via the operator) to top up."
+                ),
+            },
+        )
+
+
 def list_for_app_user(user_id: int, role: str) -> List[Dict[str, Any]]:
     if role == "user":
         return db_module.rides_for_user(user_id)
@@ -111,6 +160,7 @@ def accept_ride(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[str, A
         ride_id, driver_id=int(d["id"]), status="accepted"
     )
     if updated is not None:
+        _apply_wallet_on_accept(driver_user_id, row)
         chat_service.ensure_conversation_for_ride(ride_id)
         realtime_broadcast.broadcast_ride_update(
             updated,

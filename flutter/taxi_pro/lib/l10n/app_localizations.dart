@@ -398,6 +398,126 @@ abstract class AppLocalizations {
   /// **'Operator / Dispatch'**
   String get operatorTitle;
 
+  /// No description provided for @operatorEntryGateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Entry gate:'**
+  String get operatorEntryGateLabel;
+
+  /// No description provided for @operatorEmployeePasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Employee password:'**
+  String get operatorEmployeePasswordLabel;
+
+  /// No description provided for @operatorWelcomeOperatingRoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to the operating room.'**
+  String get operatorWelcomeOperatingRoom;
+
+  /// No description provided for @operatorTabTodaysArrivals.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s arrivals'**
+  String get operatorTabTodaysArrivals;
+
+  /// No description provided for @operatorTabLiveOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Live orders'**
+  String get operatorTabLiveOrders;
+
+  /// No description provided for @operatorTabDriverManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver management'**
+  String get operatorTabDriverManagement;
+
+  /// No description provided for @operatorTabTripHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Trip history'**
+  String get operatorTabTripHistory;
+
+  /// No description provided for @operatorArrivalsDemoHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s arrivals — Tunisia (demo data)'**
+  String get operatorArrivalsDemoHeading;
+
+  /// No description provided for @operatorColFlightNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Flight number'**
+  String get operatorColFlightNumber;
+
+  /// No description provided for @operatorColDepartureAirport.
+  ///
+  /// In en, this message translates to:
+  /// **'Departure airport'**
+  String get operatorColDepartureAirport;
+
+  /// No description provided for @operatorColTakeoffTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Take-off time'**
+  String get operatorColTakeoffTime;
+
+  /// No description provided for @operatorColExpectedArrival.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected arrival (today)'**
+  String get operatorColExpectedArrival;
+
+  /// No description provided for @operatorColArrivalAirportTn.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrival airport (Tunisia)'**
+  String get operatorColArrivalAirportTn;
+
+  /// No description provided for @operatorChooseDriverTopUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the driver to top up:'**
+  String get operatorChooseDriverTopUp;
+
+  /// No description provided for @operatorAmountReceivedDt.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount received (DT):'**
+  String get operatorAmountReceivedDt;
+
+  /// No description provided for @operatorRechargeBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Recharge the balance'**
+  String get operatorRechargeBalance;
+
+  /// No description provided for @operatorCorporateBookingsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Corporate (B2B) bookings'**
+  String get operatorCorporateBookingsSection;
+
+  /// No description provided for @operatorRoleAdminHq.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin HQ'**
+  String get operatorRoleAdminHq;
+
+  /// No description provided for @operatorNoFlightArrivals.
+  ///
+  /// In en, this message translates to:
+  /// **'No arrival rows loaded.'**
+  String get operatorNoFlightArrivals;
+
+  /// No description provided for @operatorUserAccountsHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'App user accounts'**
+  String get operatorUserAccountsHeading;
+
   /// No description provided for @operatorCode.
   ///
   /// In en, this message translates to:
@@ -1161,6 +1281,60 @@ abstract class AppLocalizations {
   /// **'Owner HQ'**
   String get ownerAppBarTitle;
 
+  /// No description provided for @ownerPasswordCeoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner (CEO) password:'**
+  String get ownerPasswordCeoLabel;
+
+  /// No description provided for @ownerWelcomeHq.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Owner HQ.'**
+  String get ownerWelcomeHq;
+
+  /// No description provided for @ownerTabTreasury.
+  ///
+  /// In en, this message translates to:
+  /// **'Treasury and profits'**
+  String get ownerTabTreasury;
+
+  /// No description provided for @ownerTabSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get ownerTabSettings;
+
+  /// No description provided for @ownerTabHostelB2b.
+  ///
+  /// In en, this message translates to:
+  /// **'Hostel Accounts (B2B)'**
+  String get ownerTabHostelB2b;
+
+  /// No description provided for @ownerSettingsCommissionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission deducted percentage (%):'**
+  String get ownerSettingsCommissionLabel;
+
+  /// No description provided for @ownerSettingsCommissionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Display only — link to driver accounts for live rates.'**
+  String get ownerSettingsCommissionHint;
+
+  /// No description provided for @ownerSettingsRouteFaresHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Route base fares (DT)'**
+  String get ownerSettingsRouteFaresHeading;
+
+  /// No description provided for @ownerSaveRouteFare.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get ownerSaveRouteFare;
+
   /// No description provided for @ownerProfitChip.
   ///
   /// In en, this message translates to:
@@ -1448,6 +1622,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Wallet: {amount} DT'**
   String walletWithAmount(String amount);
+
+  /// No description provided for @driverWalletDepletedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet empty'**
+  String get driverWalletDepletedTitle;
+
+  /// No description provided for @driverWalletDepletedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay {amount} DT to the owner (via the operator) to top up.'**
+  String driverWalletDepletedBody(int amount);
+
+  /// No description provided for @ownerDriverPinWalletsHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver wallets'**
+  String get ownerDriverPinWalletsHeading;
+
+  /// No description provided for @ownerDriverPinWalletsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No PIN driver accounts loaded.'**
+  String get ownerDriverPinWalletsEmpty;
 }
 
 class _AppLocalizationsDelegate

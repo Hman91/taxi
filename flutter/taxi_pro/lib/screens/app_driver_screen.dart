@@ -15,6 +15,7 @@ import '../l10n/place_localization.dart';
 import '../l10n/ride_status_localization.dart';
 import '../models/app_notification.dart';
 import '../services/chat_socket_service.dart';
+import '../services/local_notification_service.dart';
 import '../services/taxi_app_service.dart';
 import '../widgets/locale_popup_menu.dart';
 import 'ride_chat_screen.dart';
@@ -151,11 +152,34 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     );
   }
 
+  void _onDriverWallet(Map<String, dynamic> data) {
+    if (!mounted) return;
+    final event = (data['event'] ?? '').toString();
+    if (event != 'wallet_depleted') return;
+    final loc = AppLocalizations.of(context)!;
+    final amount =
+        (data['required_topup_dt'] as num?)?.round() ?? 100;
+    final body = loc.driverWalletDepletedBody(amount);
+    _pushNotification(
+      title: loc.driverWalletDepletedTitle,
+      body: body,
+      event: 'wallet_depleted',
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(body)),
+    );
+    LocalNotificationService.instance.show(
+      title: loc.driverWalletDepletedTitle,
+      body: body,
+    );
+  }
+
   void _connectRealtime() {
     final t = _token;
     if (t == null) return;
     _socket.connect(
       t,
+      onDriverWallet: _onDriverWallet,
       onRideStatus: (data) {
         if (!mounted) return;
         final rideMap = data['ride'];

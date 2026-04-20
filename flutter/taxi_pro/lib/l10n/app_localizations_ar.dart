@@ -170,6 +170,67 @@ class AppLocalizationsAr extends AppLocalizations {
   String get operatorTitle => 'الموظف / التوزيع';
 
   @override
+  String get operatorEntryGateLabel => 'بوابة الدخول:';
+
+  @override
+  String get operatorEmployeePasswordLabel => 'كلمة مرور الموظف:';
+
+  @override
+  String get operatorWelcomeOperatingRoom => 'مرحبًا بك في غرفة العمليات.';
+
+  @override
+  String get operatorTabTodaysArrivals => 'وصولات اليوم';
+
+  @override
+  String get operatorTabLiveOrders => 'طلبات مباشرة';
+
+  @override
+  String get operatorTabDriverManagement => 'إدارة السائقين';
+
+  @override
+  String get operatorTabTripHistory => 'سجل الرحلات';
+
+  @override
+  String get operatorArrivalsDemoHeading =>
+      'وصولات اليوم — تونس (بيانات تجريبية)';
+
+  @override
+  String get operatorColFlightNumber => 'رقم الرحلة';
+
+  @override
+  String get operatorColDepartureAirport => 'مطار المغادرة';
+
+  @override
+  String get operatorColTakeoffTime => 'وقت الإقلاع';
+
+  @override
+  String get operatorColExpectedArrival => 'الوصول المتوقع (اليوم)';
+
+  @override
+  String get operatorColArrivalAirportTn => 'مطار الوصول (تونس)';
+
+  @override
+  String get operatorChooseDriverTopUp => 'اختر السائق لشحن الرصيد:';
+
+  @override
+  String get operatorAmountReceivedDt => 'المبلغ المستلم (د.ت):';
+
+  @override
+  String get operatorRechargeBalance => 'شحن الرصيد';
+
+  @override
+  String get operatorCorporateBookingsSection => 'حجوزات الشركات (B2B)';
+
+  @override
+  String get operatorRoleAdminHq => 'الإدارة المركزية';
+
+  @override
+  String get operatorNoFlightArrivals => 'لا توجد بيانات وصول محمّلة.';
+
+  @override
+  String get operatorUserAccountsHeading => 'حسابات مستخدمي التطبيق';
+
+  @override
   String get operatorCode => 'رمز الموظف';
 
   @override
@@ -600,6 +661,34 @@ class AppLocalizationsAr extends AppLocalizations {
   String get ownerAppBarTitle => 'لوحة المالك';
 
   @override
+  String get ownerPasswordCeoLabel => 'كلمة مرور المالك (المدير التنفيذي):';
+
+  @override
+  String get ownerWelcomeHq => 'مرحبًا بك في مقر الملكية.';
+
+  @override
+  String get ownerTabTreasury => 'الخزينة والأرباح';
+
+  @override
+  String get ownerTabSettings => 'الإعدادات';
+
+  @override
+  String get ownerTabHostelB2b => 'حسابات الفنادق (B2B)';
+
+  @override
+  String get ownerSettingsCommissionLabel => 'نسبة العمولة المقتطعة (%):';
+
+  @override
+  String get ownerSettingsCommissionHint =>
+      'للعرض فقط — تُحدَّث نسب السائقين من حساباتهم.';
+
+  @override
+  String get ownerSettingsRouteFaresHeading => 'أجور المسارات الأساسية (د.ت)';
+
+  @override
+  String get ownerSaveRouteFare => 'حفظ';
+
+  @override
   String ownerProfitChip(String amount) {
     return 'الربح: $amount د.ت';
   }
@@ -779,4 +868,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String walletWithAmount(String amount) {
     return 'المحفظة: $amount د.ت';
   }
+
+  @override
+  String get driverWalletDepletedTitle => 'المحفظة فارغة';
+
+  @override
+  String driverWalletDepletedBody(int amount) {
+    return 'ادفع $amount د.ت للمالك (عبر المشغّل) لإعادة الشحن.';
+  }
+
+  @override
+  String get ownerDriverPinWalletsHeading => 'محافظ السائقين (PIN)';
+
+  @override
+  String get ownerDriverPinWalletsEmpty =>
+      'لا توجد حسابات سائقين (PIN) محمّلة.';
 }

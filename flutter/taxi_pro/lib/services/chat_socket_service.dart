@@ -19,6 +19,7 @@ class ChatSocketService {
     String token, {
     void Function(JsonMap data)? onReceiveMessage,
     void Function(JsonMap data)? onRideStatus,
+    void Function(JsonMap data)? onDriverWallet,
     void Function(JsonMap data)? onError,
     void Function(dynamic _)? onConnectError,
     List<String>? transports,
@@ -59,6 +60,7 @@ class ChatSocketService {
 
     _socket!.on('receive_message', (d) => mapEvent(d, onReceiveMessage ?? (_) {}));
     _socket!.on('ride_status', (d) => mapEvent(d, onRideStatus ?? (_) {}));
+    _socket!.on('driver_wallet', (d) => mapEvent(d, onDriverWallet ?? (_) {}));
     _socket!.on('error', (d) => mapEvent(d, onError ?? (_) {}));
     _socket!.on('connect_error', onConnectError ?? (_) {});
     _socket!.connect();

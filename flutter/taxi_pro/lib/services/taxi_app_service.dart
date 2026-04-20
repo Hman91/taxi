@@ -137,6 +137,24 @@ class TaxiAppService {
         preferredLanguage: preferredLanguage,
       );
 
+  Future<List<Map<String, dynamic>>> listAdminFareRoutes(String token) =>
+      _client.listAdminFareRoutes(token);
+
+  Future<Map<String, dynamic>> patchAdminFareRoute({
+    required String token,
+    required int routeId,
+    required double baseFare,
+  }) =>
+      _client.patchAdminFareRoute(
+        token: token,
+        routeId: routeId,
+        baseFare: baseFare,
+      );
+
+  Future<List<Map<String, dynamic>>> listAdminTunisiaFlightArrivals(
+          String token) =>
+      _client.listAdminTunisiaFlightArrivals(token);
+
   Future<List<Map<String, dynamic>>> listAdminRides(
     String token, {
     int limit = 200,

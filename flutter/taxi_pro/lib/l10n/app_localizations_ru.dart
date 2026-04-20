@@ -171,6 +171,67 @@ class AppLocalizationsRu extends AppLocalizations {
   String get operatorTitle => 'Диспетчер';
 
   @override
+  String get operatorEntryGateLabel => 'Entry gate:';
+
+  @override
+  String get operatorEmployeePasswordLabel => 'Employee password:';
+
+  @override
+  String get operatorWelcomeOperatingRoom => 'Welcome to the operating room.';
+
+  @override
+  String get operatorTabTodaysArrivals => 'Today\'s arrivals';
+
+  @override
+  String get operatorTabLiveOrders => 'Live orders';
+
+  @override
+  String get operatorTabDriverManagement => 'Driver management';
+
+  @override
+  String get operatorTabTripHistory => 'Trip history';
+
+  @override
+  String get operatorArrivalsDemoHeading =>
+      'Today\'s arrivals — Tunisia (demo data)';
+
+  @override
+  String get operatorColFlightNumber => 'Flight number';
+
+  @override
+  String get operatorColDepartureAirport => 'Departure airport';
+
+  @override
+  String get operatorColTakeoffTime => 'Take-off time';
+
+  @override
+  String get operatorColExpectedArrival => 'Expected arrival (today)';
+
+  @override
+  String get operatorColArrivalAirportTn => 'Arrival airport (Tunisia)';
+
+  @override
+  String get operatorChooseDriverTopUp => 'Choose the driver to top up:';
+
+  @override
+  String get operatorAmountReceivedDt => 'Amount received (DT):';
+
+  @override
+  String get operatorRechargeBalance => 'Recharge the balance';
+
+  @override
+  String get operatorCorporateBookingsSection => 'Corporate (B2B) bookings';
+
+  @override
+  String get operatorRoleAdminHq => 'Admin HQ';
+
+  @override
+  String get operatorNoFlightArrivals => 'No arrival rows loaded.';
+
+  @override
+  String get operatorUserAccountsHeading => 'App user accounts';
+
+  @override
   String get operatorCode => 'Код диспетчера';
 
   @override
@@ -609,6 +670,35 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ownerAppBarTitle => 'Owner HQ';
 
   @override
+  String get ownerPasswordCeoLabel => 'Owner (CEO) password:';
+
+  @override
+  String get ownerWelcomeHq => 'Welcome to Owner HQ.';
+
+  @override
+  String get ownerTabTreasury => 'Treasury and profits';
+
+  @override
+  String get ownerTabSettings => 'Settings';
+
+  @override
+  String get ownerTabHostelB2b => 'Hostel Accounts (B2B)';
+
+  @override
+  String get ownerSettingsCommissionLabel =>
+      'Commission deducted percentage (%):';
+
+  @override
+  String get ownerSettingsCommissionHint =>
+      'Display only — link to driver accounts for live rates.';
+
+  @override
+  String get ownerSettingsRouteFaresHeading => 'Route base fares (DT)';
+
+  @override
+  String get ownerSaveRouteFare => 'Save';
+
+  @override
   String ownerProfitChip(String amount) {
     return 'Profit: $amount DT';
   }
@@ -788,4 +878,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String walletWithAmount(String amount) {
     return 'Wallet: $amount DT';
   }
+
+  @override
+  String get driverWalletDepletedTitle => 'Кошелёк пуст';
+
+  @override
+  String driverWalletDepletedBody(int amount) {
+    return 'Внесите $amount DT владельцу (через оператора) для пополнения.';
+  }
+
+  @override
+  String get ownerDriverPinWalletsHeading => 'Кошельки водителей';
+
+  @override
+  String get ownerDriverPinWalletsEmpty =>
+      'Нет загруженных PIN-аккаунтов водителей.';
 }

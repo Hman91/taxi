@@ -301,6 +301,53 @@ class TaxiApiClient {
     }
   }
 
+  Future<List<Map<String, dynamic>>> listAdminFareRoutes(String token) async {
+    final r = await _http.get(
+      _u('/api/admin/fare-routes'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    final list = body['routes'] as List<dynamic>;
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<Map<String, dynamic>> patchAdminFareRoute({
+    required String token,
+    required int routeId,
+    required double baseFare,
+  }) async {
+    final r = await _http.patch(
+      _u('/api/admin/fare-routes/$routeId'),
+      headers: _jsonHeaders(bearer: token),
+      body: jsonEncode({'base_fare': baseFare}),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return Map<String, dynamic>.from(body['route'] as Map);
+  }
+
+  Future<List<Map<String, dynamic>>> listAdminTunisiaFlightArrivals(
+      String token) async {
+    final r = await _http.get(
+      _u('/api/admin/tunisia-flight-arrivals'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    final list = body['flights'] as List<dynamic>;
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
   Future<List<Map<String, dynamic>>> listAdminRides(
     String token, {
     int limit = 200,

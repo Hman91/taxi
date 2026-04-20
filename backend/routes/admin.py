@@ -16,6 +16,36 @@ def _json_error(code: str, status: int) -> Tuple[Any, int]:
     return jsonify({"error": code}), status
 
 
+@bp.get("/tunisia-flight-arrivals")
+@require_roles("owner", "operator")
+def admin_tunisia_flight_arrivals(**kwargs: Any) -> Tuple[Any, int]:
+    data = admin_service.list_tunisia_flight_arrivals_demo()
+    return jsonify({"flights": data}), 200
+
+
+@bp.get("/fare-routes")
+@require_roles("owner", "operator")
+def admin_fare_routes_list(**kwargs: Any) -> Tuple[Any, int]:
+    rows = db_module.list_fare_routes(enabled_only=False)
+    return jsonify({"routes": rows}), 200
+
+
+@bp.patch("/fare-routes/<int:route_id>")
+@require_roles("owner", "operator")
+def admin_fare_routes_patch(route_id: int, **kwargs: Any) -> Tuple[Any, int]:
+    body = request.get_json(silent=True) or {}
+    if "base_fare" not in body:
+        return _json_error("base_fare_required", 400)
+    try:
+        base_fare = float(body["base_fare"])
+    except (TypeError, ValueError):
+        return _json_error("invalid_base_fare", 400)
+    row = db_module.fare_route_update(route_id, base_fare=base_fare)
+    if row is None:
+        return _json_error("not_found", 404)
+    return jsonify({"route": row}), 200
+
+
 @bp.get("/rides")
 @require_roles("owner", "operator")
 def admin_rides(**kwargs: Any) -> Tuple[Any, int]:
@@ -137,7 +167,7 @@ def admin_list_b2b_bookings(**kwargs: Any) -> Tuple[Any, int]:
 
 
 @bp.get("/driver-pin-accounts")
-@require_roles("operator")
+@require_roles("owner", "operator")
 def admin_list_driver_pin_accounts(**kwargs: Any) -> Tuple[Any, int]:
     rows = db_module.list_driver_pin_accounts()
     return jsonify({"driver_pin_accounts": rows}), 200
