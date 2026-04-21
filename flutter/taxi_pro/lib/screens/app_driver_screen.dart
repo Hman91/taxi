@@ -18,6 +18,7 @@ import '../services/chat_socket_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/taxi_app_service.dart';
 import '../widgets/locale_popup_menu.dart';
+import '../widgets/driver_ride_offer_card.dart';
 import 'ride_chat_screen.dart';
 
 class AppDriverScreen extends StatefulWidget {
@@ -40,6 +41,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   String? _driverCarModel;
   String? _driverCarColor;
   List<Ride> _rides = [];
+  final Set<int> _dismissedPendingRideIds = {};
   final List<AppNotification> _notifications = [];
   String? _message;
   bool _busy = false;
@@ -432,6 +434,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
       _driverCarModel = null;
       _driverCarColor = null;
       _rides = [];
+      _dismissedPendingRideIds.clear();
       _notifications.clear();
       _message = null;
     });
@@ -475,8 +478,14 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
 
   List<Ride> _pendingForLocation() => _rides
       .where((r) =>
-          r.status == 'pending' && r.pickup.trim() == _selectedLocation.trim())
+          r.status == 'pending' &&
+          r.pickup.trim() == _selectedLocation.trim() &&
+          !_dismissedPendingRideIds.contains(r.id))
       .toList();
+
+  void _declineOffer(Ride r) {
+    setState(() => _dismissedPendingRideIds.add(r.id));
+  }
 
   List<String> _startsFromRouteKeys(
       Iterable<String> routeKeys, AppLocalizations loc) {
@@ -648,21 +657,14 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
             if (_pendingForLocation().isEmpty && _activeMine().isEmpty)
               Text(l.noRidesYetApp),
             ..._pendingForLocation().map(
-              (r) => Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(localizedRideRouteRow(l, r.pickup, r.destination)),
-                      Text(
-                        l.rideStatusFmt(
-                          localizedRideStatusLabel(l, r.status),
-                        ),
-                      ),
-                      Wrap(spacing: 4, children: _actionsFor(r)),
-                    ],
-                  ),
+              (r) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: DriverRideOfferCard(
+                  ride: r,
+                  api: _api,
+                  busy: _busy,
+                  onAccept: () => _accept(r),
+                  onReject: () => _declineOffer(r),
                 ),
               ),
             ),

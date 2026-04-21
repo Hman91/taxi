@@ -325,6 +325,34 @@
   "driverNotificationNewRideTitle": "New ride request",
   "driverNotificationNewRideBodyDefault": "A nearby passenger sent a new request.",
   "snackDriverNewNearbyRide": "New nearby ride request received.",
+  "driverRideRequestBannerTitle": "New ride request!",
+  "driverOfferFromLabel": "From",
+  "driverOfferToLabel": "To",
+  "driverRejectOfferButton": "Reject",
+  "driverOfferFareChip": "{amount} DT",
+  "@driverOfferFareChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "driverOfferDistanceChip": "{distance} km",
+  "@driverOfferDistanceChip": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "driverOfferTimeChip": "{minutes} min",
+  "@driverOfferTimeChip": {
+    "placeholders": {
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
   "snackDriverRideTakenOther": "Ride accepted by another driver.",
   "snackDriverPassengerCancelled": "Passenger cancelled this request.",
   "snackDriverChatAfterAcceptance": "Chat will open after ride acceptance",

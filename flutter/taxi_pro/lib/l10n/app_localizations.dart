@@ -1172,6 +1172,48 @@ abstract class AppLocalizations {
   /// **'New nearby ride request received.'**
   String get snackDriverNewNearbyRide;
 
+  /// No description provided for @driverRideRequestBannerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New ride request!'**
+  String get driverRideRequestBannerTitle;
+
+  /// No description provided for @driverOfferFromLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get driverOfferFromLabel;
+
+  /// No description provided for @driverOfferToLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get driverOfferToLabel;
+
+  /// No description provided for @driverRejectOfferButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get driverRejectOfferButton;
+
+  /// No description provided for @driverOfferFareChip.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} DT'**
+  String driverOfferFareChip(String amount);
+
+  /// No description provided for @driverOfferDistanceChip.
+  ///
+  /// In en, this message translates to:
+  /// **'{distance} km'**
+  String driverOfferDistanceChip(String distance);
+
+  /// No description provided for @driverOfferTimeChip.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String driverOfferTimeChip(String minutes);
+
   /// No description provided for @snackDriverRideTakenOther.
   ///
   /// In en, this message translates to:

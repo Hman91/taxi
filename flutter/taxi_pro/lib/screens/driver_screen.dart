@@ -19,6 +19,7 @@ import '../services/chat_socket_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/taxi_app_service.dart';
 import '../widgets/locale_popup_menu.dart';
+import '../widgets/driver_ride_offer_card.dart';
 import 'ride_chat_screen.dart';
 
 class DriverScreen extends StatefulWidget {
@@ -50,6 +51,7 @@ class _DriverScreenState extends State<DriverScreen> {
   final Set<int> _notifiedClosedRideIds = <int>{};
   Set<int> _lastPendingRideIds = <int>{};
   final Set<int> _selfAcceptedRideIds = <int>{};
+  final Set<int> _dismissedPendingRideIds = <int>{};
   bool _busy = false;
   Timer? _ridesPollingTimer;
 
@@ -473,6 +475,10 @@ class _DriverScreenState extends State<DriverScreen> {
     }
   }
 
+  void _declineOffer(Ride ride) {
+    setState(() => _dismissedPendingRideIds.add(ride.id));
+  }
+
   Future<void> _releaseRide(Ride ride) async {
     final t = _token;
     if (t == null) return;
@@ -754,58 +760,70 @@ class _DriverScreenState extends State<DriverScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            ...trackedRides.map(
-                  (r) => Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(localizedRideRouteRow(l, r.pickup, r.destination)),
-                          Text(
-                            l.rideStatusFmt(
-                              localizedRideStatusLabel(l, r.status),
-                            ),
+            ...trackedRides
+                .where(
+                  (r) =>
+                      r.status != 'pending' ||
+                      !_dismissedPendingRideIds.contains(r.id),
+                )
+                .map(
+              (r) {
+                if (r.status == 'pending') {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: DriverRideOfferCard(
+                      ride: r,
+                      api: _api,
+                      busy: _busy,
+                      onAccept: () => _acceptRide(r),
+                      onReject: () => _declineOffer(r),
+                    ),
+                  );
+                }
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(localizedRideRouteRow(l, r.pickup, r.destination)),
+                        Text(
+                          l.rideStatusFmt(
+                            localizedRideStatusLabel(l, r.status),
                           ),
-                          Wrap(
-                            spacing: 6,
-                            children: [
-                              if (r.status == 'pending')
-                                TextButton(
-                                  onPressed:
-                                      _busy ? null : () => _acceptRide(r),
-                                  child: Text(l.acceptRide),
-                                ),
-                              if (r.status == 'accepted')
-                                TextButton(
-                                  onPressed: _busy ? null : () => _startRide(r),
-                                  child: Text(l.startRide),
-                                ),
-                              if (r.status == 'accepted' ||
-                                  r.status == 'ongoing')
-                                TextButton(
-                                  onPressed:
-                                      _busy ? null : () => _releaseRide(r),
-                                  child: Text(l.rejectRide),
-                                ),
-                              if (r.status == 'ongoing')
-                                FilledButton(
-                                  onPressed:
-                                      _busy ? null : () => _completeRide(r),
-                                  child: Text(l.completeRide),
-                                ),
-                              if (r.status == 'accepted' || r.status == 'ongoing')
-                                TextButton(
-                                  onPressed: _busy ? null : () => _openChat(r),
-                                  child: Text(l.openChatButton),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
+                        ),
+                        Wrap(
+                          spacing: 6,
+                          children: [
+                            if (r.status == 'accepted')
+                              TextButton(
+                                onPressed: _busy ? null : () => _startRide(r),
+                                child: Text(l.startRide),
+                              ),
+                            if (r.status == 'accepted' || r.status == 'ongoing')
+                              TextButton(
+                                onPressed:
+                                    _busy ? null : () => _releaseRide(r),
+                                child: Text(l.rejectRide),
+                              ),
+                            if (r.status == 'ongoing')
+                              FilledButton(
+                                onPressed:
+                                    _busy ? null : () => _completeRide(r),
+                                child: Text(l.completeRide),
+                              ),
+                            if (r.status == 'accepted' || r.status == 'ongoing')
+                              TextButton(
+                                onPressed: _busy ? null : () => _openChat(r),
+                                child: Text(l.openChatButton),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                ),
+                );
+              }),
           ],
           if (_message != null)
             Padding(

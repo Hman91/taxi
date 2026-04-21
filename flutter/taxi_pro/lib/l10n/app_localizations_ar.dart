@@ -593,6 +593,33 @@ class AppLocalizationsAr extends AppLocalizations {
   String get snackDriverNewNearbyRide => 'وصل طلب رحلة جديد قريباً.';
 
   @override
+  String get driverRideRequestBannerTitle => 'طلب رحلة جديد!';
+
+  @override
+  String get driverOfferFromLabel => 'من';
+
+  @override
+  String get driverOfferToLabel => 'إلى';
+
+  @override
+  String get driverRejectOfferButton => 'رفض';
+
+  @override
+  String driverOfferFareChip(String amount) {
+    return '$amount د';
+  }
+
+  @override
+  String driverOfferDistanceChip(String distance) {
+    return '$distance كم';
+  }
+
+  @override
+  String driverOfferTimeChip(String minutes) {
+    return '$minutes دق';
+  }
+
+  @override
   String get snackDriverRideTakenOther => 'قبل سائق آخر هذه الرحلة.';
 
   @override

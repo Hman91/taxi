@@ -144,6 +144,34 @@
   "driverNotificationNewRideTitle": "طلب رحلة جديد",
   "driverNotificationNewRideBodyDefault": "أرسل راكب قريب طلباً جديداً.",
   "snackDriverNewNearbyRide": "وصل طلب رحلة جديد قريباً.",
+  "driverRideRequestBannerTitle": "طلب رحلة جديد!",
+  "driverOfferFromLabel": "من",
+  "driverOfferToLabel": "إلى",
+  "driverRejectOfferButton": "رفض",
+  "driverOfferFareChip": "{amount} د",
+  "@driverOfferFareChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "driverOfferDistanceChip": "{distance} كم",
+  "@driverOfferDistanceChip": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "driverOfferTimeChip": "{minutes} دق",
+  "@driverOfferTimeChip": {
+    "placeholders": {
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
   "snackDriverRideTakenOther": "قبل سائق آخر هذه الرحلة.",
   "snackDriverPassengerCancelled": "ألغى الراكب الطلب.",
   "snackDriverChatAfterAcceptance": "تُفتح المحادثة بعد قبول الرحلة.",

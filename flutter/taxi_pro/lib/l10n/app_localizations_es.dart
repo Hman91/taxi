@@ -601,6 +601,33 @@ class AppLocalizationsEs extends AppLocalizations {
   String get snackDriverNewNearbyRide => 'New nearby ride request received.';
 
   @override
+  String get driverRideRequestBannerTitle => 'New ride request!';
+
+  @override
+  String get driverOfferFromLabel => 'From';
+
+  @override
+  String get driverOfferToLabel => 'To';
+
+  @override
+  String get driverRejectOfferButton => 'Reject';
+
+  @override
+  String driverOfferFareChip(String amount) {
+    return '$amount DT';
+  }
+
+  @override
+  String driverOfferDistanceChip(String distance) {
+    return '$distance km';
+  }
+
+  @override
+  String driverOfferTimeChip(String minutes) {
+    return '$minutes min';
+  }
+
+  @override
   String get snackDriverRideTakenOther => 'Ride accepted by another driver.';
 
   @override
