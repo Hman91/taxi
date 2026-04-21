@@ -117,9 +117,27 @@ def authenticate_google_id_token(id_token: str) -> Tuple[Optional[Dict[str, Any]
             audience=audience,
         )
     except Exception:
-        return None, "invalid_google_token"
+        # Fallback for web environments where local verification can fail
+        # (clock skew / cert fetch / transient issuer checks).
+        qs = urlencode({"id_token": token})
+        url = f"https://oauth2.googleapis.com/tokeninfo?{qs}"
+        try:
+            with urlopen(url, timeout=8) as res:  # nosec B310: fixed Google endpoint
+                info = json.loads(res.read().decode("utf-8"))
+        except (URLError, TimeoutError, ValueError, OSError):
+            return None, "invalid_google_token"
+        aud = str(info.get("aud") or "").strip()
+        azp = str(info.get("azp") or "").strip()
+        iss = str(info.get("iss") or "").strip().lower()
+        if aud and aud != audience and azp and azp != audience:
+            return None, "invalid_google_token"
+        if iss and iss not in ("accounts.google.com", "https://accounts.google.com"):
+            return None, "invalid_google_token"
     email = str(info.get("email") or "").strip().lower()
     email_verified = bool(info.get("email_verified", False))
+    if not email_verified:
+        # tokeninfo returns "true"/"false" as strings
+        email_verified = str(info.get("email_verified") or "").strip().lower() == "true"
     if not email or not email_verified:
         return None, "google_email_not_verified"
     return _upsert_google_user(email)
@@ -140,9 +158,10 @@ def authenticate_google_access_token(access_token: str) -> Tuple[Optional[Dict[s
     except (URLError, TimeoutError, ValueError, OSError):
         return None, "invalid_google_token"
     aud = str(payload.get("aud") or "").strip()
+    azp = str(payload.get("azp") or "").strip()
     email = str(payload.get("email") or "").strip().lower()
     email_verified = str(payload.get("email_verified") or "").strip().lower() == "true"
-    if aud and aud != audience:
+    if aud and aud != audience and azp and azp != audience:
         return None, "invalid_google_token"
     if not email or not email_verified:
         return None, "google_email_not_verified"

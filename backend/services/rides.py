@@ -9,12 +9,11 @@ from . import chat_service
 from . import pricing
 from . import realtime_broadcast
 
-# 10% of route base fare when a PIN driver accepts a passenger ride.
-_ACCEPT_COMMISSION_RATE = 0.10
 # If pickup/destination do not match a FareRoute row, assume this base for the 10% cut.
 _FALLBACK_BASE_FARE_DT = 70.0
 # One-shot alert payload when balance crosses from positive to depleted (≤0).
 _REQUIRED_TOPUP_DT = 100.0
+_OWNER_COMMISSION_RATE = 0.10
 
 _ZONE_COORDS: Dict[str, tuple[float, float]] = {
     "مطار قرطاج": (36.8508, 10.2272),
@@ -37,25 +36,21 @@ def _select_top5_driver_user_ids_for_pickup(pickup_zone: str) -> List[int]:
         candidates = db_module.driver_profiles_for_dispatch()
     if not candidates:
         return []
-    target = _ZONE_COORDS.get(pickup_zone.strip())
+    pickup_norm = pickup_zone.strip()
+    target = _ZONE_COORDS.get(pickup_norm)
     scored: List[tuple[float, int]] = []
     for d in candidates:
         uid = int(d["user_id"])
+        current_zone = (db_module.driver_current_zone_by_user_id(uid) or "").strip()
+        # Hard business rule: offer only to drivers currently in the same pickup zone.
+        if current_zone != pickup_norm:
+            continue
         lat = d.get("last_lat")
         lng = d.get("last_lng")
         if target is not None and lat is not None and lng is not None:
             score = _distance_km(float(lat), float(lng), target[0], target[1])
         else:
-            # Fallback when GPS coordinates are missing:
-            # prioritize drivers whose declared current zone matches pickup.
-            current_zone = (db_module.driver_current_zone_by_user_id(uid) or "").strip()
-            if current_zone and current_zone == pickup_zone.strip():
-                score = 0.05 + (float(uid) / 1_000_000.0)
-            elif current_zone:
-                score = 5000.0 + float(uid)
-            else:
-                # Unknown location goes to back but remains eligible.
-                score = 99999.0 + float(uid)
+            score = 0.05 + (float(uid) / 1_000_000.0)
         scored.append((score, uid))
     scored.sort(key=lambda x: x[0])
     return [uid for _, uid in scored[:5]]
@@ -87,19 +82,30 @@ def request_ride(
     return ride, None
 
 
-def _apply_wallet_on_accept(
+def _localized_wallet_message(lang: str, amount: float) -> str:
+    code = (lang or "en").strip().lower()
+    if code.startswith("ar"):
+        return f"المحفظة فارغة. ادفع {int(amount)} د.ت للمالك عبر المشغل لإعادة الشحن."
+    if code.startswith("fr"):
+        return (
+            f"Portefeuille vide. Payez {int(amount)} DT au proprietaire via l'operateur."
+        )
+    return f"Wallet empty. Pay {int(amount)} DT to the owner via the operator."
+
+
+def _apply_wallet_on_complete(
     driver_user_id: int,
-    ride_before_accept: Dict[str, Any],
+    ride_before_complete: Dict[str, Any],
 ) -> None:
     acct = db_module.driver_pin_account_by_user_id(driver_user_id)
     if acct is None:
         return
-    pickup = (ride_before_accept.get("pickup") or "").strip()
-    dest = (ride_before_accept.get("destination") or "").strip()
+    pickup = (ride_before_complete.get("pickup") or "").strip()
+    dest = (ride_before_complete.get("destination") or "").strip()
     route_key = f"{pickup} ➡️ {dest}"
     gr = pricing.get_airport_route(route_key)
     base_fare = float(gr["base_fare"]) if gr is not None else _FALLBACK_BASE_FARE_DT
-    deduct = round(base_fare * _ACCEPT_COMMISSION_RATE, 3)
+    deduct = round(base_fare * _OWNER_COMMISSION_RATE, 3)
     old_bal = float(acct["wallet_balance"] or 0.0)
     new_bal = round(old_bal - deduct, 3)
     db_module.driver_pin_update(int(acct["id"]), wallet_balance=new_bal)
@@ -110,21 +116,35 @@ def _apply_wallet_on_accept(
             "wallet_balance": new_bal,
             "deducted": deduct,
             "base_fare_reference": base_fare,
-            "ride_id": int(ride_before_accept["id"]),
+            "ride_id": int(ride_before_complete["id"]),
         },
     )
     if new_bal <= 0 < old_bal:
+        driver = db_module.user_by_id(driver_user_id) or {}
+        driver_lang = str(driver.get("preferred_language") or "en")
+        driver_msg = _localized_wallet_message(driver_lang, _REQUIRED_TOPUP_DT)
         realtime_broadcast.emit_driver_wallet(
             driver_user_id,
             {
                 "event": "wallet_depleted",
                 "wallet_balance": new_bal,
                 "required_topup_dt": _REQUIRED_TOPUP_DT,
-                "ride_id": int(ride_before_accept["id"]),
-                "message": (
-                    "Wallet empty. Pay 100 DT to the owner (via the operator) to top up."
-                ),
+                "ride_id": int(ride_before_complete["id"]),
+                "message": driver_msg,
+                "message_i18n_key": "driver_wallet_depleted",
             },
+        )
+        owner_msg = _localized_wallet_message("en", _REQUIRED_TOPUP_DT)
+        realtime_broadcast.emit_owner_alert(
+            {
+                "event": "driver_wallet_depleted",
+                "driver_user_id": driver_user_id,
+                "driver_name": (acct.get("driver_name") or "").strip(),
+                "wallet_balance": new_bal,
+                "required_topup_dt": _REQUIRED_TOPUP_DT,
+                "ride_id": int(ride_before_complete["id"]),
+                "message": owner_msg,
+            }
         )
 
 
@@ -160,7 +180,6 @@ def accept_ride(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[str, A
         ride_id, driver_id=int(d["id"]), status="accepted"
     )
     if updated is not None:
-        _apply_wallet_on_accept(driver_user_id, row)
         chat_service.ensure_conversation_for_ride(ride_id)
         realtime_broadcast.broadcast_ride_update(
             updated,
@@ -223,6 +242,7 @@ def complete_ride(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[str,
         return None, "invalid_status"
     updated = db_module.ride_update(ride_id, status="completed")
     if updated is not None:
+        _apply_wallet_on_complete(driver_user_id, row)
         realtime_broadcast.broadcast_ride_update(updated, event="ride_completed")
     return updated, None
 

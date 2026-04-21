@@ -39,6 +39,10 @@ def _user_dict(u: User) -> Dict[str, Any]:
         "is_enabled": u.is_enabled,
     }
 
+def list_user_ids_by_role(role: str) -> List[int]:
+    rows = db.session.scalars(select(User.id).where(User.role == role.strip().lower())).all()
+    return [int(x) for x in rows]
+
 
 def _driver_dict(d: Driver) -> Dict[str, Any]:
     return {
@@ -261,13 +265,35 @@ def list_driver_pin_accounts() -> List[Dict[str, Any]]:
     return [_driver_pin_account_dict(r) for r in rows]
 
 
-def driver_pin_create(*, phone: str, pin: str, driver_name: str) -> Optional[Dict[str, Any]]:
+def driver_pin_create(
+    *,
+    phone: str,
+    pin: str,
+    driver_name: str,
+    car_model: str,
+    car_color: str,
+    photo_url: str,
+) -> Optional[Dict[str, Any]]:
     phone = phone.strip()
-    if not phone or not pin.strip() or not driver_name.strip():
+    if (
+        not phone
+        or not pin.strip()
+        or not driver_name.strip()
+        or not car_model.strip()
+        or not car_color.strip()
+        or not photo_url.strip()
+    ):
         return None
     if driver_pin_by_phone(phone) is not None:
         return None
-    row = DriverPinAccount(phone=phone, pin=pin.strip(), driver_name=driver_name.strip())
+    row = DriverPinAccount(
+        phone=phone,
+        pin=pin.strip(),
+        driver_name=driver_name.strip(),
+        car_model=car_model.strip(),
+        car_color=car_color.strip(),
+        photo_url=photo_url.strip(),
+    )
     db.session.add(row)
     db.session.commit()
     db.session.refresh(row)
@@ -690,18 +716,24 @@ def insert_trip(
     return trip_to_dict(t)
 
 
-def insert_rating(stars: int) -> None:
-    db.session.add(Rating(stars=stars))
+def insert_rating(*, ride_id: int, driver_id: int, stars: int) -> None:
+    db.session.add(Rating(ride_id=ride_id, driver_id=driver_id, stars=stars))
     db.session.commit()
 
 
-def rating_stats() -> Dict[str, Any]:
-    row = db.session.execute(
-        select(func.count(Rating.id), func.avg(Rating.stars))
-    ).one()
+def rating_stats(driver_id: int | None = None) -> Dict[str, Any]:
+    stmt = select(func.count(Rating.id), func.avg(Rating.stars))
+    if driver_id is not None:
+        stmt = stmt.where(Rating.driver_id == int(driver_id))
+    row = db.session.execute(stmt).one()
     n = int(row[0] or 0)
     avg = float(row[1] or 0.0)
     return {"count": n, "average": round(avg, 2) if n else 5.0}
+
+
+def rating_exists_for_ride(ride_id: int) -> bool:
+    stmt = select(Rating.id).where(Rating.ride_id == int(ride_id)).limit(1)
+    return db.session.scalars(stmt).first() is not None
 
 
 def owner_metrics() -> Dict[str, Any]:

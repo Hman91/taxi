@@ -168,11 +168,15 @@ class TaxiApiClient {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> submitRating(int stars) async {
+  Future<Map<String, dynamic>> submitRating({
+    required String token,
+    required int rideId,
+    required int stars,
+  }) async {
     final r = await _http.post(
       _u('/api/ratings'),
-      headers: _jsonHeaders(),
-      body: jsonEncode({'stars': stars}),
+      headers: _jsonHeaders(bearer: token),
+      body: jsonEncode({'ride_id': rideId, 'stars': stars}),
     );
     if (r.statusCode != 201) {
       throw TaxiApiException(r.body, r.statusCode);
@@ -522,6 +526,9 @@ class TaxiApiClient {
     required String phone,
     required String pin,
     required String driverName,
+    required String carModel,
+    required String carColor,
+    required String photoUrl,
   }) async {
     final r = await _http.post(
       _u('/api/admin/driver-pin-accounts'),
@@ -530,6 +537,9 @@ class TaxiApiClient {
         'phone': phone,
         'pin': pin,
         'driver_name': driverName,
+        'car_model': carModel,
+        'car_color': carColor,
+        'photo_url': photoUrl,
       }),
     );
     if (r.statusCode != 201) {
@@ -538,6 +548,20 @@ class TaxiApiClient {
     }
     final body = jsonDecode(r.body) as Map<String, dynamic>;
     return Map<String, dynamic>.from(body['driver_pin_account'] as Map);
+  }
+
+  Future<List<Map<String, dynamic>>> listAdminDriverRatings(String token) async {
+    final r = await _http.get(
+      _u('/api/admin/ratings/drivers'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    final list = body['driver_ratings'] as List<dynamic>;
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
   Future<Map<String, dynamic>> patchAdminDriverPinAccount({

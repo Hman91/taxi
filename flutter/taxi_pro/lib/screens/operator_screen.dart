@@ -26,6 +26,9 @@ class _OperatorScreenState extends State<OperatorScreen>
   final _newDriverPhone = TextEditingController();
   final _newDriverName = TextEditingController();
   final _newDriverPin = TextEditingController();
+  final _newDriverCarModel = TextEditingController();
+  final _newDriverCarColor = TextEditingController();
+  String _newDriverPhotoData = '';
   final _topUpAmountController = TextEditingController(text: '10');
   TabController? _tabController;
   bool _obscureOperatorPassword = true;
@@ -36,6 +39,7 @@ class _OperatorScreenState extends State<OperatorScreen>
   List<Map<String, dynamic>> _driverPinAccounts = [];
   List<Map<String, dynamic>> _adminB2bBookings = [];
   List<Map<String, dynamic>> _flightArrivals = [];
+  List<Map<String, dynamic>> _driverRatings = [];
   int? _topUpAccountId;
   bool _busy = false;
 
@@ -76,6 +80,7 @@ class _OperatorScreenState extends State<OperatorScreen>
       final driverPins = await _api.listAdminDriverPinAccounts(t);
       final b2bBookings = await _api.listAdminB2bBookings(t);
       final flights = await _api.listAdminTunisiaFlightArrivals(t);
+      final ratings = await _api.listAdminDriverRatings(t);
       setState(() {
         _trips = trips
             .map(
@@ -92,6 +97,7 @@ class _OperatorScreenState extends State<OperatorScreen>
         _driverPinAccounts = driverPins;
         _adminB2bBookings = b2bBookings;
         _flightArrivals = flights;
+        _driverRatings = ratings;
         final ids = driverPins
             .map((e) => (e['id'] as num?)?.toInt())
             .whereType<int>()
@@ -115,8 +121,16 @@ class _OperatorScreenState extends State<OperatorScreen>
     final phone = _newDriverPhone.text.trim();
     final name = _newDriverName.text.trim();
     final pin = _newDriverPin.text.trim();
+    final carModel = _newDriverCarModel.text.trim();
+    final carColor = _newDriverCarColor.text.trim();
+    final photoUrl = _newDriverPhotoData.trim();
     final loc = AppLocalizations.of(context)!;
-    if (phone.isEmpty || name.isEmpty || pin.isEmpty) {
+    if (phone.isEmpty ||
+        name.isEmpty ||
+        pin.isEmpty ||
+        carModel.isEmpty ||
+        carColor.isEmpty ||
+        photoUrl.isEmpty) {
       setState(() => _message = loc.operatorFillDriverFields);
       return;
     }
@@ -130,10 +144,16 @@ class _OperatorScreenState extends State<OperatorScreen>
         phone: phone,
         pin: pin,
         driverName: name,
+        carModel: carModel,
+        carColor: carColor,
+        photoUrl: photoUrl,
       );
       _newDriverPhone.clear();
       _newDriverName.clear();
       _newDriverPin.clear();
+      _newDriverCarModel.clear();
+      _newDriverCarColor.clear();
+      _newDriverPhotoData = '';
       await _refreshAll();
     } catch (e) {
       setState(() => _message = e.toString());
@@ -212,14 +232,25 @@ class _OperatorScreenState extends State<OperatorScreen>
                 ),
                 const SizedBox(height: 8),
                 if (selectedPhotoData.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image(
-                      image: _imageProviderFromString(selectedPhotoData),
-                      height: 90,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
+                  Builder(
+                    builder: (_) {
+                      final provider = _imageProviderFromString(selectedPhotoData);
+                      if (provider == null) return const SizedBox.shrink();
+                      return Center(
+                        child: SizedBox(
+                          width: 220,
+                          height: 90,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image(
+                              image: provider,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
@@ -239,6 +270,7 @@ class _OperatorScreenState extends State<OperatorScreen>
                             ? 'image/webp'
                             : 'image/jpeg';
                     final dataUrl = 'data:$mime;base64,${base64Encode(bytes)}';
+                    if (!mounted) return;
                     setSt(() {
                       selectedPhotoData = dataUrl;
                     });
@@ -338,20 +370,49 @@ class _OperatorScreenState extends State<OperatorScreen>
     _newDriverPhone.dispose();
     _newDriverName.dispose();
     _newDriverPin.dispose();
+    _newDriverCarModel.dispose();
+    _newDriverCarColor.dispose();
     _topUpAmountController.dispose();
     super.dispose();
   }
 
-  ImageProvider _imageProviderFromString(String value) {
+  ImageProvider<Object>? _imageProviderFromString(String value) {
     final trimmed = value.trim();
+    if (trimmed.isEmpty) return null;
     if (trimmed.startsWith('data:image/')) {
       final commaIdx = trimmed.indexOf(',');
       if (commaIdx > 0 && commaIdx + 1 < trimmed.length) {
-        final b64 = trimmed.substring(commaIdx + 1);
-        return MemoryImage(base64Decode(b64));
+        try {
+          final b64 = trimmed.substring(commaIdx + 1);
+          return MemoryImage(base64Decode(b64));
+        } catch (_) {
+          return null;
+        }
       }
+      return null;
     }
-    return NetworkImage(trimmed);
+    return Uri.tryParse(trimmed)?.hasScheme == true ? NetworkImage(trimmed) : null;
+  }
+
+  Future<void> _pickNewDriverImage() async {
+    final picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1600,
+    );
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    final name = picked.name.toLowerCase();
+    final ext = name.contains('.') ? name.split('.').last : 'jpeg';
+    final mime = ext == 'png'
+        ? 'image/png'
+        : ext == 'webp'
+            ? 'image/webp'
+            : 'image/jpeg';
+    if (!mounted) return;
+    setState(() {
+      _newDriverPhotoData = 'data:$mime;base64,${base64Encode(bytes)}';
+    });
   }
 
   TextStyle _operatorHeadingTextStyle() => const TextStyle(
@@ -869,6 +930,40 @@ class _OperatorScreenState extends State<OperatorScreen>
                 obscureText: true,
                 decoration: _operatorFieldDecoration(l.operatorPinLabel),
               ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _newDriverCarModel,
+                decoration: _operatorFieldDecoration(l.operatorCarModelLabel),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _newDriverCarColor,
+                decoration: _operatorFieldDecoration(l.operatorCarColorLabel),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _busy ? null : _pickNewDriverImage,
+                icon: const Icon(Icons.photo_library),
+                label: Text(l.operatorPickFromGallery),
+              ),
+              if (_newDriverPhotoData.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Builder(
+                  builder: (_) {
+                    final provider = _imageProviderFromString(_newDriverPhotoData);
+                    if (provider == null) return const SizedBox.shrink();
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image(
+                        image: provider,
+                        height: 90,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
+                    );
+                  },
+                ),
+              ],
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
@@ -955,6 +1050,28 @@ class _OperatorScreenState extends State<OperatorScreen>
             ],
           ),
           const SizedBox(height: 22),
+          Text(
+            'Driver ratings',
+            style: _operatorHeadingTextStyle(),
+          ),
+          const SizedBox(height: 8),
+          if (_driverRatings.isEmpty)
+            const Text('No ratings yet')
+          else
+            ..._driverRatings.map(
+              (row) => Card(
+                color: Colors.white,
+                child: ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.star, color: Colors.amber),
+                  title: Text((row['driver_name'] ?? '').toString()),
+                  subtitle: Text(
+                    'Avg: ${row['rating_average']} (${row['rating_count']} ratings)',
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [

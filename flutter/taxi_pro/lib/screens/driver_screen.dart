@@ -173,7 +173,7 @@ class _DriverScreenState extends State<DriverScreen> {
         r.accessToken,
         onRideStatus: _onRideStatusEvent,
         onDriverWallet: _onDriverWallet,
-        transports: kIsWeb ? ['websocket'] : ['polling'],
+        transports: const ['polling'],
       );
       _startRidesPolling();
       await _pushDriverLocation();
@@ -218,6 +218,14 @@ class _DriverScreenState extends State<DriverScreen> {
   }
 
   void _processRideTransitions(Map<int, Ride> previousById, List<Ride> rides) {
+    if (_socket.isConnected) {
+      // Realtime events already deliver localized server messages.
+      _lastPendingRideIds = rides
+          .where((r) => r.status == 'pending')
+          .map((r) => r.id)
+          .toSet();
+      return;
+    }
     final loc = AppLocalizations.of(context)!;
     final currentById = {for (final r in rides) r.id: r};
     final currentPendingRideIds = rides
@@ -353,7 +361,9 @@ class _DriverScreenState extends State<DriverScreen> {
     if (event != 'wallet_depleted') return;
     final amount =
         (data['required_topup_dt'] as num?)?.round() ?? 100;
-    final body = loc.driverWalletDepletedBody(amount);
+    final body = ((data['message'] ?? '').toString().trim().isNotEmpty)
+        ? (data['message'] as String).trim()
+        : loc.driverWalletDepletedBody(amount);
     _pushNotification(
       title: loc.driverWalletDepletedTitle,
       body: body,
@@ -372,6 +382,7 @@ class _DriverScreenState extends State<DriverScreen> {
     if (!mounted) return;
     final loc = AppLocalizations.of(context)!;
     final event = (payload['event'] ?? '').toString();
+    final serverMessage = (payload['message'] ?? '').toString().trim();
     if (event == 'ride_taken_by_other_driver') {
       final accepterUserId = (payload['accepted_driver_user_id'] as num?)?.toInt()
           ?? (payload['driver_id'] as num?)?.toInt();
@@ -380,15 +391,25 @@ class _DriverScreenState extends State<DriverScreen> {
       }
       _pushNotification(
         title: loc.driverNotificationRequestClosedTitle,
-        body: loc.driverNotificationRequestClosedBodyTaken,
+        body: serverMessage.isNotEmpty
+            ? serverMessage
+            : loc.driverNotificationRequestClosedBodyTaken,
         event: event,
       );
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(loc.snackDriverRideTakenOther)),
+        SnackBar(
+          content: Text(
+            serverMessage.isNotEmpty
+                ? serverMessage
+                : loc.snackDriverRideTakenOther,
+          ),
+        ),
       );
       LocalNotificationService.instance.show(
         title: loc.driverNotificationRequestClosedTitle,
-        body: loc.driverNotificationRequestClosedBodyTaken,
+        body: serverMessage.isNotEmpty
+            ? serverMessage
+            : loc.driverNotificationRequestClosedBodyTaken,
       );
       _refreshRides();
       return;
@@ -396,15 +417,41 @@ class _DriverScreenState extends State<DriverScreen> {
     if (event == 'ride_request_sent') {
       _pushNotification(
         title: loc.driverNotificationNewRideTitle,
-        body: loc.driverNotificationNewRideBodyDefault,
+        body: serverMessage.isNotEmpty
+            ? serverMessage
+            : loc.driverNotificationNewRideBodyDefault,
         event: event,
       );
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(loc.snackDriverNewNearbyRide)),
+        SnackBar(
+          content: Text(
+            serverMessage.isNotEmpty
+                ? serverMessage
+                : loc.snackDriverNewNearbyRide,
+          ),
+        ),
       );
       LocalNotificationService.instance.show(
         title: loc.driverNotificationNewRideTitle,
-        body: loc.driverNotificationNewRideBodyDefault,
+        body: serverMessage.isNotEmpty
+            ? serverMessage
+            : loc.driverNotificationNewRideBodyDefault,
+      );
+      _refreshRides();
+      return;
+    }
+    if (serverMessage.isNotEmpty) {
+      _pushNotification(
+        title: loc.notificationRideUpdateTitle,
+        body: serverMessage,
+        event: event.isEmpty ? 'ride_status_changed' : event,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(serverMessage)),
+      );
+      LocalNotificationService.instance.show(
+        title: loc.notificationRideUpdateTitle,
+        body: serverMessage,
       );
       _refreshRides();
     }
@@ -599,6 +646,41 @@ class _DriverScreenState extends State<DriverScreen> {
                 ),
               ),
             ),
+          if (_token != null && (_photoUrl?.isNotEmpty ?? false)) ...[
+            const SizedBox(height: 8),
+            Builder(builder: (context) {
+              final provider = _imageProviderFromString(_photoUrl);
+              if (provider == null) return const SizedBox.shrink();
+              return Center(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 116,
+                      height: 116,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey.shade300, width: 2),
+                        image: DecorationImage(
+                          image: provider,
+                          fit: BoxFit.cover,
+                          onError: (_, __) {},
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l.driverVehicleIdentityTitle,
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
           if (_token != null && (_carModel != null || _carColor != null)) ...[
             const SizedBox(height: 6),
             Card(
@@ -614,22 +696,6 @@ class _DriverScreenState extends State<DriverScreen> {
                 ),
               ),
             ),
-          ],
-          if (_token != null && (_photoUrl?.isNotEmpty ?? false)) ...[
-            const SizedBox(height: 8),
-            Builder(builder: (context) {
-              final provider = _imageProviderFromString(_photoUrl);
-              if (provider == null) return const SizedBox.shrink();
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image(
-                  image: provider,
-                  height: 90,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
-              );
-            }),
           ],
           if (_token != null) ...[
             const SizedBox(height: 8),

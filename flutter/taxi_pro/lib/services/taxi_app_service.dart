@@ -106,8 +106,12 @@ class TaxiAppService {
   Future<Map<String, dynamic>> ownerMetrics(String token) =>
       _client.ownerMetrics(token);
 
-  Future<Map<String, dynamic>> submitRating(int stars) =>
-      _client.submitRating(stars);
+  Future<Map<String, dynamic>> submitRating({
+    required String token,
+    required int rideId,
+    required int stars,
+  }) =>
+      _client.submitRating(token: token, rideId: rideId, stars: stars);
 
   Future<RideConversationInfo?> getRideConversation({
     required String token,
@@ -230,12 +234,18 @@ class TaxiAppService {
     required String phone,
     required String pin,
     required String driverName,
+    required String carModel,
+    required String carColor,
+    required String photoUrl,
   }) =>
       _client.createAdminDriverPinAccount(
         token: token,
         phone: phone,
         pin: pin,
         driverName: driverName,
+        carModel: carModel,
+        carColor: carColor,
+        photoUrl: photoUrl,
       );
 
   Future<Map<String, dynamic>> patchAdminDriverPinAccount({
@@ -248,4 +258,7 @@ class TaxiAppService {
         accountId: accountId,
         payload: payload,
       );
+
+  Future<List<Map<String, dynamic>>> listAdminDriverRatings(String token) =>
+      _client.listAdminDriverRatings(token);
 }

@@ -50,6 +50,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   List<Ride> _rides = [];
   final List<AppNotification> _notifications = [];
   final Set<int> _acceptedNotifiedRideIds = <int>{};
+  final Set<int> _ratedRideIds = <int>{};
   String? _message;
   bool _busy = false;
   bool _backendLoginInFlight = false;
@@ -274,11 +275,11 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   }
 
   void _connectRealtime() {
-    if (kIsWeb) return;
     final t = _token;
     if (t == null) return;
     _socket.connect(
       t,
+      transports: const ['polling'],
       onRideStatus: (data) {
         if (!mounted) return;
         final rideMap = data['ride'];
@@ -684,6 +685,58 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     }
   }
 
+  Future<void> _rateCompletedRide(Ride ride) async {
+    final t = _token;
+    if (t == null || ride.status != 'completed') return;
+    int stars = 5;
+    final l = AppLocalizations.of(context)!;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) => AlertDialog(
+          title: Text(l.rateYourLastRide),
+          content: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (i) {
+              final s = i + 1;
+              return IconButton(
+                icon: Icon(
+                  stars >= s ? Icons.star : Icons.star_border,
+                  color: Colors.amber,
+                ),
+                onPressed: () => setSt(() => stars = s),
+              );
+            }),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(l.genericCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(l.submitRating),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await _api.submitRating(token: t, rideId: ride.id, stars: stars);
+      if (!mounted) return;
+      setState(() => _ratedRideIds.add(ride.id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.thankYouFeedback)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
   Future<void> _openChat(Ride ride) async {
     final l = AppLocalizations.of(context)!;
     final t = _token;
@@ -963,6 +1016,11 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                         onPressed: _busy ? null : () => _openChat(r),
                         child: Text(l.openChatButton),
                       ),
+                      if (r.status == 'completed' && !_ratedRideIds.contains(r.id))
+                        TextButton(
+                          onPressed: _busy ? null : () => _rateCompletedRide(r),
+                          child: Text(l.submitRating),
+                        ),
                     ],
                   ),
                 ),

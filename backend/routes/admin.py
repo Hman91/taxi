@@ -100,6 +100,41 @@ def admin_owner_metrics(**kwargs: Any) -> Tuple[Any, int]:
     m = db_module.owner_metrics()
     return jsonify(m), 200
 
+@bp.get("/ratings/drivers")
+@require_roles("owner", "operator")
+def admin_driver_ratings(**kwargs: Any) -> Tuple[Any, int]:
+    rows = []
+    for d in db_module.list_driver_pin_accounts():
+        phone = (d.get("phone") or "").strip()
+        if not phone:
+            continue
+        app_user = db_module.user_by_email(f"driverpin_{phone}@taxipro.local")
+        if app_user is None:
+            rows.append(
+                {
+                    "driver_name": d.get("driver_name"),
+                    "phone": phone,
+                    "driver_id": None,
+                    "rating_average": 5.0,
+                    "rating_count": 0,
+                }
+            )
+            continue
+        drv = db_module.driver_by_user_id(int(app_user["id"]))
+        if drv is None:
+            continue
+        stats = db_module.rating_stats(driver_id=int(drv["id"]))
+        rows.append(
+            {
+                "driver_name": d.get("driver_name"),
+                "phone": phone,
+                "driver_id": int(drv["id"]),
+                "rating_average": stats["average"],
+                "rating_count": stats["count"],
+            }
+        )
+    return jsonify({"driver_ratings": rows}), 200
+
 
 @bp.get("/users")
 @require_roles("owner", "operator")
@@ -180,9 +215,19 @@ def admin_create_driver_pin_account(**kwargs: Any) -> Tuple[Any, int]:
     phone = str(body.get("phone") or "").strip()
     pin = str(body.get("pin") or "").strip()
     driver_name = str(body.get("driver_name") or "").strip()
-    if not phone or not pin or not driver_name:
+    car_model = str(body.get("car_model") or "").strip()
+    car_color = str(body.get("car_color") or "").strip()
+    photo_url = str(body.get("photo_url") or "").strip()
+    if not phone or not pin or not driver_name or not car_model or not car_color or not photo_url:
         return _json_error("missing_fields", 400)
-    row = db_module.driver_pin_create(phone=phone, pin=pin, driver_name=driver_name)
+    row = db_module.driver_pin_create(
+        phone=phone,
+        pin=pin,
+        driver_name=driver_name,
+        car_model=car_model,
+        car_color=car_color,
+        photo_url=photo_url,
+    )
     if row is None:
         return _json_error("phone_exists_or_invalid", 400)
     return jsonify({"driver_pin_account": row}), 201

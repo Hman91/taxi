@@ -12,6 +12,7 @@ from .. import db as db_module
 from ..auth_tokens import issue_token, verify_token_safe
 from ..services import pricing
 from ..services import users as users_service
+from .jwt_auth import require_jwt_with_uid
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -292,6 +293,9 @@ def login_google() -> Tuple[Any, int]:
     access_token = data.get("access_token") or ""
     if id_token:
         user, err = users_service.authenticate_google_id_token(id_token)
+        # Flutter Web may return an unusable ID token while access token is valid.
+        if err == "invalid_google_token" and access_token:
+            user, err = users_service.authenticate_google_access_token(access_token)
     elif access_token:
         user, err = users_service.authenticate_google_access_token(access_token)
     else:
@@ -371,14 +375,33 @@ def owner_metrics(**kwargs: Any) -> Tuple[Any, int]:
 
 
 @bp.post("/ratings")
-def add_rating() -> Tuple[Any, int]:
+@require_jwt_with_uid("user")
+def add_rating(**kwargs: Any) -> Tuple[Any, int]:
+    uid = int(kwargs["_uid"])
     data = request.get_json(silent=True) or {}
+    try:
+        ride_id = int(data.get("ride_id", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "invalid_ride_id"}), 400
     try:
         stars = int(data.get("stars", data.get("rating", 0)))
     except (TypeError, ValueError):
         return jsonify({"error": "invalid_stars"}), 400
+    ride = db_module.ride_get(ride_id)
+    if ride is None:
+        return jsonify({"error": "ride_not_found"}), 404
+    if int(ride.get("user_id") or 0) != uid:
+        return jsonify({"error": "forbidden"}), 403
+    if ride.get("status") != "completed":
+        return jsonify({"error": "ride_not_completed"}), 400
+    driver_id = ride.get("driver_id")
+    if driver_id is None:
+        return jsonify({"error": "ride_driver_missing"}), 400
+    if db_module.rating_exists_for_ride(ride_id):
+        return jsonify({"error": "rating_exists"}), 409
     if stars < 1 or stars > 5:
         return jsonify({"error": "stars_out_of_range"}), 400
-    db_module.insert_rating(stars)
+    db_module.insert_rating(ride_id=ride_id, driver_id=int(driver_id), stars=stars)
     stats = db_module.rating_stats()
-    return jsonify({"ok": True, "stats": stats}), 201
+    driver_stats = db_module.rating_stats(driver_id=int(driver_id))
+    return jsonify({"ok": True, "stats": stats, "driver_stats": driver_stats}), 201

@@ -38,6 +38,7 @@ class _OwnerScreenState extends State<OwnerScreen>
   List<Map<String, dynamic>> _flightArrivals = [];
   List<Map<String, dynamic>> _fareRoutes = [];
   List<Map<String, dynamic>> _driverPinAccounts = [];
+  List<Map<String, dynamic>> _driverRatings = [];
   final Map<int, TextEditingController> _fareCtrls = {};
   double _commissionDemoPercent = 10.0;
 
@@ -114,6 +115,7 @@ class _OwnerScreenState extends State<OwnerScreen>
       final flights = await _api.listAdminTunisiaFlightArrivals(t);
       final fareRoutes = await _api.listAdminFareRoutes(t);
       final driverPins = await _api.listAdminDriverPinAccounts(t);
+      final driverRatings = await _api.listAdminDriverRatings(t);
       if (!mounted) return;
       setState(() {
         _metrics = m;
@@ -137,6 +139,7 @@ class _OwnerScreenState extends State<OwnerScreen>
         _flightArrivals = flights;
         _fareRoutes = fareRoutes;
         _driverPinAccounts = driverPins;
+        _driverRatings = driverRatings;
         _syncFareControllers(fareRoutes);
         _message = null;
       });
@@ -453,6 +456,29 @@ class _OwnerScreenState extends State<OwnerScreen>
                       color: TaxiAppColors.textSoft,
                     ),
                   ),
+                ),
+              ),
+            ),
+          const Divider(height: 28),
+          Text(
+            'Driver ratings',
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: TaxiAppColors.textStrong,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (_driverRatings.isEmpty)
+            const Text('No ratings yet')
+          else
+            ..._driverRatings.map(
+              (row) => ListTile(
+                dense: true,
+                leading: const Icon(Icons.star, color: Colors.amber),
+                title: Text((row['driver_name'] ?? '').toString()),
+                subtitle: Text(
+                  'Avg: ${row['rating_average']} (${row['rating_count']} ratings)',
                 ),
               ),
             ),

@@ -31,6 +31,7 @@ class _PassengerScreenState extends State<PassengerScreen> {
   bool _locating = false;
   bool _isDisposed = false;
   int _rating = 0;
+  int? _pendingRatingRideId;
   _PassengerRequest? _activeRequest;
   String? _guestToken;
   int? _guestUserId;
@@ -173,15 +174,24 @@ class _PassengerScreenState extends State<PassengerScreen> {
   }
 
   Future<void> _submitRating() async {
-    if (_rating < 1 || _rating > 5) return;
+    if (_rating < 1 || _rating > 5 || _pendingRatingRideId == null) return;
+    final t = _guestToken;
+    if (t == null) return;
     final l = AppLocalizations.of(context)!;
     try {
-      await _api.submitRating(_rating);
+      await _api.submitRating(
+        token: t,
+        rideId: _pendingRatingRideId!,
+        stars: _rating,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l.thankYouFeedback)),
       );
-      _setStateIfMounted(() => _rating = 0);
+      _setStateIfMounted(() {
+        _rating = 0;
+        _pendingRatingRideId = null;
+      });
     } catch (e) {
       _setStateIfMounted(() => _error = e.toString());
     }
@@ -476,7 +486,8 @@ class _PassengerScreenState extends State<PassengerScreen> {
           }),
         ),
         FilledButton(
-          onPressed: _rating > 0 ? _submitRating : null,
+          onPressed:
+              (_rating > 0 && _pendingRatingRideId != null) ? _submitRating : null,
           child: Text(l.submitRating),
         ),
         if (_error != null)
@@ -656,6 +667,9 @@ class _PassengerScreenState extends State<PassengerScreen> {
         );
       });
       if (!mounted) return;
+      if (row.status == 'completed' && _pendingRatingRideId == null) {
+        _setStateIfMounted(() => _pendingRatingRideId = row!.id);
+      }
       if (previous == 'pending' && row.status == 'accepted') {
         final driver = row.driverName ?? 'Driver';
         final phone =
