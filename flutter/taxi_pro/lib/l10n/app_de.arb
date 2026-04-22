@@ -415,8 +415,8 @@
       }
     }
   },
-  "ownerAppBarTitle": "Owner HQ",
-  "ownerProfitChip": "Profit: {amount} DT",
+  "ownerAppBarTitle": "Inhaber-Zentrale",
+  "ownerProfitChip": "Gewinn: {amount} DT",
   "@ownerProfitChip": {
     "placeholders": {
       "amount": {
@@ -424,7 +424,7 @@
       }
     }
   },
-  "ownerTripsCountChip": "Trips: {count}",
+  "ownerTripsCountChip": "Fahrten: {count}",
   "@ownerTripsCountChip": {
     "placeholders": {
       "count": {
@@ -443,9 +443,9 @@
       }
     }
   },
-  "ownerVaultHeading": "Trip vault",
-  "ownerAdminOversightHeading": "Admin oversight",
-  "ownerCommissionChip": "Commission: {amount} DT",
+  "ownerVaultHeading": "Fahrtenarchiv",
+  "ownerAdminOversightHeading": "Admin-Überwachung",
+  "ownerCommissionChip": "Provision: {amount} DT",
   "@ownerCommissionChip": {
     "placeholders": {
       "amount": {
@@ -464,11 +464,11 @@
       }
     }
   },
-  "ownerHqPortalHeading": "HQ command center",
-  "operatorDispatchCenterHeading": "Dispatch & monitoring",
-  "operatorDispatchPendingBlurb": "There are pending requests that need assigning.",
-  "operatorDispatchIdleBlurb": "System is connected. No pending bookings.",
-  "operatorChipPending": "Pending: {count}",
+  "ownerHqPortalHeading": "Zentralleitstelle",
+  "operatorDispatchCenterHeading": "Disposition & Überwachung",
+  "operatorDispatchPendingBlurb": "Es gibt offene Anfragen, die zugewiesen werden müssen.",
+  "operatorDispatchIdleBlurb": "System verbunden. Keine offenen Buchungen.",
+  "operatorChipPending": "Ausstehend: {count}",
   "@operatorChipPending": {
     "placeholders": {
       "count": {
@@ -476,7 +476,7 @@
       }
     }
   },
-  "operatorChipAccepted": "Accepted: {count}",
+  "operatorChipAccepted": "Angenommen: {count}",
   "@operatorChipAccepted": {
     "placeholders": {
       "count": {
@@ -484,7 +484,7 @@
       }
     }
   },
-  "operatorChipOngoing": "Ongoing: {count}",
+  "operatorChipOngoing": "Laufend: {count}",
   "@operatorChipOngoing": {
     "placeholders": {
       "count": {
@@ -492,7 +492,7 @@
       }
     }
   },
-  "operatorChipCompleted": "Completed: {count}",
+  "operatorChipCompleted": "Abgeschlossen: {count}",
   "@operatorChipCompleted": {
     "placeholders": {
       "count": {
@@ -514,7 +514,7 @@
       }
     }
   },
-  "operatorDriversOnlineCount": "Drivers online: {count}",
+  "operatorDriversOnlineCount": "Fahrer online: {count}",
   "@operatorDriversOnlineCount": {
     "placeholders": {
       "count": {
@@ -522,13 +522,13 @@
       }
     }
   },
-  "operatorPhoneLabel": "Phone",
-  "operatorDriverNameLabel": "Driver name",
+  "operatorPhoneLabel": "Telefon",
+  "operatorDriverNameLabel": "Fahrername",
   "operatorPinLabel": "PIN",
-  "operatorCreateDriverAccount": "Create driver account",
-  "operatorRefreshCorporateBookings": "Refresh corporate bookings",
-  "operatorTripVaultHeading": "Trip vault",
-  "operatorTripVaultTripsChip": "Trips: {count}",
+  "operatorCreateDriverAccount": "Fahrerkonto erstellen",
+  "operatorRefreshCorporateBookings": "Firmenbuchungen aktualisieren",
+  "operatorTripVaultHeading": "Fahrtenarchiv",
+  "operatorTripVaultTripsChip": "Fahrten: {count}",
   "@operatorTripVaultTripsChip": {
     "placeholders": {
       "count": {
@@ -536,7 +536,7 @@
       }
     }
   },
-  "operatorTripVaultRevenueChip": "Revenue: {amount} DT",
+  "operatorTripVaultRevenueChip": "Umsatz: {amount} DT",
   "@operatorTripVaultRevenueChip": {
     "placeholders": {
       "amount": {
@@ -544,18 +544,18 @@
       }
     }
   },
-  "operatorWalletBalanceLabel": "Wallet balance",
-  "operatorOwnerCommissionLabel": "Owner commission %",
-  "operatorB2bCommissionLabel": "B2B commission %",
-  "operatorAutoDeductEnabled": "Auto deduct enabled",
-  "operatorCarModelLabel": "Car model",
-  "operatorCarColorLabel": "Car color",
-  "operatorPickFromGallery": "Pick image from gallery",
-  "operatorRemovePickedImage": "Remove picked image",
-  "operatorPhotoUrlOptional": "Photo URL (optional)",
-  "operatorCancel": "Cancel",
-  "operatorSave": "Save",
-  "operatorDriverWalletLine": "Wallet: {wallet} DT | Owner %: {owner} | B2B %: {b2b}",
+  "operatorWalletBalanceLabel": "Wallet-Guthaben",
+  "operatorOwnerCommissionLabel": "Eigentümer-Provision %",
+  "operatorB2bCommissionLabel": "B2B-Provision %",
+  "operatorAutoDeductEnabled": "Automatischer Abzug aktiv",
+  "operatorCarModelLabel": "Automodell",
+  "operatorCarColorLabel": "Autofarbe",
+  "operatorPickFromGallery": "Bild aus Galerie wählen",
+  "operatorRemovePickedImage": "Gewähltes Bild entfernen",
+  "operatorPhotoUrlOptional": "Foto-URL (optional)",
+  "operatorCancel": "Abbrechen",
+  "operatorSave": "Speichern",
+  "operatorDriverWalletLine": "Wallet: {wallet} DT | Eigentümer %: {owner} | B2B %: {b2b}",
   "@operatorDriverWalletLine": {
     "placeholders": {
       "wallet": {
@@ -569,7 +569,7 @@
       }
     }
   },
-  "operatorDriverCarColorAppend": " | Color: {color}",
+  "operatorDriverCarColorAppend": " | Farbe: {color}",
   "@operatorDriverCarColorAppend": {
     "placeholders": {
       "color": {
@@ -577,7 +577,7 @@
       }
     }
   },
-  "operatorDriverCarLine": "\nCar: {model}",
+  "operatorDriverCarLine": "\nAuto: {model}",
   "@operatorDriverCarLine": {
     "placeholders": {
       "model": {
@@ -586,8 +586,8 @@
     }
   },
   "statusLinePrefix": "Status: ",
-  "driverLabelPrefix": " | Driver: ",
-  "createdAtLinePrefix": "\nAt: ",
+  "driverLabelPrefix": " | Fahrer: ",
+  "createdAtLinePrefix": "\nUm: ",
   "walletWithAmount": "Wallet: {amount} DT",
   "@walletWithAmount": {
     "placeholders": {
@@ -596,7 +596,7 @@
       }
     }
   },
-  "b2bFareAdminPercentSuffix": "• 5% admin",
+  "b2bFareAdminPercentSuffix": "• 5% Admin",
   "adminB2bBookingRowSubtitle": "{guest} • {room} • {fare} DT",
   "@adminB2bBookingRowSubtitle": {
     "placeholders": {
@@ -611,53 +611,53 @@
       }
     }
   },
-  "operatorTabDispatch": "Dispatch",
-  "operatorTabDrivers": "Drivers",
+  "operatorTabDispatch": "Disposition",
+  "operatorTabDrivers": "Fahrer",
   "operatorTabB2b": "B2B",
-  "operatorTabTripVault": "Trip vault",
-  "operatorFillDriverFields": "Enter phone, driver name, and PIN.",
+  "operatorTabTripVault": "Fahrtenarchiv",
+  "operatorFillDriverFields": "Telefon, Fahrername und PIN eingeben.",
   "placeCarthageAirport": "Carthage Airport (Tunis)",
   "placeEnfidhaAirport": "Enfidha–Hammamet Airport",
   "placeMonastirAirport": "Monastir Airport",
-  "placeSousseCenter": "Sousse city center",
+  "placeSousseCenter": "Stadtzentrum Sousse",
   "placeHammamet": "Hammamet",
   "placeSousse": "Sousse",
   "placePortElKantaoui": "Port El Kantaoui",
   "placeNabeul": "Nabeul",
-  "homeWhatIsTitle": "What is Taxi Pro?",
-  "homeWhatIsBody": "Taxi Pro Tunisia connects you with drivers for airport transfers and city rides. Prices are fixed per route in the app; a night surcharge may apply between 9 PM and 5 AM. Book in the app, track your ride, and use in-app help when needed.",
-  "passengerFareFinalEstimate": "Final estimate for the ride",
-  "passengerPayCash": "Cash",
-  "passengerPayCardTpe": "Card (TPE)",
-  "operatorEntryGateLabel": "Entry gate:",
-  "operatorEmployeePasswordLabel": "Employee password:",
-  "operatorWelcomeOperatingRoom": "Welcome to the operating room.",
-  "operatorTabTodaysArrivals": "Today's arrivals",
-  "operatorTabLiveOrders": "Live orders",
-  "operatorTabDriverManagement": "Driver management",
-  "operatorTabTripHistory": "Trip history",
-  "operatorArrivalsDemoHeading": "Today's arrivals — Tunisia (demo data)",
-  "operatorColFlightNumber": "Flight number",
-  "operatorColDepartureAirport": "Departure airport",
-  "operatorColTakeoffTime": "Take-off time",
-  "operatorColExpectedArrival": "Expected arrival (today)",
-  "operatorColArrivalAirportTn": "Arrival airport (Tunisia)",
-  "operatorChooseDriverTopUp": "Choose the driver to top up:",
-  "operatorAmountReceivedDt": "Amount received (DT):",
-  "operatorRechargeBalance": "Recharge the balance",
-  "operatorCorporateBookingsSection": "Corporate (B2B) bookings",
-  "operatorRoleAdminHq": "Admin HQ",
-  "operatorNoFlightArrivals": "No arrival rows loaded.",
-  "operatorUserAccountsHeading": "App user accounts",
-  "ownerPasswordCeoLabel": "Owner (CEO) password:",
-  "ownerWelcomeHq": "Welcome to Owner HQ.",
-  "ownerTabTreasury": "Treasury and profits",
-  "ownerTabSettings": "Settings",
-  "ownerTabHostelB2b": "Hostel Accounts (B2B)",
-  "ownerSettingsCommissionLabel": "Commission deducted percentage (%):",
-  "ownerSettingsCommissionHint": "Display only — link to driver accounts for live rates.",
-  "ownerSettingsRouteFaresHeading": "Route base fares (DT)",
-  "ownerSaveRouteFare": "Save",
+  "homeWhatIsTitle": "Was ist Taxi Pro?",
+  "homeWhatIsBody": "Taxi Pro Tunisia verbindet Sie mit Fahrern für Flughafentransfers und Stadtfahrten. Die Preise sind pro Strecke in der App festgelegt; zwischen 21:00 und 05:00 kann ein Nachtzuschlag gelten. Buchen Sie in der App, verfolgen Sie Ihre Fahrt und nutzen Sie bei Bedarf die Hilfe.",
+  "passengerFareFinalEstimate": "Endgültige Schätzung für die Fahrt",
+  "passengerPayCash": "Barzahlung",
+  "passengerPayCardTpe": "Karte (TPE)",
+  "operatorEntryGateLabel": "Eingangstor:",
+  "operatorEmployeePasswordLabel": "Mitarbeiterpasswort:",
+  "operatorWelcomeOperatingRoom": "Willkommen im Betriebsraum.",
+  "operatorTabTodaysArrivals": "Heutige Ankünfte",
+  "operatorTabLiveOrders": "Live-Aufträge",
+  "operatorTabDriverManagement": "Fahrerverwaltung",
+  "operatorTabTripHistory": "Fahrtenverlauf",
+  "operatorArrivalsDemoHeading": "Heutige Ankünfte — Tunesien (Demodaten)",
+  "operatorColFlightNumber": "Flugnummer",
+  "operatorColDepartureAirport": "Abflughafen",
+  "operatorColTakeoffTime": "Abflugzeit",
+  "operatorColExpectedArrival": "Erwartete Ankunft (heute)",
+  "operatorColArrivalAirportTn": "Ankunftsflughafen (Tunesien)",
+  "operatorChooseDriverTopUp": "Fahrer zum Aufladen wählen:",
+  "operatorAmountReceivedDt": "Erhaltener Betrag (DT):",
+  "operatorRechargeBalance": "Guthaben aufladen",
+  "operatorCorporateBookingsSection": "Firmenbuchungen (B2B)",
+  "operatorRoleAdminHq": "Admin-Zentrale",
+  "operatorNoFlightArrivals": "Keine Ankunftszeilen geladen.",
+  "operatorUserAccountsHeading": "App-Benutzerkonten",
+  "ownerPasswordCeoLabel": "Eigentümer-(CEO)-Passwort:",
+  "ownerWelcomeHq": "Willkommen in der Inhaber-Zentrale.",
+  "ownerTabTreasury": "Kasse und Gewinne",
+  "ownerTabSettings": "Einstellungen",
+  "ownerTabHostelB2b": "Hotelkonten (B2B)",
+  "ownerSettingsCommissionLabel": "Abgezogener Provisionssatz (%):",
+  "ownerSettingsCommissionHint": "Nur Anzeige — mit Fahrerkonten für Live-Sätze verknüpfen.",
+  "ownerSettingsRouteFaresHeading": "Basispreise pro Route (DT)",
+  "ownerSaveRouteFare": "Speichern",
   "driverWalletDepletedTitle": "Wallet leer",
   "driverWalletDepletedBody": "Zahlen Sie {amount} DT an den Eigentümer (über den Operator) zum Aufladen.",
   "@driverWalletDepletedBody": {

@@ -188,11 +188,21 @@ class TaxiApiClient {
     required String email,
     required String password,
     required String role,
+    String? displayName,
+    String? phone,
+    String? photoUrl,
   }) async {
     final r = await _http.post(
       _u('/api/auth/register'),
       headers: _jsonHeaders(),
-      body: jsonEncode({'email': email, 'password': password, 'role': role}),
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+        'role': role,
+        if ((displayName ?? '').trim().isNotEmpty) 'display_name': displayName!.trim(),
+        if ((phone ?? '').trim().isNotEmpty) 'phone': phone!.trim(),
+        if ((photoUrl ?? '').trim().isNotEmpty) 'photo_url': photoUrl!.trim(),
+      }),
     );
     if (r.statusCode != 201) {
       throw TaxiApiException(r.body, r.statusCode);
@@ -223,6 +233,7 @@ class TaxiApiClient {
   Future<AppLoginResponse> loginGoogle({
     String? idToken,
     String? accessToken,
+    String? phone,
   }) async {
     final tokenId = (idToken ?? '').trim();
     final tokenAccess = (accessToken ?? '').trim();
@@ -235,6 +246,7 @@ class TaxiApiClient {
       body: jsonEncode({
         if (tokenId.isNotEmpty) 'id_token': tokenId,
         if (tokenAccess.isNotEmpty) 'access_token': tokenAccess,
+        if ((phone ?? '').trim().isNotEmpty) 'phone': phone!.trim(),
       }),
     );
     if (r.statusCode != 200) {
@@ -415,6 +427,9 @@ class TaxiApiClient {
     required String token,
     required String route,
     required String guestName,
+    String guestPhone = '',
+    String hotelName = '',
+    String flightEta = '',
     required String roomNumber,
     required double fare,
     required String sourceCode,
@@ -425,6 +440,9 @@ class TaxiApiClient {
       body: jsonEncode({
         'route': route,
         'guest_name': guestName,
+        'guest_phone': guestPhone,
+        'hotel_name': hotelName,
+        'flight_eta': flightEta,
         'room_number': roomNumber,
         'fare': fare,
         'source_code': sourceCode,
@@ -518,6 +536,21 @@ class TaxiApiClient {
     }
     final body = jsonDecode(r.body) as Map<String, dynamic>;
     final list = body['driver_pin_accounts'] as List<dynamic>;
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> listAdminDriverWalletBreakdown(
+      String token) async {
+    final r = await _http.get(
+      _u('/api/admin/driver-wallet-breakdown'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    final list = body['driver_wallets'] as List<dynamic>;
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
@@ -702,14 +735,31 @@ class TaxiApiClient {
   Future<void> updateDriverLocation({
     required String token,
     required String currentZone,
+    bool? isAvailable,
   }) async {
     final r = await _http.post(
       _u('/api/rides/driver/location'),
       headers: _jsonHeaders(bearer: token),
-      body: jsonEncode({'current_zone': currentZone}),
+      body: jsonEncode({
+        'current_zone': currentZone,
+        if (isAvailable != null) 'is_available': isAvailable,
+      }),
     );
     if (r.statusCode != 200) {
       throw TaxiApiException(_errorCodeFromBody(r.body) ?? r.body, r.statusCode);
     }
+  }
+
+  Future<Map<String, dynamic>> driverGains(String token) async {
+    final r = await _http.get(
+      _u('/api/rides/driver/gains'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return Map<String, dynamic>.from(body['gains'] as Map);
   }
 }

@@ -12,11 +12,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appTitle => 'Taxi Pro 突尼斯';
 
   @override
-  String get homeWhatIsTitle => 'What is Taxi Pro?';
+  String get homeWhatIsTitle => '什么是 Taxi Pro？';
 
   @override
   String get homeWhatIsBody =>
-      'Taxi Pro Tunisia connects you with drivers for airport transfers and city rides. Prices are fixed per route in the app; a night surcharge may apply between 9 PM and 5 AM. Book in the app, track your ride, and use in-app help when needed.';
+      'Taxi Pro Tunisia 可将您与司机连接，用于机场接送和城市出行。应用内按线路固定价格；21:00 到 05:00 可能加收夜间附加费。可在应用中下单、追踪行程，并在需要时使用应用内帮助。';
 
   @override
   String get loginAs => '登录身份';
@@ -98,13 +98,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentType => '支付方式';
 
   @override
-  String get passengerFareFinalEstimate => 'Final estimate for the ride';
+  String get passengerFareFinalEstimate => '行程最终预估';
 
   @override
-  String get passengerPayCash => 'Cash';
+  String get passengerPayCash => '现金';
 
   @override
-  String get passengerPayCardTpe => 'Card (TPE)';
+  String get passengerPayCardTpe => '刷卡 (TPE)';
 
   @override
   String get cashOrCard => '现金 / 刷卡';
@@ -170,65 +170,64 @@ class AppLocalizationsZh extends AppLocalizations {
   String get operatorTitle => '调度 / 运营';
 
   @override
-  String get operatorEntryGateLabel => 'Entry gate:';
+  String get operatorEntryGateLabel => '入口闸门:';
 
   @override
-  String get operatorEmployeePasswordLabel => 'Employee password:';
+  String get operatorEmployeePasswordLabel => '员工密码:';
 
   @override
-  String get operatorWelcomeOperatingRoom => 'Welcome to the operating room.';
+  String get operatorWelcomeOperatingRoom => '欢迎来到运营控制室。';
 
   @override
-  String get operatorTabTodaysArrivals => 'Today\'s arrivals';
+  String get operatorTabTodaysArrivals => '今日到达';
 
   @override
-  String get operatorTabLiveOrders => 'Live orders';
+  String get operatorTabLiveOrders => '实时订单';
 
   @override
-  String get operatorTabDriverManagement => 'Driver management';
+  String get operatorTabDriverManagement => '司机管理';
 
   @override
-  String get operatorTabTripHistory => 'Trip history';
+  String get operatorTabTripHistory => '行程历史';
 
   @override
-  String get operatorArrivalsDemoHeading =>
-      'Today\'s arrivals — Tunisia (demo data)';
+  String get operatorArrivalsDemoHeading => '今日到达 — 突尼斯（演示数据）';
 
   @override
-  String get operatorColFlightNumber => 'Flight number';
+  String get operatorColFlightNumber => '航班号';
 
   @override
-  String get operatorColDepartureAirport => 'Departure airport';
+  String get operatorColDepartureAirport => '出发机场';
 
   @override
-  String get operatorColTakeoffTime => 'Take-off time';
+  String get operatorColTakeoffTime => '起飞时间';
 
   @override
-  String get operatorColExpectedArrival => 'Expected arrival (today)';
+  String get operatorColExpectedArrival => '预计到达（今日）';
 
   @override
-  String get operatorColArrivalAirportTn => 'Arrival airport (Tunisia)';
+  String get operatorColArrivalAirportTn => '到达机场（突尼斯）';
 
   @override
-  String get operatorChooseDriverTopUp => 'Choose the driver to top up:';
+  String get operatorChooseDriverTopUp => '选择要充值的司机:';
 
   @override
-  String get operatorAmountReceivedDt => 'Amount received (DT):';
+  String get operatorAmountReceivedDt => '收到金额 (DT):';
 
   @override
-  String get operatorRechargeBalance => 'Recharge the balance';
+  String get operatorRechargeBalance => '充值余额';
 
   @override
-  String get operatorCorporateBookingsSection => 'Corporate (B2B) bookings';
+  String get operatorCorporateBookingsSection => '企业预订 (B2B)';
 
   @override
-  String get operatorRoleAdminHq => 'Admin HQ';
+  String get operatorRoleAdminHq => '总部管理';
 
   @override
-  String get operatorNoFlightArrivals => 'No arrival rows loaded.';
+  String get operatorNoFlightArrivals => '未加载到达记录。';
 
   @override
-  String get operatorUserAccountsHeading => 'App user accounts';
+  String get operatorUserAccountsHeading => '应用用户账户';
 
   @override
   String get operatorCode => '调度员代码';
@@ -378,7 +377,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get placeMonastirAirport => 'Monastir Airport';
 
   @override
-  String get placeSousseCenter => 'Sousse city center';
+  String get placeSousseCenter => '苏斯市中心';
 
   @override
   String get placeHammamet => 'Hammamet';
@@ -689,45 +688,43 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get ownerAppBarTitle => 'Owner HQ';
+  String get ownerAppBarTitle => '车主总部';
 
   @override
-  String get ownerPasswordCeoLabel => 'Owner (CEO) password:';
+  String get ownerPasswordCeoLabel => '车主（CEO）密码:';
 
   @override
-  String get ownerWelcomeHq => 'Welcome to Owner HQ.';
+  String get ownerWelcomeHq => '欢迎来到车主总部。';
 
   @override
-  String get ownerTabTreasury => 'Treasury and profits';
+  String get ownerTabTreasury => '财务与利润';
 
   @override
-  String get ownerTabSettings => 'Settings';
+  String get ownerTabSettings => '设置';
 
   @override
-  String get ownerTabHostelB2b => 'Hostel Accounts (B2B)';
+  String get ownerTabHostelB2b => '酒店账户 (B2B)';
 
   @override
-  String get ownerSettingsCommissionLabel =>
-      'Commission deducted percentage (%):';
+  String get ownerSettingsCommissionLabel => '扣除佣金比例 (%):';
 
   @override
-  String get ownerSettingsCommissionHint =>
-      'Display only — link to driver accounts for live rates.';
+  String get ownerSettingsCommissionHint => '仅显示 — 可连接司机账户以显示实时费率。';
 
   @override
-  String get ownerSettingsRouteFaresHeading => 'Route base fares (DT)';
+  String get ownerSettingsRouteFaresHeading => '路线基础价格 (DT)';
 
   @override
-  String get ownerSaveRouteFare => 'Save';
+  String get ownerSaveRouteFare => '保存';
 
   @override
   String ownerProfitChip(String amount) {
-    return 'Profit: $amount DT';
+    return '利润: $amount DT';
   }
 
   @override
   String ownerTripsCountChip(String count) {
-    return 'Trips: $count';
+    return '行程: $count';
   }
 
   @override
@@ -736,14 +733,14 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get ownerVaultHeading => 'Trip vault';
+  String get ownerVaultHeading => '行程档案';
 
   @override
-  String get ownerAdminOversightHeading => 'Admin oversight';
+  String get ownerAdminOversightHeading => '管理监控';
 
   @override
   String ownerCommissionChip(String amount) {
-    return 'Commission: $amount DT';
+    return '佣金: $amount DT';
   }
 
   @override
@@ -752,49 +749,47 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get ownerHqPortalHeading => 'HQ command center';
+  String get ownerHqPortalHeading => '总部指挥中心';
 
   @override
-  String get operatorTabDispatch => 'Dispatch';
+  String get operatorTabDispatch => '调度';
 
   @override
-  String get operatorTabDrivers => 'Drivers';
+  String get operatorTabDrivers => '司机';
 
   @override
   String get operatorTabB2b => 'B2B';
 
   @override
-  String get operatorTabTripVault => 'Trip vault';
+  String get operatorTabTripVault => '行程档案';
 
   @override
-  String get operatorDispatchCenterHeading => 'Dispatch & monitoring';
+  String get operatorDispatchCenterHeading => '调度与监控';
 
   @override
-  String get operatorDispatchPendingBlurb =>
-      'There are pending requests that need assigning.';
+  String get operatorDispatchPendingBlurb => '有待分配的请求。';
 
   @override
-  String get operatorDispatchIdleBlurb =>
-      'System is connected. No pending bookings.';
+  String get operatorDispatchIdleBlurb => '系统已连接。暂无待处理预订。';
 
   @override
   String operatorChipPending(int count) {
-    return 'Pending: $count';
+    return '待处理: $count';
   }
 
   @override
   String operatorChipAccepted(int count) {
-    return 'Accepted: $count';
+    return '已接受: $count';
   }
 
   @override
   String operatorChipOngoing(int count) {
-    return 'Ongoing: $count';
+    return '进行中: $count';
   }
 
   @override
   String operatorChipCompleted(int count) {
-    return 'Completed: $count';
+    return '已完成: $count';
   }
 
   @override
@@ -805,96 +800,96 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String operatorDriversOnlineCount(int count) {
-    return 'Drivers online: $count';
+    return '在线司机: $count';
   }
 
   @override
-  String get operatorPhoneLabel => 'Phone';
+  String get operatorPhoneLabel => '电话';
 
   @override
-  String get operatorDriverNameLabel => 'Driver name';
+  String get operatorDriverNameLabel => '司机姓名';
 
   @override
   String get operatorPinLabel => 'PIN';
 
   @override
-  String get operatorFillDriverFields => 'Enter phone, driver name, and PIN.';
+  String get operatorFillDriverFields => '请输入电话、司机姓名和 PIN。';
 
   @override
-  String get operatorCreateDriverAccount => 'Create driver account';
+  String get operatorCreateDriverAccount => '创建司机账户';
 
   @override
-  String get operatorRefreshCorporateBookings => 'Refresh corporate bookings';
+  String get operatorRefreshCorporateBookings => '刷新企业预订';
 
   @override
-  String get operatorTripVaultHeading => 'Trip vault';
+  String get operatorTripVaultHeading => '行程档案';
 
   @override
   String operatorTripVaultTripsChip(int count) {
-    return 'Trips: $count';
+    return '行程: $count';
   }
 
   @override
   String operatorTripVaultRevenueChip(String amount) {
-    return 'Revenue: $amount DT';
+    return '收入: $amount DT';
   }
 
   @override
-  String get operatorWalletBalanceLabel => 'Wallet balance';
+  String get operatorWalletBalanceLabel => '钱包余额';
 
   @override
-  String get operatorOwnerCommissionLabel => 'Owner commission %';
+  String get operatorOwnerCommissionLabel => '车主佣金 %';
 
   @override
-  String get operatorB2bCommissionLabel => 'B2B commission %';
+  String get operatorB2bCommissionLabel => 'B2B 佣金 %';
 
   @override
-  String get operatorAutoDeductEnabled => 'Auto deduct enabled';
+  String get operatorAutoDeductEnabled => '自动扣款已启用';
 
   @override
-  String get operatorCarModelLabel => 'Car model';
+  String get operatorCarModelLabel => '车辆型号';
 
   @override
-  String get operatorCarColorLabel => 'Car color';
+  String get operatorCarColorLabel => '车辆颜色';
 
   @override
-  String get operatorPickFromGallery => 'Pick image from gallery';
+  String get operatorPickFromGallery => '从图库选择图片';
 
   @override
-  String get operatorRemovePickedImage => 'Remove picked image';
+  String get operatorRemovePickedImage => '移除已选图片';
 
   @override
-  String get operatorPhotoUrlOptional => 'Photo URL (optional)';
+  String get operatorPhotoUrlOptional => '照片 URL（可选）';
 
   @override
-  String get operatorCancel => 'Cancel';
+  String get operatorCancel => '取消';
 
   @override
-  String get operatorSave => 'Save';
+  String get operatorSave => '保存';
 
   @override
   String operatorDriverWalletLine(String wallet, String owner, String b2b) {
-    return 'Wallet: $wallet DT | Owner %: $owner | B2B %: $b2b';
+    return '钱包: $wallet DT | 车主 %: $owner | B2B %: $b2b';
   }
 
   @override
   String operatorDriverCarColorAppend(String color) {
-    return ' | Color: $color';
+    return ' | 颜色: $color';
   }
 
   @override
   String operatorDriverCarLine(String model) {
-    return '\nCar: $model';
+    return '\n车辆: $model';
   }
 
   @override
-  String get statusLinePrefix => 'Status: ';
+  String get statusLinePrefix => '状态: ';
 
   @override
-  String get driverLabelPrefix => ' | Driver: ';
+  String get driverLabelPrefix => ' | 司机: ';
 
   @override
-  String get createdAtLinePrefix => '\nAt: ';
+  String get createdAtLinePrefix => '\n时间: ';
 
   @override
   String walletWithAmount(String amount) {

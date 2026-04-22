@@ -415,8 +415,8 @@
       }
     }
   },
-  "ownerAppBarTitle": "Owner HQ",
-  "ownerProfitChip": "Profit: {amount} DT",
+  "ownerAppBarTitle": "QG propriétaire",
+  "ownerProfitChip": "Profit : {amount} DT",
   "@ownerProfitChip": {
     "placeholders": {
       "amount": {
@@ -424,7 +424,7 @@
       }
     }
   },
-  "ownerTripsCountChip": "Trips: {count}",
+  "ownerTripsCountChip": "Courses : {count}",
   "@ownerTripsCountChip": {
     "placeholders": {
       "count": {
@@ -443,9 +443,9 @@
       }
     }
   },
-  "ownerVaultHeading": "Trip vault",
-  "ownerAdminOversightHeading": "Admin oversight",
-  "ownerCommissionChip": "Commission: {amount} DT",
+  "ownerVaultHeading": "Coffre des courses",
+  "ownerAdminOversightHeading": "Supervision admin",
+  "ownerCommissionChip": "Commission : {amount} DT",
   "@ownerCommissionChip": {
     "placeholders": {
       "amount": {
@@ -464,10 +464,10 @@
       }
     }
   },
-  "ownerHqPortalHeading": "HQ command center",
-  "operatorDispatchCenterHeading": "Dispatch & monitoring",
-  "operatorDispatchPendingBlurb": "There are pending requests that need assigning.",
-  "operatorDispatchIdleBlurb": "System is connected. No pending bookings.",
+  "ownerHqPortalHeading": "Centre de commande HQ",
+  "operatorDispatchCenterHeading": "Dispatch et supervision",
+  "operatorDispatchPendingBlurb": "Des demandes en attente doivent être attribuées.",
+  "operatorDispatchIdleBlurb": "Système connecté. Aucune réservation en attente.",
   "operatorChipPending": "Pending: {count}",
   "@operatorChipPending": {
     "placeholders": {
@@ -522,13 +522,13 @@
       }
     }
   },
-  "operatorPhoneLabel": "Phone",
-  "operatorDriverNameLabel": "Driver name",
+  "operatorPhoneLabel": "Téléphone",
+  "operatorDriverNameLabel": "Nom du chauffeur",
   "operatorPinLabel": "PIN",
-  "operatorCreateDriverAccount": "Create driver account",
-  "operatorRefreshCorporateBookings": "Refresh corporate bookings",
-  "operatorTripVaultHeading": "Trip vault",
-  "operatorTripVaultTripsChip": "Trips: {count}",
+  "operatorCreateDriverAccount": "Créer un compte chauffeur",
+  "operatorRefreshCorporateBookings": "Actualiser les réservations B2B",
+  "operatorTripVaultHeading": "Coffre des courses",
+  "operatorTripVaultTripsChip": "Courses : {count}",
   "@operatorTripVaultTripsChip": {
     "placeholders": {
       "count": {
@@ -536,7 +536,7 @@
       }
     }
   },
-  "operatorTripVaultRevenueChip": "Revenue: {amount} DT",
+  "operatorTripVaultRevenueChip": "Revenu : {amount} DT",
   "@operatorTripVaultRevenueChip": {
     "placeholders": {
       "amount": {
@@ -544,18 +544,18 @@
       }
     }
   },
-  "operatorWalletBalanceLabel": "Wallet balance",
-  "operatorOwnerCommissionLabel": "Owner commission %",
-  "operatorB2bCommissionLabel": "B2B commission %",
-  "operatorAutoDeductEnabled": "Auto deduct enabled",
-  "operatorCarModelLabel": "Car model",
-  "operatorCarColorLabel": "Car color",
-  "operatorPickFromGallery": "Pick image from gallery",
-  "operatorRemovePickedImage": "Remove picked image",
-  "operatorPhotoUrlOptional": "Photo URL (optional)",
-  "operatorCancel": "Cancel",
-  "operatorSave": "Save",
-  "operatorDriverWalletLine": "Wallet: {wallet} DT | Owner %: {owner} | B2B %: {b2b}",
+  "operatorWalletBalanceLabel": "Solde portefeuille",
+  "operatorOwnerCommissionLabel": "Commission propriétaire %",
+  "operatorB2bCommissionLabel": "Commission B2B %",
+  "operatorAutoDeductEnabled": "Déduction auto activée",
+  "operatorCarModelLabel": "Modèle de voiture",
+  "operatorCarColorLabel": "Couleur de voiture",
+  "operatorPickFromGallery": "Choisir une image de la galerie",
+  "operatorRemovePickedImage": "Retirer l'image choisie",
+  "operatorPhotoUrlOptional": "URL photo (optionnel)",
+  "operatorCancel": "Annuler",
+  "operatorSave": "Enregistrer",
+  "operatorDriverWalletLine": "Portefeuille : {wallet} DT | Propriétaire % : {owner} | B2B % : {b2b}",
   "@operatorDriverWalletLine": {
     "placeholders": {
       "wallet": {
@@ -569,7 +569,7 @@
       }
     }
   },
-  "operatorDriverCarColorAppend": " | Color: {color}",
+  "operatorDriverCarColorAppend": " | Couleur : {color}",
   "@operatorDriverCarColorAppend": {
     "placeholders": {
       "color": {
@@ -577,7 +577,7 @@
       }
     }
   },
-  "operatorDriverCarLine": "\nCar: {model}",
+  "operatorDriverCarLine": "\nVoiture : {model}",
   "@operatorDriverCarLine": {
     "placeholders": {
       "model": {
@@ -585,9 +585,9 @@
       }
     }
   },
-  "statusLinePrefix": "Status: ",
-  "driverLabelPrefix": " | Driver: ",
-  "createdAtLinePrefix": "\nAt: ",
+  "statusLinePrefix": "Statut : ",
+  "driverLabelPrefix": " | Chauffeur : ",
+  "createdAtLinePrefix": "\nÀ : ",
   "walletWithAmount": "Wallet: {amount} DT",
   "@walletWithAmount": {
     "placeholders": {
@@ -612,52 +612,52 @@
     }
   },
   "operatorTabDispatch": "Dispatch",
-  "operatorTabDrivers": "Drivers",
+  "operatorTabDrivers": "Chauffeurs",
   "operatorTabB2b": "B2B",
-  "operatorTabTripVault": "Trip vault",
-  "operatorFillDriverFields": "Enter phone, driver name, and PIN.",
+  "operatorTabTripVault": "Coffre des courses",
+  "operatorFillDriverFields": "Saisissez téléphone, nom du chauffeur et PIN.",
   "placeCarthageAirport": "Carthage Airport (Tunis)",
   "placeEnfidhaAirport": "Enfidha–Hammamet Airport",
   "placeMonastirAirport": "Monastir Airport",
-  "placeSousseCenter": "Sousse city center",
+  "placeSousseCenter": "Centre-ville de Sousse",
   "placeHammamet": "Hammamet",
   "placeSousse": "Sousse",
   "placePortElKantaoui": "Port El Kantaoui",
   "placeNabeul": "Nabeul",
-  "homeWhatIsTitle": "What is Taxi Pro?",
-  "homeWhatIsBody": "Taxi Pro Tunisia connects you with drivers for airport transfers and city rides. Prices are fixed per route in the app; a night surcharge may apply between 9 PM and 5 AM. Book in the app, track your ride, and use in-app help when needed.",
-  "passengerFareFinalEstimate": "Final estimate for the ride",
-  "passengerPayCash": "Cash",
-  "passengerPayCardTpe": "Card (TPE)",
-  "operatorEntryGateLabel": "Entry gate:",
-  "operatorEmployeePasswordLabel": "Employee password:",
-  "operatorWelcomeOperatingRoom": "Welcome to the operating room.",
-  "operatorTabTodaysArrivals": "Today's arrivals",
-  "operatorTabLiveOrders": "Live orders",
-  "operatorTabDriverManagement": "Driver management",
-  "operatorTabTripHistory": "Trip history",
-  "operatorArrivalsDemoHeading": "Today's arrivals — Tunisia (demo data)",
-  "operatorColFlightNumber": "Flight number",
-  "operatorColDepartureAirport": "Departure airport",
-  "operatorColTakeoffTime": "Take-off time",
-  "operatorColExpectedArrival": "Expected arrival (today)",
-  "operatorColArrivalAirportTn": "Arrival airport (Tunisia)",
-  "operatorChooseDriverTopUp": "Choose the driver to top up:",
-  "operatorAmountReceivedDt": "Amount received (DT):",
-  "operatorRechargeBalance": "Recharge the balance",
-  "operatorCorporateBookingsSection": "Corporate (B2B) bookings",
+  "homeWhatIsTitle": "Qu'est-ce que Taxi Pro ?",
+  "homeWhatIsBody": "Taxi Pro Tunisie vous met en relation avec des chauffeurs pour les transferts aéroport et les trajets urbains. Les prix sont fixes par trajet dans l'application ; un supplément de nuit peut s'appliquer entre 21 h et 5 h. Réservez dans l'application, suivez votre trajet et utilisez l'aide intégrée si besoin.",
+  "passengerFareFinalEstimate": "Estimation finale de la course",
+  "passengerPayCash": "Espèces",
+  "passengerPayCardTpe": "Carte (TPE)",
+  "operatorEntryGateLabel": "Porte d'entrée :",
+  "operatorEmployeePasswordLabel": "Mot de passe employé :",
+  "operatorWelcomeOperatingRoom": "Bienvenue dans la salle d'opérations.",
+  "operatorTabTodaysArrivals": "Arrivées du jour",
+  "operatorTabLiveOrders": "Commandes en direct",
+  "operatorTabDriverManagement": "Gestion des chauffeurs",
+  "operatorTabTripHistory": "Historique des courses",
+  "operatorArrivalsDemoHeading": "Arrivées du jour — Tunisie (données démo)",
+  "operatorColFlightNumber": "Numéro de vol",
+  "operatorColDepartureAirport": "Aéroport de départ",
+  "operatorColTakeoffTime": "Heure de décollage",
+  "operatorColExpectedArrival": "Arrivée prévue (aujourd'hui)",
+  "operatorColArrivalAirportTn": "Aéroport d'arrivée (Tunisie)",
+  "operatorChooseDriverTopUp": "Choisissez le chauffeur à recharger :",
+  "operatorAmountReceivedDt": "Montant reçu (DT) :",
+  "operatorRechargeBalance": "Recharger le solde",
+  "operatorCorporateBookingsSection": "Réservations entreprises (B2B)",
   "operatorRoleAdminHq": "Admin HQ",
-  "operatorNoFlightArrivals": "No arrival rows loaded.",
-  "operatorUserAccountsHeading": "App user accounts",
-  "ownerPasswordCeoLabel": "Owner (CEO) password:",
-  "ownerWelcomeHq": "Welcome to Owner HQ.",
-  "ownerTabTreasury": "Treasury and profits",
-  "ownerTabSettings": "Settings",
-  "ownerTabHostelB2b": "Hostel Accounts (B2B)",
-  "ownerSettingsCommissionLabel": "Commission deducted percentage (%):",
-  "ownerSettingsCommissionHint": "Display only — link to driver accounts for live rates.",
-  "ownerSettingsRouteFaresHeading": "Route base fares (DT)",
-  "ownerSaveRouteFare": "Save",
+  "operatorNoFlightArrivals": "Aucune ligne d'arrivée chargée.",
+  "operatorUserAccountsHeading": "Comptes utilisateurs de l'application",
+  "ownerPasswordCeoLabel": "Mot de passe propriétaire (CEO) :",
+  "ownerWelcomeHq": "Bienvenue au QG propriétaire.",
+  "ownerTabTreasury": "Trésorerie et profits",
+  "ownerTabSettings": "Paramètres",
+  "ownerTabHostelB2b": "Comptes hôteliers (B2B)",
+  "ownerSettingsCommissionLabel": "Pourcentage de commission déduite (%) :",
+  "ownerSettingsCommissionHint": "Affichage uniquement — lier aux comptes chauffeurs pour des taux en direct.",
+  "ownerSettingsRouteFaresHeading": "Tarifs de base des trajets (DT)",
+  "ownerSaveRouteFare": "Enregistrer",
   "driverWalletDepletedTitle": "Portefeuille vide",
   "driverWalletDepletedBody": "Payez {amount} DT au propriétaire (via l’opérateur) pour recharger.",
   "@driverWalletDepletedBody": {

@@ -156,6 +156,8 @@ def driver_location(**kwargs: Any) -> Tuple[Any, int]:
         return bad
     body = request.get_json(silent=True) or {}
     current_zone = (body.get("current_zone") or "").strip()
+    if "is_available" in body and isinstance(body.get("is_available"), bool):
+        rides_service.set_driver_availability(uid, bool(body.get("is_available")))
     lat_raw = body.get("lat")
     lng_raw = body.get("lng")
     lat = None
@@ -174,3 +176,14 @@ def driver_location(**kwargs: Any) -> Tuple[Any, int]:
         lng=lng,
     )
     return jsonify({"ok": True}), 200
+
+
+@bp.get("/driver/gains")
+@require_jwt_with_uid("driver")
+def driver_gains(**kwargs: Any) -> Tuple[Any, int]:
+    uid = kwargs["_uid"]
+    bad = _guard_enabled(uid)
+    if bad:
+        return bad
+    data = rides_service.driver_gains_summary(uid)
+    return jsonify({"gains": data}), 200

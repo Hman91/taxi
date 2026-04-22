@@ -13,6 +13,30 @@ from . import translation_service
 _MESSAGE_MAX_LEN = 8000
 
 
+def _user_display_name(user_id: int) -> str:
+    u = db_module.user_by_id(user_id) or {}
+    email = str(u.get("email") or "").strip()
+    if email:
+        return email.split("@", 1)[0]
+    return f"User {user_id}"
+
+
+def _sender_name_for_ride(ride: Dict[str, Any], sender_user_id: int) -> str:
+    if int(ride.get("user_id") or 0) == sender_user_id:
+        return _user_display_name(sender_user_id)
+    did = ride.get("driver_id")
+    if did is None:
+        return _user_display_name(sender_user_id)
+    d = db_module.driver_by_id(int(did))
+    if d is None:
+        return _user_display_name(sender_user_id)
+    if int(d.get("user_id") or 0) == sender_user_id:
+        name = str(d.get("display_name") or "").strip()
+        if name:
+            return name
+    return _user_display_name(sender_user_id)
+
+
 def _participant_ok(ride: Dict[str, Any], user_id: int) -> bool:
     if int(ride["user_id"]) == user_id:
         return True
@@ -133,6 +157,7 @@ def list_messages(
             "conversation_id": int(m.conversation_id),
             "sender_user_id": int(m.sender_user_id),
             "sender_id": int(m.sender_user_id),
+            "sender_name": _sender_name_for_ride(ride, int(m.sender_user_id)),
             "original_text": m.original_text,
             "original_language": m.original_language,
             "created_at": m.created_at.isoformat() if m.created_at else None,
@@ -143,11 +168,16 @@ def list_messages(
 
 def _message_to_dict(m: Message) -> Dict[str, Any]:
     sid = int(m.sender_user_id)
+    conv = db.session.get(Conversation, int(m.conversation_id))
+    ride_id = int(conv.ride_id) if conv is not None and conv.ride_id is not None else None
+    ride = db_module.ride_get(ride_id) if ride_id is not None else None
     return {
         "message_id": int(m.id),
         "conversation_id": int(m.conversation_id),
+        "ride_id": ride_id,
         "sender_id": sid,
         "sender_user_id": sid,
+        "sender_name": _sender_name_for_ride(ride, sid) if ride is not None else _user_display_name(sid),
         "original_text": m.original_text,
         "original_language": m.original_language,
         "created_at": m.created_at.isoformat() if m.created_at else None,

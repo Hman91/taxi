@@ -415,8 +415,8 @@
       }
     }
   },
-  "ownerAppBarTitle": "Owner HQ",
-  "ownerProfitChip": "Profit: {amount} DT",
+  "ownerAppBarTitle": "车主总部",
+  "ownerProfitChip": "利润: {amount} DT",
   "@ownerProfitChip": {
     "placeholders": {
       "amount": {
@@ -424,7 +424,7 @@
       }
     }
   },
-  "ownerTripsCountChip": "Trips: {count}",
+  "ownerTripsCountChip": "行程: {count}",
   "@ownerTripsCountChip": {
     "placeholders": {
       "count": {
@@ -443,9 +443,9 @@
       }
     }
   },
-  "ownerVaultHeading": "Trip vault",
-  "ownerAdminOversightHeading": "Admin oversight",
-  "ownerCommissionChip": "Commission: {amount} DT",
+  "ownerVaultHeading": "行程档案",
+  "ownerAdminOversightHeading": "管理监控",
+  "ownerCommissionChip": "佣金: {amount} DT",
   "@ownerCommissionChip": {
     "placeholders": {
       "amount": {
@@ -464,11 +464,11 @@
       }
     }
   },
-  "ownerHqPortalHeading": "HQ command center",
-  "operatorDispatchCenterHeading": "Dispatch & monitoring",
-  "operatorDispatchPendingBlurb": "There are pending requests that need assigning.",
-  "operatorDispatchIdleBlurb": "System is connected. No pending bookings.",
-  "operatorChipPending": "Pending: {count}",
+  "ownerHqPortalHeading": "总部指挥中心",
+  "operatorDispatchCenterHeading": "调度与监控",
+  "operatorDispatchPendingBlurb": "有待分配的请求。",
+  "operatorDispatchIdleBlurb": "系统已连接。暂无待处理预订。",
+  "operatorChipPending": "待处理: {count}",
   "@operatorChipPending": {
     "placeholders": {
       "count": {
@@ -476,7 +476,7 @@
       }
     }
   },
-  "operatorChipAccepted": "Accepted: {count}",
+  "operatorChipAccepted": "已接受: {count}",
   "@operatorChipAccepted": {
     "placeholders": {
       "count": {
@@ -484,7 +484,7 @@
       }
     }
   },
-  "operatorChipOngoing": "Ongoing: {count}",
+  "operatorChipOngoing": "进行中: {count}",
   "@operatorChipOngoing": {
     "placeholders": {
       "count": {
@@ -492,7 +492,7 @@
       }
     }
   },
-  "operatorChipCompleted": "Completed: {count}",
+  "operatorChipCompleted": "已完成: {count}",
   "@operatorChipCompleted": {
     "placeholders": {
       "count": {
@@ -514,7 +514,7 @@
       }
     }
   },
-  "operatorDriversOnlineCount": "Drivers online: {count}",
+  "operatorDriversOnlineCount": "在线司机: {count}",
   "@operatorDriversOnlineCount": {
     "placeholders": {
       "count": {
@@ -522,13 +522,13 @@
       }
     }
   },
-  "operatorPhoneLabel": "Phone",
-  "operatorDriverNameLabel": "Driver name",
+  "operatorPhoneLabel": "电话",
+  "operatorDriverNameLabel": "司机姓名",
   "operatorPinLabel": "PIN",
-  "operatorCreateDriverAccount": "Create driver account",
-  "operatorRefreshCorporateBookings": "Refresh corporate bookings",
-  "operatorTripVaultHeading": "Trip vault",
-  "operatorTripVaultTripsChip": "Trips: {count}",
+  "operatorCreateDriverAccount": "创建司机账户",
+  "operatorRefreshCorporateBookings": "刷新企业预订",
+  "operatorTripVaultHeading": "行程档案",
+  "operatorTripVaultTripsChip": "行程: {count}",
   "@operatorTripVaultTripsChip": {
     "placeholders": {
       "count": {
@@ -536,7 +536,7 @@
       }
     }
   },
-  "operatorTripVaultRevenueChip": "Revenue: {amount} DT",
+  "operatorTripVaultRevenueChip": "收入: {amount} DT",
   "@operatorTripVaultRevenueChip": {
     "placeholders": {
       "amount": {
@@ -544,18 +544,18 @@
       }
     }
   },
-  "operatorWalletBalanceLabel": "Wallet balance",
-  "operatorOwnerCommissionLabel": "Owner commission %",
-  "operatorB2bCommissionLabel": "B2B commission %",
-  "operatorAutoDeductEnabled": "Auto deduct enabled",
-  "operatorCarModelLabel": "Car model",
-  "operatorCarColorLabel": "Car color",
-  "operatorPickFromGallery": "Pick image from gallery",
-  "operatorRemovePickedImage": "Remove picked image",
-  "operatorPhotoUrlOptional": "Photo URL (optional)",
-  "operatorCancel": "Cancel",
-  "operatorSave": "Save",
-  "operatorDriverWalletLine": "Wallet: {wallet} DT | Owner %: {owner} | B2B %: {b2b}",
+  "operatorWalletBalanceLabel": "钱包余额",
+  "operatorOwnerCommissionLabel": "车主佣金 %",
+  "operatorB2bCommissionLabel": "B2B 佣金 %",
+  "operatorAutoDeductEnabled": "自动扣款已启用",
+  "operatorCarModelLabel": "车辆型号",
+  "operatorCarColorLabel": "车辆颜色",
+  "operatorPickFromGallery": "从图库选择图片",
+  "operatorRemovePickedImage": "移除已选图片",
+  "operatorPhotoUrlOptional": "照片 URL（可选）",
+  "operatorCancel": "取消",
+  "operatorSave": "保存",
+  "operatorDriverWalletLine": "钱包: {wallet} DT | 车主 %: {owner} | B2B %: {b2b}",
   "@operatorDriverWalletLine": {
     "placeholders": {
       "wallet": {
@@ -569,7 +569,7 @@
       }
     }
   },
-  "operatorDriverCarColorAppend": " | Color: {color}",
+  "operatorDriverCarColorAppend": " | 颜色: {color}",
   "@operatorDriverCarColorAppend": {
     "placeholders": {
       "color": {
@@ -577,7 +577,7 @@
       }
     }
   },
-  "operatorDriverCarLine": "\nCar: {model}",
+  "operatorDriverCarLine": "\n车辆: {model}",
   "@operatorDriverCarLine": {
     "placeholders": {
       "model": {
@@ -585,9 +585,9 @@
       }
     }
   },
-  "statusLinePrefix": "Status: ",
-  "driverLabelPrefix": " | Driver: ",
-  "createdAtLinePrefix": "\nAt: ",
+  "statusLinePrefix": "状态: ",
+  "driverLabelPrefix": " | 司机: ",
+  "createdAtLinePrefix": "\n时间: ",
   "walletWithAmount": "Wallet: {amount} DT",
   "@walletWithAmount": {
     "placeholders": {
@@ -611,53 +611,53 @@
       }
     }
   },
-  "operatorTabDispatch": "Dispatch",
-  "operatorTabDrivers": "Drivers",
+  "operatorTabDispatch": "调度",
+  "operatorTabDrivers": "司机",
   "operatorTabB2b": "B2B",
-  "operatorTabTripVault": "Trip vault",
-  "operatorFillDriverFields": "Enter phone, driver name, and PIN.",
+  "operatorTabTripVault": "行程档案",
+  "operatorFillDriverFields": "请输入电话、司机姓名和 PIN。",
   "placeCarthageAirport": "Carthage Airport (Tunis)",
   "placeEnfidhaAirport": "Enfidha–Hammamet Airport",
   "placeMonastirAirport": "Monastir Airport",
-  "placeSousseCenter": "Sousse city center",
+  "placeSousseCenter": "苏斯市中心",
   "placeHammamet": "Hammamet",
   "placeSousse": "Sousse",
   "placePortElKantaoui": "Port El Kantaoui",
   "placeNabeul": "Nabeul",
-  "homeWhatIsTitle": "What is Taxi Pro?",
-  "homeWhatIsBody": "Taxi Pro Tunisia connects you with drivers for airport transfers and city rides. Prices are fixed per route in the app; a night surcharge may apply between 9 PM and 5 AM. Book in the app, track your ride, and use in-app help when needed.",
-  "passengerFareFinalEstimate": "Final estimate for the ride",
-  "passengerPayCash": "Cash",
-  "passengerPayCardTpe": "Card (TPE)",
-  "operatorEntryGateLabel": "Entry gate:",
-  "operatorEmployeePasswordLabel": "Employee password:",
-  "operatorWelcomeOperatingRoom": "Welcome to the operating room.",
-  "operatorTabTodaysArrivals": "Today's arrivals",
-  "operatorTabLiveOrders": "Live orders",
-  "operatorTabDriverManagement": "Driver management",
-  "operatorTabTripHistory": "Trip history",
-  "operatorArrivalsDemoHeading": "Today's arrivals — Tunisia (demo data)",
-  "operatorColFlightNumber": "Flight number",
-  "operatorColDepartureAirport": "Departure airport",
-  "operatorColTakeoffTime": "Take-off time",
-  "operatorColExpectedArrival": "Expected arrival (today)",
-  "operatorColArrivalAirportTn": "Arrival airport (Tunisia)",
-  "operatorChooseDriverTopUp": "Choose the driver to top up:",
-  "operatorAmountReceivedDt": "Amount received (DT):",
-  "operatorRechargeBalance": "Recharge the balance",
-  "operatorCorporateBookingsSection": "Corporate (B2B) bookings",
-  "operatorRoleAdminHq": "Admin HQ",
-  "operatorNoFlightArrivals": "No arrival rows loaded.",
-  "operatorUserAccountsHeading": "App user accounts",
-  "ownerPasswordCeoLabel": "Owner (CEO) password:",
-  "ownerWelcomeHq": "Welcome to Owner HQ.",
-  "ownerTabTreasury": "Treasury and profits",
-  "ownerTabSettings": "Settings",
-  "ownerTabHostelB2b": "Hostel Accounts (B2B)",
-  "ownerSettingsCommissionLabel": "Commission deducted percentage (%):",
-  "ownerSettingsCommissionHint": "Display only — link to driver accounts for live rates.",
-  "ownerSettingsRouteFaresHeading": "Route base fares (DT)",
-  "ownerSaveRouteFare": "Save",
+  "homeWhatIsTitle": "什么是 Taxi Pro？",
+  "homeWhatIsBody": "Taxi Pro Tunisia 可将您与司机连接，用于机场接送和城市出行。应用内按线路固定价格；21:00 到 05:00 可能加收夜间附加费。可在应用中下单、追踪行程，并在需要时使用应用内帮助。",
+  "passengerFareFinalEstimate": "行程最终预估",
+  "passengerPayCash": "现金",
+  "passengerPayCardTpe": "刷卡 (TPE)",
+  "operatorEntryGateLabel": "入口闸门:",
+  "operatorEmployeePasswordLabel": "员工密码:",
+  "operatorWelcomeOperatingRoom": "欢迎来到运营控制室。",
+  "operatorTabTodaysArrivals": "今日到达",
+  "operatorTabLiveOrders": "实时订单",
+  "operatorTabDriverManagement": "司机管理",
+  "operatorTabTripHistory": "行程历史",
+  "operatorArrivalsDemoHeading": "今日到达 — 突尼斯（演示数据）",
+  "operatorColFlightNumber": "航班号",
+  "operatorColDepartureAirport": "出发机场",
+  "operatorColTakeoffTime": "起飞时间",
+  "operatorColExpectedArrival": "预计到达（今日）",
+  "operatorColArrivalAirportTn": "到达机场（突尼斯）",
+  "operatorChooseDriverTopUp": "选择要充值的司机:",
+  "operatorAmountReceivedDt": "收到金额 (DT):",
+  "operatorRechargeBalance": "充值余额",
+  "operatorCorporateBookingsSection": "企业预订 (B2B)",
+  "operatorRoleAdminHq": "总部管理",
+  "operatorNoFlightArrivals": "未加载到达记录。",
+  "operatorUserAccountsHeading": "应用用户账户",
+  "ownerPasswordCeoLabel": "车主（CEO）密码:",
+  "ownerWelcomeHq": "欢迎来到车主总部。",
+  "ownerTabTreasury": "财务与利润",
+  "ownerTabSettings": "设置",
+  "ownerTabHostelB2b": "酒店账户 (B2B)",
+  "ownerSettingsCommissionLabel": "扣除佣金比例 (%):",
+  "ownerSettingsCommissionHint": "仅显示 — 可连接司机账户以显示实时费率。",
+  "ownerSettingsRouteFaresHeading": "路线基础价格 (DT)",
+  "ownerSaveRouteFare": "保存",
   "driverWalletDepletedTitle": "钱包为空",
   "driverWalletDepletedBody": "请通过运营商向店主支付 {amount} DT 以充值。",
   "@driverWalletDepletedBody": {

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../api/models.dart';
@@ -15,6 +14,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
 import '../l10n/ride_status_localization.dart';
 import '../models/app_notification.dart';
+import '../models/chat_message.dart';
 import '../services/chat_socket_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/taxi_app_service.dart';
@@ -41,6 +41,9 @@ class _DriverScreenState extends State<DriverScreen> {
   int? _driverId;
   String? _driverName;
   double _walletBalance = 0.0;
+  Map<String, dynamic>? _gains;
+  bool _isAvailable = true;
+  String _historyFilter = 'all';
   String? _carModel;
   String? _carColor;
   String? _photoUrl;
@@ -52,6 +55,11 @@ class _DriverScreenState extends State<DriverScreen> {
   Set<int> _lastPendingRideIds = <int>{};
   final Set<int> _selfAcceptedRideIds = <int>{};
   final Set<int> _dismissedPendingRideIds = <int>{};
+  final Map<int, int> _unreadChatByRideId = <int, int>{};
+  final Map<int, int> _rideIdByConversationId = <int, int>{};
+  final Map<int, int> _conversationIdByRideId = <int, int>{};
+  final Map<int, int> _lastSeenMessageIdByConversationId = <int, int>{};
+  int? _activeChatRideId;
   bool _busy = false;
   Timer? _ridesPollingTimer;
 
@@ -157,9 +165,15 @@ class _DriverScreenState extends State<DriverScreen> {
         _driverId = r.driverId;
         _driverName = r.driverName;
         _walletBalance = r.walletBalance;
+        _isAvailable = true;
         _carModel = r.carModel;
         _carColor = r.carColor;
         _photoUrl = r.photoUrl;
+        _unreadChatByRideId.clear();
+        _rideIdByConversationId.clear();
+        _conversationIdByRideId.clear();
+        _lastSeenMessageIdByConversationId.clear();
+        _activeChatRideId = null;
         _message = l.loggedInAs(r.role);
       });
       final fares = await _api.getAirportFares();
@@ -171,8 +185,10 @@ class _DriverScreenState extends State<DriverScreen> {
         }
       });
       await _refreshRides();
+      await _refreshGains();
       _socket.connect(
         r.accessToken,
+        onReceiveMessage: _onChatMessage,
         onRideStatus: _onRideStatusEvent,
         onDriverWallet: _onDriverWallet,
         transports: const ['polling'],
@@ -207,6 +223,8 @@ class _DriverScreenState extends State<DriverScreen> {
         }
       }
       setState(() => _rides = rides);
+      await _syncConversationRideMap(rides);
+      await _pollChatUnreadFallback();
       if (mounted) _processRideTransitions(previousById, rides);
     } catch (e) {
       if (!silent) {
@@ -216,6 +234,95 @@ class _DriverScreenState extends State<DriverScreen> {
       if (!silent && mounted) {
         setState(() => _busy = false);
       }
+    }
+  }
+
+  Future<void> _refreshGains() async {
+    final t = _token;
+    if (t == null) return;
+    try {
+      final g = await _api.driverGains(t);
+      if (!mounted) return;
+      setState(() {
+        _gains = g;
+        _isAvailable = (g['is_available'] == true);
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _syncConversationRideMap(List<Ride> rides) async {
+    final t = _token;
+    if (t == null) return;
+    final candidates = rides
+        .where((r) => r.status == 'accepted' || r.status == 'ongoing')
+        .toList();
+    for (final ride in candidates) {
+      try {
+        final info = await _api.getRideConversation(token: t, rideId: ride.id);
+        if (info == null) continue;
+        _rideIdByConversationId[info.conversationId] = ride.id;
+        _conversationIdByRideId[ride.id] = info.conversationId;
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _pollChatUnreadFallback() async {
+    final t = _token;
+    final uid = _userId;
+    if (t == null || uid == null) return;
+    final l = AppLocalizations.of(context)!;
+    final pairs = _conversationIdByRideId.entries.toList();
+    for (final entry in pairs) {
+      final rideId = entry.key;
+      final conversationId = entry.value;
+      if (_activeChatRideId == rideId) continue;
+      try {
+        final msgs = await _api.listConversationMessages(
+          token: t,
+          conversationId: conversationId,
+          limit: 20,
+        );
+        if (msgs.isEmpty) continue;
+        final prevSeen = _lastSeenMessageIdByConversationId[conversationId] ?? 0;
+        int maxId = prevSeen;
+        int incomingCount = 0;
+        ChatMessage? latestIncoming;
+        for (final m in msgs) {
+          if (m.id > maxId) maxId = m.id;
+          if (prevSeen > 0 && m.id > prevSeen && m.senderUserId != uid) {
+            incomingCount++;
+            if (latestIncoming == null || m.id > latestIncoming.id) {
+              latestIncoming = m;
+            }
+          }
+        }
+        if (prevSeen == 0) {
+          _lastSeenMessageIdByConversationId[conversationId] = maxId;
+          continue;
+        }
+        if (incomingCount > 0) {
+          if (!mounted) return;
+          setState(() {
+            _unreadChatByRideId[rideId] =
+                (_unreadChatByRideId[rideId] ?? 0) + incomingCount;
+          });
+          final body = (latestIncoming?.displayText.trim().isNotEmpty ?? false)
+              ? latestIncoming!.displayText
+              : l.openChatButton;
+          final senderName = (latestIncoming?.senderName ?? '').trim();
+          final title = senderName.isEmpty
+              ? l.openChatButton
+              : '${l.openChatButton} • $senderName';
+          _pushNotification(
+            title: title,
+            body: body,
+            event: 'chat_message_fallback',
+            rideId: rideId,
+          );
+          LocalNotificationService.instance.show(title: title, body: body);
+        }
+        _lastSeenMessageIdByConversationId[conversationId] = maxId;
+      } catch (_) {}
     }
   }
 
@@ -348,8 +455,42 @@ class _DriverScreenState extends State<DriverScreen> {
     final t = _token;
     if (t == null || _location.isEmpty) return;
     try {
-      await _api.updateDriverLocation(token: t, currentZone: _location);
+      await _api.updateDriverLocation(
+        token: t,
+        currentZone: _location,
+        isAvailable: _isAvailable,
+      );
     } catch (_) {}
+  }
+
+  Future<void> _setAvailability(bool v) async {
+    final t = _token;
+    if (t == null) return;
+    setState(() => _isAvailable = v);
+    try {
+      await _api.updateDriverLocation(
+        token: t,
+        currentZone: _location,
+        isAvailable: v,
+      );
+      await _refreshGains();
+      if (mounted) {
+        final l = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${l.statusLinePrefix}${localizedRideStatusLabel(l, v ? 'active' : 'cancelled')}',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isAvailable = !v;
+        _message = e.toString();
+      });
+    }
   }
 
   void _onDriverWallet(Map<String, dynamic> data) {
@@ -459,6 +600,64 @@ class _DriverScreenState extends State<DriverScreen> {
     }
   }
 
+  Future<int?> _resolveRideIdFromChatPayload(Map<String, dynamic> data) async {
+    final directRideId = (data['ride_id'] as num?)?.toInt();
+    if (directRideId != null) return directRideId;
+    final conversationId = (data['conversation_id'] as num?)?.toInt();
+    if (conversationId == null) return null;
+    final cached = _rideIdByConversationId[conversationId];
+    if (cached != null) return cached;
+    final t = _token;
+    if (t == null) return null;
+    final candidates = _rides
+        .where((r) => r.status == 'accepted' || r.status == 'ongoing')
+        .toList();
+    for (final ride in candidates) {
+      try {
+        final info = await _api.getRideConversation(token: t, rideId: ride.id);
+        if (info == null) continue;
+        _rideIdByConversationId[info.conversationId] = ride.id;
+        _conversationIdByRideId[ride.id] = info.conversationId;
+        if (info.conversationId == conversationId) {
+          return ride.id;
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  void _onChatMessage(Map<String, dynamic> data) async {
+    if (!mounted) return;
+    final msg = ChatMessage.fromJson(data);
+    if (msg.senderUserId == _userId) return;
+    final rideId = await _resolveRideIdFromChatPayload(data);
+    if (!mounted) return;
+    if (rideId == null) return;
+    if (_activeChatRideId == rideId) return;
+    final conversationId = (data['conversation_id'] as num?)?.toInt();
+    if (conversationId != null) {
+      _lastSeenMessageIdByConversationId[conversationId] = msg.id;
+      _conversationIdByRideId[rideId] = conversationId;
+      _rideIdByConversationId[conversationId] = rideId;
+    }
+    final l = AppLocalizations.of(context)!;
+    final body = msg.displayText.trim().isEmpty ? l.openChatButton : msg.displayText;
+    setState(() {
+      _unreadChatByRideId[rideId] = (_unreadChatByRideId[rideId] ?? 0) + 1;
+    });
+    final senderName = (msg.senderName ?? '').trim();
+    final title = senderName.isEmpty
+        ? l.openChatButton
+        : '${l.openChatButton} • $senderName';
+    _pushNotification(
+      title: title,
+      body: body,
+      event: 'chat_message',
+      rideId: rideId,
+    );
+    LocalNotificationService.instance.show(title: title, body: body);
+  }
+
   Future<void> _acceptRide(Ride ride) async {
     final t = _token;
     if (t == null) return;
@@ -534,6 +733,12 @@ class _DriverScreenState extends State<DriverScreen> {
         );
         return;
       }
+      setState(() {
+        _activeChatRideId = ride.id;
+        _unreadChatByRideId.remove(ride.id);
+      });
+      _rideIdByConversationId[info.conversationId] = ride.id;
+      _conversationIdByRideId[ride.id] = info.conversationId;
       await Navigator.of(context).push<void>(
         MaterialPageRoute<void>(
           builder: (_) => RideChatScreen(
@@ -544,10 +749,17 @@ class _DriverScreenState extends State<DriverScreen> {
           ),
         ),
       );
+      if (mounted && _activeChatRideId == ride.id) {
+        setState(() => _activeChatRideId = null);
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted && _activeChatRideId == ride.id) {
+        setState(() => _activeChatRideId = null);
+      }
     }
   }
 
@@ -560,14 +772,67 @@ class _DriverScreenState extends State<DriverScreen> {
     super.dispose();
   }
 
+  Widget _chatActionButton(Ride ride) {
+    final l = AppLocalizations.of(context)!;
+    final unread = _unreadChatByRideId[ride.id] ?? 0;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: TextButton.icon(
+        onPressed: _busy ? null : () => _openChat(ride),
+        icon: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l.openChatButton,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (unread > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  unread > 99 ? '99+' : '$unread',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final trackedRides = _rides
-        .where((r) =>
-            r.status == 'pending' ||
-            (r.status == 'accepted' && r.driverId != null) ||
-            r.status == 'ongoing')
+    final pendingOffers = _rides.where((r) => r.status == 'pending').toList();
+    final historyRides = _rides
+        .where((r) => _driverId != null && r.driverId == _driverId)
+        .toList();
+    final visibleHistoryRides = historyRides
+        .where((r) => _historyFilter == 'all' || r.status == _historyFilter)
         .toList();
     return Scaffold(
       appBar: AppBar(
@@ -652,6 +917,37 @@ class _DriverScreenState extends State<DriverScreen> {
                 ),
               ),
             ),
+          if (_token != null)
+            Card(
+              child: SwitchListTile(
+                value: _isAvailable,
+                onChanged: _busy ? null : _setAvailability,
+                title: Text(l.statusLinePrefix),
+                subtitle: Text(
+                  _isAvailable
+                      ? localizedRideStatusLabel(l, 'active')
+                      : localizedRideStatusLabel(l, 'cancelled'),
+                ),
+              ),
+            ),
+          if (_token != null && _gains != null)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.savings_outlined),
+                title: Text(
+                  l.ownerProfitChip(
+                    ((_gains!['net_gains'] ?? 0) as num).toStringAsFixed(3),
+                  ),
+                ),
+                subtitle: Text(
+                  '${l.tripsCount((_gains!['completed_rides_count'] ?? 0).toString())}'
+                  '\nNormal: ${((_gains!['gross_normal'] ?? 0) as num).toStringAsFixed(3)} DT'
+                  ' | B2B: ${((_gains!['gross_b2b'] ?? 0) as num).toStringAsFixed(3)} DT'
+                  '\n${l.operatorRoleAdminHq}: ${((_gains!['deducted_normal'] ?? 0) as num).toStringAsFixed(3)}'
+                  ' | B2B: ${((_gains!['deducted_b2b'] ?? 0) as num).toStringAsFixed(3)}',
+                ),
+              ),
+            ),
           if (_token != null && (_photoUrl?.isNotEmpty ?? false)) ...[
             const SizedBox(height: 8),
             Builder(builder: (context) {
@@ -705,125 +1001,182 @@ class _DriverScreenState extends State<DriverScreen> {
           ],
           if (_token != null) ...[
             const SizedBox(height: 8),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l.driverPendingRides,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 8),
-                    InputDecorator(
-                      decoration: InputDecoration(labelText: l.ridePickupLabel),
-                      child: DropdownButton<String>(
-                        value: _location.isEmpty ? null : _location,
-                        isExpanded: true,
-                        underline: const SizedBox.shrink(),
-                        items: _locations
-                            .map((e) => DropdownMenuItem(
-                                  value: e,
-                                  child: Text(localizedPlaceName(l, e)),
-                                ))
-                            .toList(),
-                        onChanged: (v) async {
-                          if (v == null) return;
-                          setState(() => _location = v);
-                          await _pushDriverLocation();
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    FilledButton.tonal(
-                      onPressed: _busy ? null : _refreshRides,
-                      child: Text(l.adminLoadRidesBtn),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+            DefaultTabController(
+              length: 2,
+              child: Column(
+                children: [
+                  TabBar(
+                    tabs: [
+                      Tab(text: l.driverPendingRides),
+                      Tab(text: l.operatorTabTripHistory),
+                    ],
+                  ),
+                  SizedBox(
+                    height: 520,
+                    child: TabBarView(
                       children: [
-                        Chip(
-                          avatar: const Icon(Icons.list_alt, size: 16),
-                          label: Text(l.driverOpenRequestsChip(trackedRides.length)),
-                        ),
-                        Chip(
-                          avatar: const Icon(Icons.notifications_active, size: 16),
-                          label: Text(l.driverUnreadAlertsChip(_unreadCount)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...trackedRides
-                .where(
-                  (r) =>
-                      r.status != 'pending' ||
-                      !_dismissedPendingRideIds.contains(r.id),
-                )
-                .map(
-              (r) {
-                if (r.status == 'pending') {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: DriverRideOfferCard(
-                      ride: r,
-                      api: _api,
-                      busy: _busy,
-                      onAccept: () => _acceptRide(r),
-                      onReject: () => _declineOffer(r),
-                    ),
-                  );
-                }
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(localizedRideRouteRow(l, r.pickup, r.destination)),
-                        Text(
-                          l.rideStatusFmt(
-                            localizedRideStatusLabel(l, r.status),
-                          ),
-                        ),
-                        Wrap(
-                          spacing: 6,
+                        ListView(
                           children: [
-                            if (r.status == 'accepted')
-                              TextButton(
-                                onPressed: _busy ? null : () => _startRide(r),
-                                child: Text(l.startRide),
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    InputDecorator(
+                                      decoration: InputDecoration(labelText: l.ridePickupLabel),
+                                      child: DropdownButton<String>(
+                                        value: _location.isEmpty ? null : _location,
+                                        isExpanded: true,
+                                        underline: const SizedBox.shrink(),
+                                        items: _locations
+                                            .map((e) => DropdownMenuItem(
+                                                  value: e,
+                                                  child: Text(localizedPlaceName(l, e)),
+                                                ))
+                                            .toList(),
+                                        onChanged: (v) async {
+                                          if (v == null) return;
+                                          setState(() => _location = v);
+                                          await _pushDriverLocation();
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    FilledButton.tonal(
+                                      onPressed: _busy ? null : _refreshRides,
+                                      child: Text(l.adminLoadRidesBtn),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        Chip(
+                                          avatar: const Icon(Icons.list_alt, size: 16),
+                                          label: Text(l.driverOpenRequestsChip(pendingOffers.length)),
+                                        ),
+                                        Chip(
+                                          avatar: const Icon(Icons.notifications_active, size: 16),
+                                          label: Text(l.driverUnreadAlertsChip(_unreadCount)),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            if (r.status == 'accepted' || r.status == 'ongoing')
-                              TextButton(
-                                onPressed:
-                                    _busy ? null : () => _releaseRide(r),
-                                child: Text(l.rejectRide),
+                            ),
+                            ...pendingOffers
+                                .where((r) => !_dismissedPendingRideIds.contains(r.id))
+                                .map(
+                              (r) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: DriverRideOfferCard(
+                                  ride: r,
+                                  api: _api,
+                                  busy: _busy,
+                                  onAccept: () => _acceptRide(r),
+                                  onReject: () => _declineOffer(r),
+                                ),
                               ),
-                            if (r.status == 'ongoing')
-                              FilledButton(
-                                onPressed:
-                                    _busy ? null : () => _completeRide(r),
-                                child: Text(l.completeRide),
+                            ),
+                          ],
+                        ),
+                        ListView(
+                          children: [
+                            InputDecorator(
+                              decoration: InputDecoration(labelText: l.operatorTabTripHistory),
+                              child: DropdownButton<String>(
+                                value: _historyFilter,
+                                isExpanded: true,
+                                underline: const SizedBox.shrink(),
+                                items: [
+                                  DropdownMenuItem(value: 'all', child: Text(l.adminRidesHeading)),
+                                  DropdownMenuItem(
+                                    value: 'completed',
+                                    child: Text(localizedRideStatusLabel(l, 'completed')),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'cancelled',
+                                    child: Text(localizedRideStatusLabel(l, 'cancelled')),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'accepted',
+                                    child: Text(localizedRideStatusLabel(l, 'accepted')),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'ongoing',
+                                    child: Text(localizedRideStatusLabel(l, 'ongoing')),
+                                  ),
+                                ],
+                                onChanged: (v) => setState(() => _historyFilter = v ?? 'all'),
                               ),
-                            if (r.status == 'accepted' || r.status == 'ongoing')
-                              TextButton(
-                                onPressed: _busy ? null : () => _openChat(r),
-                                child: Text(l.openChatButton),
-                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ...visibleHistoryRides.map(
+                              (r) {
+                                return Card(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(localizedRideRouteRow(l, r.pickup, r.destination)),
+                                        Text(
+                                          l.rideStatusFmt(
+                                            localizedRideStatusLabel(l, r.status),
+                                          ),
+                                        ),
+                                        if (r.isB2b == true)
+                                          Text(
+                                            '${l.roleB2b} • ${r.b2bGuestName ?? '-'} • ${((r.b2bFare ?? 0)).toStringAsFixed(3)} DT',
+                                            style: const TextStyle(fontWeight: FontWeight.w600),
+                                          ),
+                                        if ((r.passengerName ?? '').trim().isNotEmpty ||
+                                            (r.passengerPhone ?? '').trim().isNotEmpty)
+                                          Text(
+                                            '${l.rolePassenger}: ${(r.passengerName ?? '').trim().isEmpty ? '-' : r.passengerName}'
+                                            ' • ${(r.passengerPhone ?? '').trim().isEmpty ? '-' : r.passengerPhone}',
+                                            style: const TextStyle(fontWeight: FontWeight.w600),
+                                          ),
+                                        Wrap(
+                                          spacing: 6,
+                                          children: [
+                                            if (r.status == 'accepted')
+                                              TextButton(
+                                                onPressed: _busy ? null : () => _startRide(r),
+                                                child: Text(l.startRide),
+                                              ),
+                                            if (r.status == 'accepted' || r.status == 'ongoing')
+                                              TextButton(
+                                                onPressed:
+                                                    _busy ? null : () => _releaseRide(r),
+                                                child: Text(l.cancelRidePassenger),
+                                              ),
+                                            if (r.status == 'ongoing')
+                                              FilledButton(
+                                                onPressed:
+                                                    _busy ? null : () => _completeRide(r),
+                                                child: Text(l.completeRide),
+                                              ),
+                                            if (r.status == 'accepted' || r.status == 'ongoing')
+                                              _chatActionButton(r),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ],
                         ),
                       ],
                     ),
                   ),
-                );
-              }),
+                ],
+              ),
+            ),
           ],
           if (_message != null)
             Padding(

@@ -148,6 +148,39 @@ class _DriverRideOfferCardState extends State<DriverRideOfferCard> {
                 ),
               ],
             ),
+            if (widget.ride.isB2b == true) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1F2937),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'B2B: ${widget.ride.b2bGuestName ?? '-'}'
+                  ' • Room ${widget.ride.b2bRoomNumber ?? '-'}'
+                  ' • ${widget.ride.b2bSourceCode ?? '-'}',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+            if ((widget.ride.passengerName ?? '').trim().isNotEmpty ||
+                (widget.ride.passengerPhone ?? '').trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Passenger: ${(widget.ride.passengerName ?? '').trim().isEmpty ? '-' : widget.ride.passengerName}'
+                ' • ${(widget.ride.passengerPhone ?? '').trim().isEmpty ? '-' : widget.ride.passengerPhone}',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
             const SizedBox(height: 14),
             if (_quoteLoading)
               const Center(

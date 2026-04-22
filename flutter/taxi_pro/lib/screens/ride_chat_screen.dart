@@ -66,7 +66,18 @@ class _RideChatScreenState extends State<RideChatScreen> {
         widget.token,
         onReceiveMessage: _onIncoming,
         onRideStatus: _onRideStatus,
-        onError: (_) {},
+        onError: (data) {
+          if (!mounted) return;
+          setState(() {
+            _error = (data['code'] ?? 'chat_socket_error').toString();
+          });
+        },
+        onConnectError: (err) {
+          if (!mounted) return;
+          setState(() {
+            _error = err?.toString() ?? 'chat_socket_connect_error';
+          });
+        },
       );
       _repo.socket.joinConversation(widget.conversationId);
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEnd());

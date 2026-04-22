@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../api/client.dart';
 import '../app_locale.dart' show
@@ -20,6 +21,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
 import '../l10n/ride_status_localization.dart';
 import '../models/app_notification.dart';
+import '../models/chat_message.dart';
 import '../services/chat_socket_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/taxi_app_service.dart';
@@ -27,8 +29,6 @@ import '../widgets/locale_popup_menu.dart';
 import '../widgets/passenger_google_sign_in_button.dart';
 import '../theme/taxi_app_theme.dart';
 import 'ride_chat_screen.dart';
-
-enum _PassengerPayMethod { cash, cardTpe }
 
 class AppPassengerScreen extends StatefulWidget {
   const AppPassengerScreen({super.key});
@@ -40,6 +40,14 @@ class AppPassengerScreen extends StatefulWidget {
 class _AppPassengerScreenState extends State<AppPassengerScreen> {
   final _api = TaxiAppService();
   final _socket = ChatSocketService();
+  final _imagePicker = ImagePicker();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _signupNameCtrl = TextEditingController();
+  final _signupEmailCtrl = TextEditingController();
+  final _signupPhoneCtrl = TextEditingController();
+  final _signupPasswordCtrl = TextEditingController();
+  String _signupPhotoData = '';
   Map<String, double> _fares = {};
   String? _locationText;
   String? _locationPlaceName;
@@ -51,6 +59,11 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   final List<AppNotification> _notifications = [];
   final Set<int> _acceptedNotifiedRideIds = <int>{};
   final Set<int> _ratedRideIds = <int>{};
+  final Map<int, int> _unreadChatByRideId = <int, int>{};
+  final Map<int, int> _rideIdByConversationId = <int, int>{};
+  final Map<int, int> _conversationIdByRideId = <int, int>{};
+  final Map<int, int> _lastSeenMessageIdByConversationId = <int, int>{};
+  int? _activeChatRideId;
   String? _message;
   bool _busy = false;
   bool _backendLoginInFlight = false;
@@ -93,6 +106,12 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     _ridesPollingTimer?.cancel();
     _socket.disconnect();
     _googleUserSub?.cancel();
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    _signupNameCtrl.dispose();
+    _signupEmailCtrl.dispose();
+    _signupPhoneCtrl.dispose();
+    _signupPasswordCtrl.dispose();
     super.dispose();
   }
 
@@ -280,6 +299,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     _socket.connect(
       t,
       transports: const ['polling'],
+      onReceiveMessage: _onChatMessage,
       onRideStatus: (data) {
         if (!mounted) return;
         final rideMap = data['ride'];
@@ -311,6 +331,142 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       },
       onConnectError: (_) {},
     );
+  }
+
+  Future<int?> _resolveRideIdFromChatPayload(Map<String, dynamic> data) async {
+    final directRideId = (data['ride_id'] as num?)?.toInt();
+    if (directRideId != null) return directRideId;
+    final conversationId = (data['conversation_id'] as num?)?.toInt();
+    if (conversationId == null) return null;
+    final cached = _rideIdByConversationId[conversationId];
+    if (cached != null) return cached;
+    final t = _token;
+    if (t == null) return null;
+    final candidates = _rides
+        .where((r) => r.status == 'accepted' || r.status == 'ongoing')
+        .toList();
+    for (final ride in candidates) {
+      try {
+        final info = await _api.getRideConversation(token: t, rideId: ride.id);
+        if (info == null) continue;
+        _rideIdByConversationId[info.conversationId] = ride.id;
+        _conversationIdByRideId[ride.id] = info.conversationId;
+        if (info.conversationId == conversationId) {
+          return ride.id;
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  Future<void> _syncConversationRideMap(List<Ride> rides) async {
+    final t = _token;
+    if (t == null) return;
+    final candidates = rides
+        .where((r) => r.status == 'accepted' || r.status == 'ongoing')
+        .toList();
+    for (final ride in candidates) {
+      try {
+        final info = await _api.getRideConversation(token: t, rideId: ride.id);
+        if (info == null) continue;
+        _rideIdByConversationId[info.conversationId] = ride.id;
+        _conversationIdByRideId[ride.id] = info.conversationId;
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _pollChatUnreadFallback() async {
+    final t = _token;
+    final uid = _userId;
+    if (t == null || uid == null) return;
+    final l = AppLocalizations.of(context)!;
+    final pairs = _conversationIdByRideId.entries.toList();
+    for (final entry in pairs) {
+      final rideId = entry.key;
+      final conversationId = entry.value;
+      if (_activeChatRideId == rideId) continue;
+      try {
+        final msgs = await _api.listConversationMessages(
+          token: t,
+          conversationId: conversationId,
+          limit: 20,
+        );
+        if (msgs.isEmpty) continue;
+        final prevSeen = _lastSeenMessageIdByConversationId[conversationId] ?? 0;
+        int maxId = prevSeen;
+        int incomingCount = 0;
+        ChatMessage? latestIncoming;
+        for (final m in msgs) {
+          if (m.id > maxId) maxId = m.id;
+          if (prevSeen > 0 && m.id > prevSeen && m.senderUserId != uid) {
+            incomingCount++;
+            if (latestIncoming == null || m.id > latestIncoming.id) {
+              latestIncoming = m;
+            }
+          }
+        }
+        if (prevSeen == 0) {
+          _lastSeenMessageIdByConversationId[conversationId] = maxId;
+          continue;
+        }
+        if (incomingCount > 0) {
+          if (!mounted) return;
+          setState(() {
+            _unreadChatByRideId[rideId] =
+                (_unreadChatByRideId[rideId] ?? 0) + incomingCount;
+          });
+          final body = (latestIncoming?.displayText.trim().isNotEmpty ?? false)
+              ? latestIncoming!.displayText
+              : l.openChatButton;
+          final senderName = (latestIncoming?.senderName ?? '').trim();
+          final title = senderName.isEmpty
+              ? l.openChatButton
+              : '${l.openChatButton} • $senderName';
+          _pushNotification(
+            title: title,
+            body: body,
+            event: 'chat_message_fallback',
+            rideId: rideId,
+          );
+          LocalNotificationService.instance.show(title: title, body: body);
+        }
+        _lastSeenMessageIdByConversationId[conversationId] = maxId;
+      } catch (_) {}
+    }
+  }
+
+  void _onChatMessage(Map<String, dynamic> data) async {
+    if (!mounted) return;
+    final msg = ChatMessage.fromJson(data);
+    if (msg.senderUserId == _userId) return;
+    final rideId = await _resolveRideIdFromChatPayload(data);
+    if (!mounted) return;
+    if (rideId == null) return;
+    if (_activeChatRideId == rideId) return;
+    final conversationId = (data['conversation_id'] as num?)?.toInt();
+    if (conversationId != null) {
+      _lastSeenMessageIdByConversationId[conversationId] = msg.id;
+      _conversationIdByRideId[rideId] = conversationId;
+      _rideIdByConversationId[conversationId] = rideId;
+    }
+    final l = AppLocalizations.of(context)!;
+    final body = msg.displayText.trim().isEmpty
+        ? l.openChatButton
+        : msg.displayText;
+    setState(() {
+      _unreadChatByRideId[rideId] = (_unreadChatByRideId[rideId] ?? 0) + 1;
+    });
+    final senderName = (msg.senderName ?? '').trim();
+    final title = senderName.isEmpty
+        ? l.openChatButton
+        : '${l.openChatButton} • $senderName';
+    _pushNotification(
+      title: title,
+      body: body,
+      event: 'chat_message',
+      rideId: rideId,
+    );
+    LocalNotificationService.instance.show(title: title, body: body);
   }
 
   /// Interactive Google login for Android/iOS.
@@ -350,10 +506,29 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         setState(() => _message = AppLocalizations.of(context)!.errorGoogleSignInMissingToken);
         return;
       }
-      final r = await _api.loginGoogle(
-        idToken: hasIdToken ? idToken : null,
-        accessToken: hasAccessToken ? accessToken : null,
-      );
+      AppLoginResponse r;
+      try {
+        r = await _api.loginGoogle(
+          idToken: hasIdToken ? idToken : null,
+          accessToken: hasAccessToken ? accessToken : null,
+        );
+      } on TaxiApiException catch (e) {
+        if (e.message == 'phone_required') {
+          final phone = await _askRequiredPhoneForGoogle();
+          if (phone == null || phone.trim().isEmpty) {
+            if (!mounted) return;
+            setState(() => _message = 'Phone number is required.');
+            return;
+          }
+          r = await _api.loginGoogle(
+            idToken: hasIdToken ? idToken : null,
+            accessToken: hasAccessToken ? accessToken : null,
+            phone: phone.trim(),
+          );
+        } else {
+          rethrow;
+        }
+      }
       if (!userChoseLocaleThisSession.value) {
         applyPreferredLanguageToApp(r.preferredLanguage);
       } else {
@@ -389,6 +564,146 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     }
   }
 
+  Future<String?> _askRequiredPhoneForGoogle() async {
+    final ctrl = TextEditingController();
+    final focusNode = FocusNode();
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (focusNode.canRequestFocus) {
+            focusNode.requestFocus();
+          }
+        });
+        return AlertDialog(
+          title: const Text('Phone required'),
+          content: TextField(
+            controller: ctrl,
+            focusNode: focusNode,
+            autofocus: true,
+            keyboardType: TextInputType.phone,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
+            decoration: const InputDecoration(
+              labelText: 'Phone number',
+              hintText: 'Enter your phone number',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    focusNode.dispose();
+    ctrl.dispose();
+    return result;
+  }
+
+  Future<void> _loginWithEmailPassword() async {
+    final l = AppLocalizations.of(context)!;
+    final email = _emailCtrl.text.trim();
+    final password = _passwordCtrl.text;
+    if (email.isEmpty || password.isEmpty) {
+      setState(() => _message = 'Please fill in email and password.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      final r = await _api.loginApp(email: email, password: password);
+      if (!userChoseLocaleThisSession.value) {
+        applyPreferredLanguageToApp(r.preferredLanguage);
+      } else {
+        try {
+          await _api.patchPreferredLanguage(
+            token: r.accessToken,
+            preferredLanguage: appLocale.value.languageCode,
+          );
+        } catch (_) {}
+      }
+      rememberCurrentLocaleForRole(AppUiRole.passenger);
+      _token = r.accessToken;
+      _userId = r.userId;
+      _connectRealtime();
+      _startRidesPolling();
+      _fares = await _api.getAirportFares();
+      await _detectPassengerLocation();
+      await _refreshRides();
+    } on TaxiAccountDisabledException {
+      if (!mounted) return;
+      setState(() => _message = l.accountDisabledContactAdmin);
+    } catch (e) {
+      setState(() => _message = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _registerPassengerAccount() async {
+    final name = _signupNameCtrl.text.trim();
+    final email = _signupEmailCtrl.text.trim();
+    final phone = _signupPhoneCtrl.text.trim();
+    final password = _signupPasswordCtrl.text;
+    final photoUrl = _signupPhotoData.trim();
+    if (name.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
+      setState(() => _message = 'Please fill all required fields.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      await _api.registerAppUser(
+        email: email,
+        password: password,
+        role: 'user',
+        displayName: name,
+        phone: phone,
+        photoUrl: photoUrl,
+      );
+      _emailCtrl.text = email;
+      _passwordCtrl.text = password;
+      await _loginWithEmailPassword();
+    } catch (e) {
+      setState(() => _message = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _pickPassengerSignupImage() async {
+    final picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1600,
+    );
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    final name = picked.name.toLowerCase();
+    final ext = name.contains('.') ? name.split('.').last : 'jpeg';
+    final mime = ext == 'png'
+        ? 'image/png'
+        : ext == 'webp'
+            ? 'image/webp'
+            : 'image/jpeg';
+    if (!mounted) return;
+    setState(() {
+      _signupPhotoData = 'data:$mime;base64,${base64Encode(bytes)}';
+    });
+  }
+
   Future<void> _refreshRides({bool silent = false}) async {
     final t = _token;
     if (t == null) return;
@@ -402,6 +717,8 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         _rides = list;
         _message = null;
       });
+      await _syncConversationRideMap(list);
+      await _pollChatUnreadFallback();
       if (!mounted) return;
       final loc = AppLocalizations.of(context)!;
       for (final ride in list) {
@@ -481,44 +798,31 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       return;
     }
 
-    final starts = _startsFromFares(l);
-    if (starts.isEmpty) {
+    final routeKeys = _fares.keys.toList()
+      ..sort((a, b) =>
+          localizedRouteKeyForDisplay(l, a).compareTo(localizedRouteKeyForDisplay(l, b)));
+    if (routeKeys.isEmpty) {
       setState(() => _message = l.noRidesYetApp);
       return;
     }
 
-    String selectedStart = _locationPlaceName != null && starts.contains(_locationPlaceName)
-        ? _locationPlaceName!
-        : starts.first;
-    final initialEnds = _endsForStart(l, selectedStart);
-    String? selectedEnd = initialEnds.isNotEmpty ? initialEnds.first : null;
-    String promoCode = '';
-    Map<String, dynamic>? quote;
-    var paymentMethod = _PassengerPayMethod.cash;
-    bool? ok;
-    final promoCtrl = TextEditingController();
-    String? _routeKey() {
-      if (selectedEnd == null) return null;
-      final direct =
-          '$selectedStart $airportRouteKeySeparator $selectedEnd';
-      if (_fares.containsKey(direct)) return direct;
-      for (final key in _fares.keys) {
+    String selectedRouteKey = routeKeys.first;
+    if ((_locationPlaceName ?? '').trim().isNotEmpty) {
+      for (final key in routeKeys) {
         final parts = key.split(airportRouteKeySeparator);
-        if (parts.length != 2) continue;
-        if (parts[0].trim() == selectedStart &&
-            parts[1].trim() == selectedEnd) {
-          return key;
+        if (parts.isNotEmpty && parts.first.trim() == _locationPlaceName!.trim()) {
+          selectedRouteKey = key;
+          break;
         }
       }
-      return null;
     }
+    String promoCode = '';
+    Map<String, dynamic>? quote;
+    bool? ok;
+    final promoCtrl = TextEditingController();
 
     Future<void> recalcQuote(StateSetter setDialogState) async {
-      final rk = _routeKey();
-      if (rk == null) {
-        setDialogState(() => quote = null);
-        return;
-      }
+      final rk = selectedRouteKey;
       try {
         final q = await _api.quoteAirport(rk);
         var fare = (q['base_fare'] as num?)?.toDouble() ?? (_fares[rk] ?? 0);
@@ -544,39 +848,25 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                DropdownButtonFormField<String>(
-                  value: selectedStart,
-                  decoration: InputDecoration(labelText: l.ridePickupLabel),
-                  items: _startsFromFares(l)
-                      .map((s) => DropdownMenuItem(
-                            value: s,
-                            child: Text(localizedPlaceName(l, s)),
-                          ))
-                      .toList(),
-                  onChanged: (v) async {
-                    if (v == null) return;
-                    selectedStart = v;
-                    final ends = _endsForStart(l, v);
-                    selectedEnd = ends.isNotEmpty ? ends.first : null;
-                    await recalcQuote(setDialogState);
-                    setDialogState(() {});
-                  },
-                ),
-                DropdownButtonFormField<String>(
-                  value: selectedEnd,
-                  decoration:
-                      InputDecoration(labelText: l.rideDestinationLabel),
-                  items: _endsForStart(l, selectedStart)
-                      .map((e) => DropdownMenuItem(
-                            value: e,
-                            child: Text(localizedPlaceName(l, e)),
-                          ))
-                      .toList(),
-                  onChanged: (v) async {
-                    selectedEnd = v;
-                    await recalcQuote(setDialogState);
-                    setDialogState(() {});
-                  },
+                InputDecorator(
+                  decoration: InputDecoration(labelText: l.route),
+                  child: DropdownButton<String>(
+                    value: selectedRouteKey,
+                    isExpanded: true,
+                    underline: const SizedBox.shrink(),
+                    items: routeKeys
+                        .map((k) => DropdownMenuItem(
+                              value: k,
+                              child: Text(localizedRouteKeyForDisplay(l, k)),
+                            ))
+                        .toList(),
+                    onChanged: (v) async {
+                      if (v == null) return;
+                      selectedRouteKey = v;
+                      await recalcQuote(setDialogState);
+                      setDialogState(() {});
+                    },
+                  ),
                 ),
                 TextField(
                   controller: promoCtrl,
@@ -588,12 +878,9 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                 ),
                 const SizedBox(height: 8),
                 if (quote != null) ...[
-                  _buildPassengerFareAndPayment(
+                  _buildPassengerFareCard(
                     l,
                     (quote!['final_fare'] as num).toDouble(),
-                    paymentMethod,
-                    (v) => setDialogState(
-                        () => paymentMethod = v ?? paymentMethod),
                   ),
                   const SizedBox(height: 10),
                   Text(
@@ -642,9 +929,6 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       if (!mounted) return;
       final fareText = (q['final_fare'] as num).toStringAsFixed(3);
       final promoPart = promoCode.isEmpty ? '' : ' | $promoCode';
-      final payLabel = paymentMethod == _PassengerPayMethod.cash
-          ? l.passengerPayCash
-          : l.passengerPayCardTpe;
       _pushNotification(
         title: l.notificationRequestSentTitle,
         body: l.notificationRequestSentBody,
@@ -654,7 +938,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         SnackBar(
           content: Text(
             l.requestSentSnackLine(
-              '${l.fareDt(fareText)} · $payLabel',
+              l.fareDt(fareText),
               promoPart,
             ),
           ),
@@ -751,6 +1035,12 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
             .showSnackBar(SnackBar(content: Text(l.chatUnavailable)));
         return;
       }
+      setState(() {
+        _activeChatRideId = ride.id;
+        _unreadChatByRideId.remove(ride.id);
+      });
+      _rideIdByConversationId[info.conversationId] = ride.id;
+      _conversationIdByRideId[ride.id] = info.conversationId;
       await Navigator.of(context).push<void>(
         MaterialPageRoute<void>(
           builder: (_) => RideChatScreen(
@@ -761,6 +1051,9 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
           ),
         ),
       );
+      if (mounted && _activeChatRideId == ride.id) {
+        setState(() => _activeChatRideId = null);
+      }
       await _refreshRides();
     } catch (e) {
       if (mounted) {
@@ -768,6 +1061,9 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
             .showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
+      if (mounted && _activeChatRideId == ride.id) {
+        setState(() => _activeChatRideId = null);
+      }
       if (mounted) setState(() => _busy = false);
     }
   }
@@ -783,8 +1079,65 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       _userId = null;
       _rides = [];
       _notifications.clear();
+      _unreadChatByRideId.clear();
+      _rideIdByConversationId.clear();
+      _conversationIdByRideId.clear();
+      _lastSeenMessageIdByConversationId.clear();
+      _activeChatRideId = null;
       _message = null;
     });
+  }
+
+  Widget _chatActionButton(Ride ride) {
+    final l = AppLocalizations.of(context)!;
+    final unread = _unreadChatByRideId[ride.id] ?? 0;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: TextButton.icon(
+        onPressed: _busy ? null : () => _openChat(ride),
+        icon: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l.openChatButton,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (unread > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  unread > 99 ? '99+' : '$unread',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        ),
+      ),
+    );
   }
 
   List<String> _startsFromFares(AppLocalizations l) {
@@ -875,8 +1228,25 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      l.passengerGoogleLoginRequired,
+                      l.signInApp,
                       style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _emailCtrl,
+                      decoration: InputDecoration(labelText: l.emailLabel),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _passwordCtrl,
+                      obscureText: true,
+                      decoration: InputDecoration(labelText: l.passwordLabel),
+                    ),
+                    const SizedBox(height: 10),
+                    FilledButton.icon(
+                      onPressed: _busy ? null : _loginWithEmailPassword,
+                      icon: const Icon(Icons.login),
+                      label: Text(l.signInApp),
                     ),
                   ],
                 ),
@@ -891,6 +1261,81 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                 icon: const Icon(Icons.login),
                 label: Text(l.continueWithGoogle),
               ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l.registerAppAccount,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _signupNameCtrl,
+                      decoration: InputDecoration(labelText: l.operatorDriverNameLabel),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _signupEmailCtrl,
+                      decoration: InputDecoration(labelText: l.emailLabel),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _signupPhoneCtrl,
+                      decoration: InputDecoration(labelText: l.operatorPhoneLabel),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _signupPasswordCtrl,
+                      obscureText: true,
+                      decoration: InputDecoration(labelText: l.passwordLabel),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: _busy ? null : _pickPassengerSignupImage,
+                      icon: const Icon(Icons.photo_library),
+                      label: Text(l.operatorPickFromGallery),
+                    ),
+                    if (_signupPhotoData.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Builder(
+                        builder: (_) {
+                          final provider =
+                              _imageProviderFromString(_signupPhotoData);
+                          if (provider == null) return const SizedBox.shrink();
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image(
+                              image: provider,
+                              height: 90,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  const SizedBox.shrink(),
+                            ),
+                          );
+                        },
+                      ),
+                      TextButton.icon(
+                        onPressed: _busy
+                            ? null
+                            : () => setState(() => _signupPhotoData = ''),
+                        icon: const Icon(Icons.delete_outline),
+                        label: Text(l.operatorRemovePickedImage),
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    FilledButton.icon(
+                      onPressed: _busy ? null : _registerPassengerAccount,
+                      icon: const Icon(Icons.person_add),
+                      label: Text(l.registerAppAccount),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ] else ...[
             Card(
               color: TaxiAppColors.darkPanel,
@@ -1012,10 +1457,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                           onPressed: _busy ? null : () => _cancelRide(r),
                           child: Text(l.cancelRidePassenger),
                         ),
-                      TextButton(
-                        onPressed: _busy ? null : () => _openChat(r),
-                        child: Text(l.openChatButton),
-                      ),
+                      _chatActionButton(r),
                       if (r.status == 'completed' && !_ratedRideIds.contains(r.id))
                         TextButton(
                           onPressed: _busy ? null : () => _rateCompletedRide(r),
@@ -1036,11 +1478,9 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     );
   }
 
-  Widget _buildPassengerFareAndPayment(
+  Widget _buildPassengerFareCard(
     AppLocalizations l,
     double finalFare,
-    _PassengerPayMethod paymentMethod,
-    void Function(_PassengerPayMethod?) onPaymentChanged,
   ) {
     final fareStr = finalFare.toStringAsFixed(2);
     return Column(
@@ -1068,98 +1508,6 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                 l.passengerFareFinalEstimate,
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          '${l.paymentType}:',
-          style: const TextStyle(
-            color: TaxiAppColors.text,
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF8E1),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0x338B1428)),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: () =>
-                      onPaymentChanged(_PassengerPayMethod.cash),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Radio<_PassengerPayMethod>(
-                          value: _PassengerPayMethod.cash,
-                          groupValue: paymentMethod,
-                          onChanged: onPaymentChanged,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        Icon(Icons.payments, color: Colors.green[700], size: 22),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            l.passengerPayCash,
-                            style: const TextStyle(
-                              color: TaxiAppColors.text,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: InkWell(
-                  onTap: () =>
-                      onPaymentChanged(_PassengerPayMethod.cardTpe),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Radio<_PassengerPayMethod>(
-                          value: _PassengerPayMethod.cardTpe,
-                          groupValue: paymentMethod,
-                          onChanged: onPaymentChanged,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        Icon(Icons.credit_card, color: Colors.blue[700], size: 22),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            l.passengerPayCardTpe,
-                            style: const TextStyle(
-                              color: TaxiAppColors.text,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
               ),
             ],
           ),

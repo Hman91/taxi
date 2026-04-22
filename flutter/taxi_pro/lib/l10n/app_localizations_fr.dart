@@ -12,11 +12,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get appTitle => 'Taxi Pro Tunisie';
 
   @override
-  String get homeWhatIsTitle => 'What is Taxi Pro?';
+  String get homeWhatIsTitle => 'Qu\'est-ce que Taxi Pro ?';
 
   @override
   String get homeWhatIsBody =>
-      'Taxi Pro Tunisia connects you with drivers for airport transfers and city rides. Prices are fixed per route in the app; a night surcharge may apply between 9 PM and 5 AM. Book in the app, track your ride, and use in-app help when needed.';
+      'Taxi Pro Tunisie vous met en relation avec des chauffeurs pour les transferts aéroport et les trajets urbains. Les prix sont fixes par trajet dans l\'application ; un supplément de nuit peut s\'appliquer entre 21 h et 5 h. Réservez dans l\'application, suivez votre trajet et utilisez l\'aide intégrée si besoin.';
 
   @override
   String get loginAs => 'Connexion en tant que';
@@ -99,13 +99,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get paymentType => 'Mode de paiement';
 
   @override
-  String get passengerFareFinalEstimate => 'Final estimate for the ride';
+  String get passengerFareFinalEstimate => 'Estimation finale de la course';
 
   @override
-  String get passengerPayCash => 'Cash';
+  String get passengerPayCash => 'Espèces';
 
   @override
-  String get passengerPayCardTpe => 'Card (TPE)';
+  String get passengerPayCardTpe => 'Carte (TPE)';
 
   @override
   String get cashOrCard => 'Espèces / carte';
@@ -171,65 +171,69 @@ class AppLocalizationsFr extends AppLocalizations {
   String get operatorTitle => 'Opérateur / Dispatch';
 
   @override
-  String get operatorEntryGateLabel => 'Entry gate:';
+  String get operatorEntryGateLabel => 'Porte d\'entrée :';
 
   @override
-  String get operatorEmployeePasswordLabel => 'Employee password:';
+  String get operatorEmployeePasswordLabel => 'Mot de passe employé :';
 
   @override
-  String get operatorWelcomeOperatingRoom => 'Welcome to the operating room.';
+  String get operatorWelcomeOperatingRoom =>
+      'Bienvenue dans la salle d\'opérations.';
 
   @override
-  String get operatorTabTodaysArrivals => 'Today\'s arrivals';
+  String get operatorTabTodaysArrivals => 'Arrivées du jour';
 
   @override
-  String get operatorTabLiveOrders => 'Live orders';
+  String get operatorTabLiveOrders => 'Commandes en direct';
 
   @override
-  String get operatorTabDriverManagement => 'Driver management';
+  String get operatorTabDriverManagement => 'Gestion des chauffeurs';
 
   @override
-  String get operatorTabTripHistory => 'Trip history';
+  String get operatorTabTripHistory => 'Historique des courses';
 
   @override
   String get operatorArrivalsDemoHeading =>
-      'Today\'s arrivals — Tunisia (demo data)';
+      'Arrivées du jour — Tunisie (données démo)';
 
   @override
-  String get operatorColFlightNumber => 'Flight number';
+  String get operatorColFlightNumber => 'Numéro de vol';
 
   @override
-  String get operatorColDepartureAirport => 'Departure airport';
+  String get operatorColDepartureAirport => 'Aéroport de départ';
 
   @override
-  String get operatorColTakeoffTime => 'Take-off time';
+  String get operatorColTakeoffTime => 'Heure de décollage';
 
   @override
-  String get operatorColExpectedArrival => 'Expected arrival (today)';
+  String get operatorColExpectedArrival => 'Arrivée prévue (aujourd\'hui)';
 
   @override
-  String get operatorColArrivalAirportTn => 'Arrival airport (Tunisia)';
+  String get operatorColArrivalAirportTn => 'Aéroport d\'arrivée (Tunisie)';
 
   @override
-  String get operatorChooseDriverTopUp => 'Choose the driver to top up:';
+  String get operatorChooseDriverTopUp =>
+      'Choisissez le chauffeur à recharger :';
 
   @override
-  String get operatorAmountReceivedDt => 'Amount received (DT):';
+  String get operatorAmountReceivedDt => 'Montant reçu (DT) :';
 
   @override
-  String get operatorRechargeBalance => 'Recharge the balance';
+  String get operatorRechargeBalance => 'Recharger le solde';
 
   @override
-  String get operatorCorporateBookingsSection => 'Corporate (B2B) bookings';
+  String get operatorCorporateBookingsSection =>
+      'Réservations entreprises (B2B)';
 
   @override
   String get operatorRoleAdminHq => 'Admin HQ';
 
   @override
-  String get operatorNoFlightArrivals => 'No arrival rows loaded.';
+  String get operatorNoFlightArrivals => 'Aucune ligne d\'arrivée chargée.';
 
   @override
-  String get operatorUserAccountsHeading => 'App user accounts';
+  String get operatorUserAccountsHeading =>
+      'Comptes utilisateurs de l\'application';
 
   @override
   String get operatorCode => 'Code opérateur';
@@ -381,7 +385,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get placeMonastirAirport => 'Monastir Airport';
 
   @override
-  String get placeSousseCenter => 'Sousse city center';
+  String get placeSousseCenter => 'Centre-ville de Sousse';
 
   @override
   String get placeHammamet => 'Hammamet';
@@ -697,45 +701,46 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get ownerAppBarTitle => 'Owner HQ';
+  String get ownerAppBarTitle => 'QG propriétaire';
 
   @override
-  String get ownerPasswordCeoLabel => 'Owner (CEO) password:';
+  String get ownerPasswordCeoLabel => 'Mot de passe propriétaire (CEO) :';
 
   @override
-  String get ownerWelcomeHq => 'Welcome to Owner HQ.';
+  String get ownerWelcomeHq => 'Bienvenue au QG propriétaire.';
 
   @override
-  String get ownerTabTreasury => 'Treasury and profits';
+  String get ownerTabTreasury => 'Trésorerie et profits';
 
   @override
-  String get ownerTabSettings => 'Settings';
+  String get ownerTabSettings => 'Paramètres';
 
   @override
-  String get ownerTabHostelB2b => 'Hostel Accounts (B2B)';
+  String get ownerTabHostelB2b => 'Comptes hôteliers (B2B)';
 
   @override
   String get ownerSettingsCommissionLabel =>
-      'Commission deducted percentage (%):';
+      'Pourcentage de commission déduite (%) :';
 
   @override
   String get ownerSettingsCommissionHint =>
-      'Display only — link to driver accounts for live rates.';
+      'Affichage uniquement — lier aux comptes chauffeurs pour des taux en direct.';
 
   @override
-  String get ownerSettingsRouteFaresHeading => 'Route base fares (DT)';
+  String get ownerSettingsRouteFaresHeading =>
+      'Tarifs de base des trajets (DT)';
 
   @override
-  String get ownerSaveRouteFare => 'Save';
+  String get ownerSaveRouteFare => 'Enregistrer';
 
   @override
   String ownerProfitChip(String amount) {
-    return 'Profit: $amount DT';
+    return 'Profit : $amount DT';
   }
 
   @override
   String ownerTripsCountChip(String count) {
-    return 'Trips: $count';
+    return 'Courses : $count';
   }
 
   @override
@@ -744,14 +749,14 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get ownerVaultHeading => 'Trip vault';
+  String get ownerVaultHeading => 'Coffre des courses';
 
   @override
-  String get ownerAdminOversightHeading => 'Admin oversight';
+  String get ownerAdminOversightHeading => 'Supervision admin';
 
   @override
   String ownerCommissionChip(String amount) {
-    return 'Commission: $amount DT';
+    return 'Commission : $amount DT';
   }
 
   @override
@@ -760,30 +765,30 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get ownerHqPortalHeading => 'HQ command center';
+  String get ownerHqPortalHeading => 'Centre de commande HQ';
 
   @override
   String get operatorTabDispatch => 'Dispatch';
 
   @override
-  String get operatorTabDrivers => 'Drivers';
+  String get operatorTabDrivers => 'Chauffeurs';
 
   @override
   String get operatorTabB2b => 'B2B';
 
   @override
-  String get operatorTabTripVault => 'Trip vault';
+  String get operatorTabTripVault => 'Coffre des courses';
 
   @override
-  String get operatorDispatchCenterHeading => 'Dispatch & monitoring';
+  String get operatorDispatchCenterHeading => 'Dispatch et supervision';
 
   @override
   String get operatorDispatchPendingBlurb =>
-      'There are pending requests that need assigning.';
+      'Des demandes en attente doivent être attribuées.';
 
   @override
   String get operatorDispatchIdleBlurb =>
-      'System is connected. No pending bookings.';
+      'Système connecté. Aucune réservation en attente.';
 
   @override
   String operatorChipPending(int count) {
@@ -817,92 +822,94 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get operatorPhoneLabel => 'Phone';
+  String get operatorPhoneLabel => 'Téléphone';
 
   @override
-  String get operatorDriverNameLabel => 'Driver name';
+  String get operatorDriverNameLabel => 'Nom du chauffeur';
 
   @override
   String get operatorPinLabel => 'PIN';
 
   @override
-  String get operatorFillDriverFields => 'Enter phone, driver name, and PIN.';
+  String get operatorFillDriverFields =>
+      'Saisissez téléphone, nom du chauffeur et PIN.';
 
   @override
-  String get operatorCreateDriverAccount => 'Create driver account';
+  String get operatorCreateDriverAccount => 'Créer un compte chauffeur';
 
   @override
-  String get operatorRefreshCorporateBookings => 'Refresh corporate bookings';
+  String get operatorRefreshCorporateBookings =>
+      'Actualiser les réservations B2B';
 
   @override
-  String get operatorTripVaultHeading => 'Trip vault';
+  String get operatorTripVaultHeading => 'Coffre des courses';
 
   @override
   String operatorTripVaultTripsChip(int count) {
-    return 'Trips: $count';
+    return 'Courses : $count';
   }
 
   @override
   String operatorTripVaultRevenueChip(String amount) {
-    return 'Revenue: $amount DT';
+    return 'Revenu : $amount DT';
   }
 
   @override
-  String get operatorWalletBalanceLabel => 'Wallet balance';
+  String get operatorWalletBalanceLabel => 'Solde portefeuille';
 
   @override
-  String get operatorOwnerCommissionLabel => 'Owner commission %';
+  String get operatorOwnerCommissionLabel => 'Commission propriétaire %';
 
   @override
-  String get operatorB2bCommissionLabel => 'B2B commission %';
+  String get operatorB2bCommissionLabel => 'Commission B2B %';
 
   @override
-  String get operatorAutoDeductEnabled => 'Auto deduct enabled';
+  String get operatorAutoDeductEnabled => 'Déduction auto activée';
 
   @override
-  String get operatorCarModelLabel => 'Car model';
+  String get operatorCarModelLabel => 'Modèle de voiture';
 
   @override
-  String get operatorCarColorLabel => 'Car color';
+  String get operatorCarColorLabel => 'Couleur de voiture';
 
   @override
-  String get operatorPickFromGallery => 'Pick image from gallery';
+  String get operatorPickFromGallery => 'Choisir une image de la galerie';
 
   @override
-  String get operatorRemovePickedImage => 'Remove picked image';
+  String get operatorRemovePickedImage => 'Retirer l\'image choisie';
 
   @override
-  String get operatorPhotoUrlOptional => 'Photo URL (optional)';
+  String get operatorPhotoUrlOptional => 'URL photo (optionnel)';
 
   @override
-  String get operatorCancel => 'Cancel';
+  String get operatorCancel => 'Annuler';
 
   @override
-  String get operatorSave => 'Save';
+  String get operatorSave => 'Enregistrer';
 
   @override
   String operatorDriverWalletLine(String wallet, String owner, String b2b) {
-    return 'Wallet: $wallet DT | Owner %: $owner | B2B %: $b2b';
+    return 'Portefeuille : $wallet DT | Propriétaire % : $owner | B2B % : $b2b';
   }
 
   @override
   String operatorDriverCarColorAppend(String color) {
-    return ' | Color: $color';
+    return ' | Couleur : $color';
   }
 
   @override
   String operatorDriverCarLine(String model) {
-    return '\nCar: $model';
+    return '\nVoiture : $model';
   }
 
   @override
-  String get statusLinePrefix => 'Status: ';
+  String get statusLinePrefix => 'Statut : ';
 
   @override
-  String get driverLabelPrefix => ' | Driver: ';
+  String get driverLabelPrefix => ' | Chauffeur : ';
 
   @override
-  String get createdAtLinePrefix => '\nAt: ';
+  String get createdAtLinePrefix => '\nÀ : ';
 
   @override
   String walletWithAmount(String amount) {

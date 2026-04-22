@@ -14,6 +14,7 @@ _FALLBACK_BASE_FARE_DT = 70.0
 # One-shot alert payload when balance crosses from positive to depleted (≤0).
 _REQUIRED_TOPUP_DT = 100.0
 _OWNER_COMMISSION_RATE = 0.10
+_B2B_EXTRA_COMMISSION_RATE = 0.05
 
 _ZONE_COORDS: Dict[str, tuple[float, float]] = {
     "مطار قرطاج": (36.8508, 10.2272),
@@ -100,12 +101,9 @@ def _apply_wallet_on_complete(
     acct = db_module.driver_pin_account_by_user_id(driver_user_id)
     if acct is None:
         return
-    pickup = (ride_before_complete.get("pickup") or "").strip()
-    dest = (ride_before_complete.get("destination") or "").strip()
-    route_key = f"{pickup} ➡️ {dest}"
-    gr = pricing.get_airport_route(route_key)
-    base_fare = float(gr["base_fare"]) if gr is not None else _FALLBACK_BASE_FARE_DT
-    deduct = round(base_fare * _OWNER_COMMISSION_RATE, 3)
+    fare_ref, effective_rate, deduct, is_b2b = _deduction_components_for_ride(
+        ride_before_complete
+    )
     old_bal = float(acct["wallet_balance"] or 0.0)
     new_bal = round(old_bal - deduct, 3)
     db_module.driver_pin_update(int(acct["id"]), wallet_balance=new_bal)
@@ -115,7 +113,9 @@ def _apply_wallet_on_complete(
             "event": "wallet_updated",
             "wallet_balance": new_bal,
             "deducted": deduct,
-            "base_fare_reference": base_fare,
+            "base_fare_reference": fare_ref,
+            "commission_rate_applied": effective_rate,
+            "is_b2b_ride": is_b2b,
             "ride_id": int(ride_before_complete["id"]),
         },
     )
@@ -146,6 +146,76 @@ def _apply_wallet_on_complete(
                 "message": owner_msg,
             }
         )
+
+
+def _deduction_components_for_ride(
+    ride_row: Dict[str, Any],
+) -> tuple[float, float, float, bool]:
+    pickup = (ride_row.get("pickup") or "").strip()
+    dest = (ride_row.get("destination") or "").strip()
+    route_key = f"{pickup} ➡️ {dest}"
+    gr = pricing.get_airport_route(route_key)
+    base_fare = float(gr["base_fare"]) if gr is not None else _FALLBACK_BASE_FARE_DT
+    b2b_booking = db_module.b2b_booking_by_ride_id(int(ride_row["id"]))
+    is_b2b = b2b_booking is not None
+    effective_rate = _OWNER_COMMISSION_RATE + (_B2B_EXTRA_COMMISSION_RATE if is_b2b else 0.0)
+    fare_ref = float(b2b_booking["fare"]) if is_b2b else base_fare
+    deduct = round(fare_ref * effective_rate, 3)
+    return fare_ref, effective_rate, deduct, is_b2b
+
+
+def driver_gains_summary(driver_user_id: int) -> Dict[str, Any]:
+    d = db_module.driver_by_user_id(driver_user_id)
+    acct = db_module.driver_pin_account_by_user_id(driver_user_id)
+    if d is None:
+        return {
+            "driver_user_id": driver_user_id,
+            "is_available": False,
+            "wallet_balance": float((acct or {}).get("wallet_balance") or 0.0),
+            "completed_rides_count": 0,
+            "gross_normal": 0.0,
+            "gross_b2b": 0.0,
+            "deducted_normal": 0.0,
+            "deducted_b2b": 0.0,
+            "total_gross": 0.0,
+            "total_deducted": 0.0,
+            "net_gains": 0.0,
+        }
+    rides = db_module.rides_for_driver(int(d["id"]))
+    completed = [r for r in rides if r.get("status") == "completed"]
+    gross_normal = 0.0
+    gross_b2b = 0.0
+    deducted_normal = 0.0
+    deducted_b2b = 0.0
+    for r in completed:
+        fare_ref, _rate, deduct, is_b2b = _deduction_components_for_ride(r)
+        if is_b2b:
+            gross_b2b += fare_ref
+            deducted_b2b += deduct
+        else:
+            gross_normal += fare_ref
+            deducted_normal += deduct
+    total_gross = round(gross_normal + gross_b2b, 3)
+    total_deducted = round(deducted_normal + deducted_b2b, 3)
+    net_gains = round(total_gross - total_deducted, 3)
+    return {
+        "driver_user_id": driver_user_id,
+        "driver_id": int(d["id"]),
+        "is_available": bool(int(d.get("is_available", 0))),
+        "wallet_balance": float((acct or {}).get("wallet_balance") or 0.0),
+        "completed_rides_count": len(completed),
+        "gross_normal": round(gross_normal, 3),
+        "gross_b2b": round(gross_b2b, 3),
+        "deducted_normal": round(deducted_normal, 3),
+        "deducted_b2b": round(deducted_b2b, 3),
+        "total_gross": total_gross,
+        "total_deducted": total_deducted,
+        "net_gains": net_gains,
+    }
+
+
+def set_driver_availability(driver_user_id: int, is_available: bool) -> None:
+    db_module.driver_set_availability_by_user_id(driver_user_id, is_available)
 
 
 def list_for_app_user(user_id: int, role: str) -> List[Dict[str, Any]]:
@@ -274,7 +344,7 @@ def update_driver_live_location(
     lat: float | None = None,
     lng: float | None = None,
 ) -> None:
-    db_module.driver_mark_online(driver_user_id, last_lat=lat, last_lng=lng)
+    db_module.driver_touch_online(driver_user_id, last_lat=lat, last_lng=lng)
     if current_zone.strip():
         db_module.driver_update_current_zone_by_user_id(driver_user_id, current_zone.strip())
     # Notify passengers when the assigned driver reaches/approaches pickup zone.

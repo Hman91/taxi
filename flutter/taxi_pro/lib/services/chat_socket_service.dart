@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 
 import '../config.dart';
@@ -25,14 +26,22 @@ class ChatSocketService {
     List<String>? transports,
   }) {
     disconnect();
+    var resolvedTransports =
+        List<String>.from(transports ?? (kIsWeb ? ['websocket', 'polling'] : ['polling']));
+    // On Flutter web, polling transport can intermittently yield malformed
+    // payload chunks in socket_io_common; prefer websocket first.
+    if (kIsWeb &&
+        resolvedTransports.length == 1 &&
+        resolvedTransports.first == 'polling') {
+      resolvedTransports = ['websocket', 'polling'];
+    }
     _socket = socket_io.io(
       _base,
       socket_io.OptionBuilder()
-          // Flask dev server on Windows is more stable with long-polling transport.
-          // WebSocket upgrade can fail with Werkzeug and break live chat delivery.
-          .setTransports(transports ?? ['polling'])
+          .setTransports(resolvedTransports)
           .disableAutoConnect()
           .setAuth({'token': token})
+          .setQuery({'token': token})
           .build(),
     );
 

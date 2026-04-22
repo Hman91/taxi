@@ -255,8 +255,8 @@
     }
   },
   "notificationsEmpty": "No notifications yet.",
-  "notificationRideUpdateTitle": "Ride update",
-  "notificationRideUpdatedBody": "Ride #{id} updated.",
+  "notificationRideUpdateTitle": "Actualización de viaje",
+  "notificationRideUpdatedBody": "Viaje #{id} actualizado.",
   "@notificationRideUpdatedBody": {
     "placeholders": {
       "id": {
@@ -265,9 +265,9 @@
     }
   },
   "errorGoogleSignInMissingToken": "Google sign-in failed: missing Google token.",
-  "driverNameFallback": "Driver",
-  "notificationDriverAcceptedTitle": "Driver accepted",
-  "notificationDriverAcceptedBody": "{driver}{phoneSuffix} accepted your request.",
+  "driverNameFallback": "Conductor",
+  "notificationDriverAcceptedTitle": "Conductor aceptado",
+  "notificationDriverAcceptedBody": "{driver}{phoneSuffix} aceptó tu solicitud.",
   "@notificationDriverAcceptedBody": {
     "placeholders": {
       "driver": {
@@ -278,7 +278,7 @@
       }
     }
   },
-  "notificationDriverAcceptedSnack": "Driver accepted: {driver}{phoneSuffix}",
+  "notificationDriverAcceptedSnack": "Conductor aceptado: {driver}{phoneSuffix}",
   "@notificationDriverAcceptedSnack": {
     "placeholders": {
       "driver": {
@@ -289,9 +289,9 @@
       }
     }
   },
-  "passengerDriverNearPickupSnack": "Driver is now near your pickup point.",
-  "notificationDriverNearPickupTitle": "Driver near pickup",
-  "notificationDriverNearPickupBody": "Your driver is near pickup in {pickup}.",
+  "passengerDriverNearPickupSnack": "El conductor está cerca de tu punto de recogida.",
+  "notificationDriverNearPickupTitle": "Conductor cerca de recogida",
+  "notificationDriverNearPickupBody": "Tu conductor está cerca del punto de recogida en {pickup}.",
   "@notificationDriverNearPickupBody": {
     "placeholders": {
       "pickup": {
@@ -299,9 +299,9 @@
       }
     }
   },
-  "notificationRequestSentTitle": "Request sent",
-  "notificationRequestSentBody": "We sent your ride request to nearby drivers.",
-  "requestSentSnackLine": "Request sent. {farePart}{promoPart}",
+  "notificationRequestSentTitle": "Solicitud enviada",
+  "notificationRequestSentBody": "Enviamos tu solicitud de viaje a conductores cercanos.",
+  "requestSentSnackLine": "Solicitud enviada. {farePart}{promoPart}",
   "@requestSentSnackLine": {
     "placeholders": {
       "farePart": {
@@ -313,22 +313,22 @@
     }
   },
   "promoCodeOptionalLabel": "Promo code",
-  "driverNotificationNewNearbyTitle": "New nearby ride",
-  "driverNotificationNewNearbyBodyDefault": "A nearby passenger requested a ride.",
-  "driverNotificationTakenTitle": "Request already accepted",
-  "driverNotificationTakenBodyDefault": "Another driver accepted this request.",
-  "driverNotificationCancelledTitle": "Ride cancelled",
-  "driverNotificationCancelledBodyDefault": "Passenger cancelled this ride request.",
-  "driverNotificationRequestClosedTitle": "Request closed",
-  "driverNotificationRequestClosedBodyOther": "This request was accepted by another driver or cancelled.",
-  "driverNotificationRequestClosedBodyTaken": "This request was accepted by another driver.",
-  "driverNotificationNewRideTitle": "New ride request",
-  "driverNotificationNewRideBodyDefault": "A nearby passenger sent a new request.",
-  "snackDriverNewNearbyRide": "New nearby ride request received.",
-  "driverRideRequestBannerTitle": "New ride request!",
-  "driverOfferFromLabel": "From",
-  "driverOfferToLabel": "To",
-  "driverRejectOfferButton": "Reject",
+  "driverNotificationNewNearbyTitle": "Nuevo viaje cercano",
+  "driverNotificationNewNearbyBodyDefault": "Un pasajero cercano solicitó un viaje.",
+  "driverNotificationTakenTitle": "Solicitud ya aceptada",
+  "driverNotificationTakenBodyDefault": "Otro conductor aceptó esta solicitud.",
+  "driverNotificationCancelledTitle": "Viaje cancelado",
+  "driverNotificationCancelledBodyDefault": "El pasajero canceló esta solicitud.",
+  "driverNotificationRequestClosedTitle": "Solicitud cerrada",
+  "driverNotificationRequestClosedBodyOther": "Esta solicitud fue aceptada por otro conductor o cancelada.",
+  "driverNotificationRequestClosedBodyTaken": "Esta solicitud fue aceptada por otro conductor.",
+  "driverNotificationNewRideTitle": "Nueva solicitud de viaje",
+  "driverNotificationNewRideBodyDefault": "Un pasajero cercano envió una nueva solicitud.",
+  "snackDriverNewNearbyRide": "Se recibió una nueva solicitud cercana.",
+  "driverRideRequestBannerTitle": "¡Nueva solicitud de viaje!",
+  "driverOfferFromLabel": "Desde",
+  "driverOfferToLabel": "Hasta",
+  "driverRejectOfferButton": "Rechazar",
   "driverOfferFareChip": "{amount} DT",
   "@driverOfferFareChip": {
     "placeholders": {
@@ -353,11 +353,11 @@
       }
     }
   },
-  "snackDriverRideTakenOther": "Ride accepted by another driver.",
-  "snackDriverPassengerCancelled": "Passenger cancelled this request.",
-  "snackDriverChatAfterAcceptance": "Chat will open after ride acceptance",
-  "driverMyVehicleTitle": "My vehicle",
-  "driverVehicleSummaryLine": "Car: {model} | Color: {color}",
+  "snackDriverRideTakenOther": "Viaje aceptado por otro conductor.",
+  "snackDriverPassengerCancelled": "El pasajero canceló esta solicitud.",
+  "snackDriverChatAfterAcceptance": "El chat se abrirá tras aceptar el viaje",
+  "driverMyVehicleTitle": "Mi vehículo",
+  "driverVehicleSummaryLine": "Auto: {model} | Color: {color}",
   "@driverVehicleSummaryLine": {
     "placeholders": {
       "model": {
@@ -368,8 +368,8 @@
       }
     }
   },
-  "driverVehicleIdentityTitle": "Vehicle identity",
-  "driverOpenRequestsChip": "Open requests: {count}",
+  "driverVehicleIdentityTitle": "Identidad del vehículo",
+  "driverOpenRequestsChip": "Solicitudes abiertas: {count}",
   "@driverOpenRequestsChip": {
     "placeholders": {
       "count": {
@@ -377,7 +377,7 @@
       }
     }
   },
-  "driverUnreadAlertsChip": "Unread alerts: {count}",
+  "driverUnreadAlertsChip": "Alertas sin leer: {count}",
   "@driverUnreadAlertsChip": {
     "placeholders": {
       "count": {
@@ -385,12 +385,12 @@
       }
     }
   },
-  "b2bAppBarTitle": "Taxi Pro Corporate",
-  "b2bPortalHeading": "Corporate & hotel portal",
-  "b2bConnectedWorkflowSubtitle": "Connected to monthly billing workflow",
-  "b2bBookOnAccountHeading": "Book on company account",
-  "b2bMonthlyUsageTitle": "Current month usage (stub)",
-  "b2bMonthlyAmountDue": "Amount due (DT): {amount}",
+  "b2bAppBarTitle": "Taxi Pro Corporativo",
+  "b2bPortalHeading": "Portal corporativo y hotelero",
+  "b2bConnectedWorkflowSubtitle": "Conectado al flujo de facturación mensual",
+  "b2bBookOnAccountHeading": "Reservar en cuenta de empresa",
+  "b2bMonthlyUsageTitle": "Uso del mes actual (demo)",
+  "b2bMonthlyAmountDue": "Importe adeudado (DT): {amount}",
   "@b2bMonthlyAmountDue": {
     "placeholders": {
       "amount": {
@@ -415,8 +415,8 @@
       }
     }
   },
-  "ownerAppBarTitle": "Owner HQ",
-  "ownerProfitChip": "Profit: {amount} DT",
+  "ownerAppBarTitle": "Sede del propietario",
+  "ownerProfitChip": "Beneficio: {amount} DT",
   "@ownerProfitChip": {
     "placeholders": {
       "amount": {
@@ -424,7 +424,7 @@
       }
     }
   },
-  "ownerTripsCountChip": "Trips: {count}",
+  "ownerTripsCountChip": "Viajes: {count}",
   "@ownerTripsCountChip": {
     "placeholders": {
       "count": {
@@ -443,9 +443,9 @@
       }
     }
   },
-  "ownerVaultHeading": "Trip vault",
-  "ownerAdminOversightHeading": "Admin oversight",
-  "ownerCommissionChip": "Commission: {amount} DT",
+  "ownerVaultHeading": "Registro de viajes",
+  "ownerAdminOversightHeading": "Supervisión administrativa",
+  "ownerCommissionChip": "Comisión: {amount} DT",
   "@ownerCommissionChip": {
     "placeholders": {
       "amount": {
@@ -464,11 +464,11 @@
       }
     }
   },
-  "ownerHqPortalHeading": "HQ command center",
-  "operatorDispatchCenterHeading": "Dispatch & monitoring",
-  "operatorDispatchPendingBlurb": "There are pending requests that need assigning.",
-  "operatorDispatchIdleBlurb": "System is connected. No pending bookings.",
-  "operatorChipPending": "Pending: {count}",
+  "ownerHqPortalHeading": "Centro de mando HQ",
+  "operatorDispatchCenterHeading": "Despacho y monitoreo",
+  "operatorDispatchPendingBlurb": "Hay solicitudes pendientes que deben asignarse.",
+  "operatorDispatchIdleBlurb": "El sistema está conectado. No hay reservas pendientes.",
+  "operatorChipPending": "Pendientes: {count}",
   "@operatorChipPending": {
     "placeholders": {
       "count": {
@@ -476,7 +476,7 @@
       }
     }
   },
-  "operatorChipAccepted": "Accepted: {count}",
+  "operatorChipAccepted": "Aceptados: {count}",
   "@operatorChipAccepted": {
     "placeholders": {
       "count": {
@@ -484,7 +484,7 @@
       }
     }
   },
-  "operatorChipOngoing": "Ongoing: {count}",
+  "operatorChipOngoing": "En curso: {count}",
   "@operatorChipOngoing": {
     "placeholders": {
       "count": {
@@ -492,7 +492,7 @@
       }
     }
   },
-  "operatorChipCompleted": "Completed: {count}",
+  "operatorChipCompleted": "Completados: {count}",
   "@operatorChipCompleted": {
     "placeholders": {
       "count": {
@@ -514,7 +514,7 @@
       }
     }
   },
-  "operatorDriversOnlineCount": "Drivers online: {count}",
+  "operatorDriversOnlineCount": "Conductores en línea: {count}",
   "@operatorDriversOnlineCount": {
     "placeholders": {
       "count": {
@@ -522,13 +522,13 @@
       }
     }
   },
-  "operatorPhoneLabel": "Phone",
-  "operatorDriverNameLabel": "Driver name",
+  "operatorPhoneLabel": "Teléfono",
+  "operatorDriverNameLabel": "Nombre del conductor",
   "operatorPinLabel": "PIN",
-  "operatorCreateDriverAccount": "Create driver account",
-  "operatorRefreshCorporateBookings": "Refresh corporate bookings",
-  "operatorTripVaultHeading": "Trip vault",
-  "operatorTripVaultTripsChip": "Trips: {count}",
+  "operatorCreateDriverAccount": "Crear cuenta de conductor",
+  "operatorRefreshCorporateBookings": "Actualizar reservas corporativas",
+  "operatorTripVaultHeading": "Registro de viajes",
+  "operatorTripVaultTripsChip": "Viajes: {count}",
   "@operatorTripVaultTripsChip": {
     "placeholders": {
       "count": {
@@ -536,7 +536,7 @@
       }
     }
   },
-  "operatorTripVaultRevenueChip": "Revenue: {amount} DT",
+  "operatorTripVaultRevenueChip": "Ingresos: {amount} DT",
   "@operatorTripVaultRevenueChip": {
     "placeholders": {
       "amount": {
@@ -544,18 +544,18 @@
       }
     }
   },
-  "operatorWalletBalanceLabel": "Wallet balance",
-  "operatorOwnerCommissionLabel": "Owner commission %",
-  "operatorB2bCommissionLabel": "B2B commission %",
-  "operatorAutoDeductEnabled": "Auto deduct enabled",
-  "operatorCarModelLabel": "Car model",
-  "operatorCarColorLabel": "Car color",
-  "operatorPickFromGallery": "Pick image from gallery",
-  "operatorRemovePickedImage": "Remove picked image",
-  "operatorPhotoUrlOptional": "Photo URL (optional)",
-  "operatorCancel": "Cancel",
-  "operatorSave": "Save",
-  "operatorDriverWalletLine": "Wallet: {wallet} DT | Owner %: {owner} | B2B %: {b2b}",
+  "operatorWalletBalanceLabel": "Saldo de billetera",
+  "operatorOwnerCommissionLabel": "Comisión del propietario %",
+  "operatorB2bCommissionLabel": "Comisión B2B %",
+  "operatorAutoDeductEnabled": "Deducción automática activa",
+  "operatorCarModelLabel": "Modelo del auto",
+  "operatorCarColorLabel": "Color del auto",
+  "operatorPickFromGallery": "Elegir imagen de la galería",
+  "operatorRemovePickedImage": "Quitar imagen seleccionada",
+  "operatorPhotoUrlOptional": "URL de foto (opcional)",
+  "operatorCancel": "Cancelar",
+  "operatorSave": "Guardar",
+  "operatorDriverWalletLine": "Billetera: {wallet} DT | Propietario %: {owner} | B2B %: {b2b}",
   "@operatorDriverWalletLine": {
     "placeholders": {
       "wallet": {
@@ -585,10 +585,10 @@
       }
     }
   },
-  "statusLinePrefix": "Status: ",
-  "driverLabelPrefix": " | Driver: ",
-  "createdAtLinePrefix": "\nAt: ",
-  "walletWithAmount": "Wallet: {amount} DT",
+  "statusLinePrefix": "Estado: ",
+  "driverLabelPrefix": " | Conductor: ",
+  "createdAtLinePrefix": "\nEn: ",
+  "walletWithAmount": "Billetera: {amount} DT",
   "@walletWithAmount": {
     "placeholders": {
       "amount": {
@@ -611,53 +611,53 @@
       }
     }
   },
-  "operatorTabDispatch": "Dispatch",
-  "operatorTabDrivers": "Drivers",
+  "operatorTabDispatch": "Despacho",
+  "operatorTabDrivers": "Conductores",
   "operatorTabB2b": "B2B",
-  "operatorTabTripVault": "Trip vault",
-  "operatorFillDriverFields": "Enter phone, driver name, and PIN.",
-  "placeCarthageAirport": "Carthage Airport (Tunis)",
-  "placeEnfidhaAirport": "Enfidha–Hammamet Airport",
-  "placeMonastirAirport": "Monastir Airport",
-  "placeSousseCenter": "Sousse city center",
+  "operatorTabTripVault": "Registro de viajes",
+  "operatorFillDriverFields": "Ingrese teléfono, nombre del conductor y PIN.",
+  "placeCarthageAirport": "Aeropuerto de Cartago (Túnez)",
+  "placeEnfidhaAirport": "Aeropuerto Enfidha–Hammamet",
+  "placeMonastirAirport": "Aeropuerto de Monastir",
+  "placeSousseCenter": "Centro de Sousse",
   "placeHammamet": "Hammamet",
   "placeSousse": "Sousse",
   "placePortElKantaoui": "Port El Kantaoui",
   "placeNabeul": "Nabeul",
-  "homeWhatIsTitle": "What is Taxi Pro?",
-  "homeWhatIsBody": "Taxi Pro Tunisia connects you with drivers for airport transfers and city rides. Prices are fixed per route in the app; a night surcharge may apply between 9 PM and 5 AM. Book in the app, track your ride, and use in-app help when needed.",
-  "passengerFareFinalEstimate": "Final estimate for the ride",
-  "passengerPayCash": "Cash",
-  "passengerPayCardTpe": "Card (TPE)",
-  "operatorEntryGateLabel": "Entry gate:",
-  "operatorEmployeePasswordLabel": "Employee password:",
-  "operatorWelcomeOperatingRoom": "Welcome to the operating room.",
-  "operatorTabTodaysArrivals": "Today's arrivals",
-  "operatorTabLiveOrders": "Live orders",
-  "operatorTabDriverManagement": "Driver management",
-  "operatorTabTripHistory": "Trip history",
-  "operatorArrivalsDemoHeading": "Today's arrivals — Tunisia (demo data)",
-  "operatorColFlightNumber": "Flight number",
-  "operatorColDepartureAirport": "Departure airport",
-  "operatorColTakeoffTime": "Take-off time",
-  "operatorColExpectedArrival": "Expected arrival (today)",
-  "operatorColArrivalAirportTn": "Arrival airport (Tunisia)",
-  "operatorChooseDriverTopUp": "Choose the driver to top up:",
-  "operatorAmountReceivedDt": "Amount received (DT):",
-  "operatorRechargeBalance": "Recharge the balance",
-  "operatorCorporateBookingsSection": "Corporate (B2B) bookings",
-  "operatorRoleAdminHq": "Admin HQ",
-  "operatorNoFlightArrivals": "No arrival rows loaded.",
-  "operatorUserAccountsHeading": "App user accounts",
-  "ownerPasswordCeoLabel": "Owner (CEO) password:",
-  "ownerWelcomeHq": "Welcome to Owner HQ.",
-  "ownerTabTreasury": "Treasury and profits",
-  "ownerTabSettings": "Settings",
-  "ownerTabHostelB2b": "Hostel Accounts (B2B)",
-  "ownerSettingsCommissionLabel": "Commission deducted percentage (%):",
-  "ownerSettingsCommissionHint": "Display only — link to driver accounts for live rates.",
-  "ownerSettingsRouteFaresHeading": "Route base fares (DT)",
-  "ownerSaveRouteFare": "Save",
+  "homeWhatIsTitle": "¿Qué es Taxi Pro?",
+  "homeWhatIsBody": "Taxi Pro Túnez te conecta con conductores para traslados al aeropuerto y viajes urbanos. Los precios son fijos por ruta en la app; puede aplicarse recargo nocturno entre las 21:00 y las 05:00. Reserva en la app, sigue tu viaje y usa la ayuda integrada cuando la necesites.",
+  "passengerFareFinalEstimate": "Estimación final del viaje",
+  "passengerPayCash": "Efectivo",
+  "passengerPayCardTpe": "Tarjeta (TPE)",
+  "operatorEntryGateLabel": "Puerta de acceso:",
+  "operatorEmployeePasswordLabel": "Contraseña del empleado:",
+  "operatorWelcomeOperatingRoom": "Bienvenido a la sala de operaciones.",
+  "operatorTabTodaysArrivals": "Llegadas de hoy",
+  "operatorTabLiveOrders": "Pedidos en vivo",
+  "operatorTabDriverManagement": "Gestión de conductores",
+  "operatorTabTripHistory": "Historial de viajes",
+  "operatorArrivalsDemoHeading": "Llegadas de hoy — Túnez (datos demo)",
+  "operatorColFlightNumber": "Número de vuelo",
+  "operatorColDepartureAirport": "Aeropuerto de salida",
+  "operatorColTakeoffTime": "Hora de despegue",
+  "operatorColExpectedArrival": "Llegada prevista (hoy)",
+  "operatorColArrivalAirportTn": "Aeropuerto de llegada (Túnez)",
+  "operatorChooseDriverTopUp": "Elegir conductor a recargar:",
+  "operatorAmountReceivedDt": "Importe recibido (DT):",
+  "operatorRechargeBalance": "Recargar saldo",
+  "operatorCorporateBookingsSection": "Reservas corporativas (B2B)",
+  "operatorRoleAdminHq": "Admin central",
+  "operatorNoFlightArrivals": "No hay llegadas cargadas.",
+  "operatorUserAccountsHeading": "Cuentas de usuarios de la app",
+  "ownerPasswordCeoLabel": "Contraseña del propietario (CEO):",
+  "ownerWelcomeHq": "Bienvenido a la sede del propietario.",
+  "ownerTabTreasury": "Tesorería y beneficios",
+  "ownerTabSettings": "Configuración",
+  "ownerTabHostelB2b": "Cuentas de hotel (B2B)",
+  "ownerSettingsCommissionLabel": "Porcentaje de comisión deducida (%):",
+  "ownerSettingsCommissionHint": "Solo visualización — vincular con cuentas de conductor para tasas en vivo.",
+  "ownerSettingsRouteFaresHeading": "Tarifas base de rutas (DT)",
+  "ownerSaveRouteFare": "Guardar",
   "driverWalletDepletedTitle": "Monedero vacío",
   "driverWalletDepletedBody": "Pague {amount} DT al propietario (vía el operador) para recargar.",
   "@driverWalletDepletedBody": {

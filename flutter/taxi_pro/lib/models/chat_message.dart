@@ -6,6 +6,7 @@ class ChatMessage {
     this.translatedText,
     required this.displayText,
     required this.senderUserId,
+    this.senderName,
     this.createdAt,
   });
 
@@ -14,6 +15,7 @@ class ChatMessage {
   final String? translatedText;
   final String displayText;
   final int senderUserId;
+  final String? senderName;
   final String? createdAt;
 
   /// Prefer `display_text` from API / socket (translation on delivery).
@@ -27,6 +29,7 @@ class ChatMessage {
       translatedText: json['translated_text'] as String?,
       displayText: rawDisplay ?? original,
       senderUserId: ((json['sender_user_id'] ?? json['sender_id']) as num?)?.toInt() ?? 0,
+      senderName: json['sender_name'] as String?,
       createdAt: json['created_at'] as String?,
     );
   }

@@ -22,15 +22,32 @@ except Exception:  # pragma: no cover - optional dependency for local/dev
     google_id_token = None
 
 
-def register(email: str, password: str, role: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+def register(
+    email: str,
+    password: str,
+    role: str,
+    *,
+    display_name: str = "",
+    phone: str = "",
+    photo_url: str = "",
+) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     if role not in ("user", "driver"):
         return None, "invalid_role"
     if not email or not password:
         return None, "missing_fields"
+    if role == "user" and not phone.strip():
+        return None, "phone_required"
     if db_module.user_by_email(email):
         return None, "email_taken"
     pw_hash = generate_password_hash(password)
-    uid = db_module.user_create(email=email, password_hash=pw_hash, role=role)
+    uid = db_module.user_create(
+        email=email,
+        password_hash=pw_hash,
+        role=role,
+        display_name=display_name.strip() if role == "user" else "",
+        phone=phone.strip() if role == "user" else "",
+        photo_url=photo_url.strip() if role == "user" else "",
+    )
     if role == "driver":
         db_module.driver_create(
             user_id=uid,
@@ -43,6 +60,9 @@ def register(email: str, password: str, role: str) -> Tuple[Optional[Dict[str, A
         "id": row["id"],
         "email": row["email"],
         "role": row["role"],
+        "display_name": row.get("display_name"),
+        "phone": row.get("phone"),
+        "photo_url": row.get("photo_url"),
         "preferred_language": row["preferred_language"],
         "is_enabled": row["is_enabled"],
     }, None
@@ -58,6 +78,9 @@ def authenticate(email: str, password: str) -> Tuple[Optional[Dict[str, Any]], O
         "id": row["id"],
         "email": row["email"],
         "role": row["role"],
+        "display_name": row.get("display_name"),
+        "phone": row.get("phone"),
+        "photo_url": row.get("photo_url"),
         "preferred_language": row["preferred_language"],
         "is_enabled": row["is_enabled"],
     }, None
@@ -71,6 +94,20 @@ def set_preferred_language(user_id: int, language: str) -> Tuple[Optional[Dict[s
     if u is None:
         return None, "not_found"
     u.preferred_language = raw
+    db.session.commit()
+    out = db_module.user_by_id(user_id)
+    assert out is not None
+    return out, None
+
+
+def set_phone(user_id: int, phone: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    raw = (phone or "").strip()
+    if not raw:
+        return None, "phone_required"
+    u = db.session.get(User, user_id)
+    if u is None:
+        return None, "not_found"
+    u.phone = raw
     db.session.commit()
     out = db_module.user_by_id(user_id)
     assert out is not None

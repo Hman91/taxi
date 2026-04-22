@@ -36,15 +36,30 @@ class TaxiAppService {
   Future<AppLoginResponse> loginGoogle({
     String? idToken,
     String? accessToken,
+    String? phone,
   }) =>
-      _client.loginGoogle(idToken: idToken, accessToken: accessToken);
+      _client.loginGoogle(
+        idToken: idToken,
+        accessToken: accessToken,
+        phone: phone,
+      );
 
   Future<Map<String, dynamic>> registerAppUser({
     required String email,
     required String password,
     required String role,
+    String? displayName,
+    String? phone,
+    String? photoUrl,
   }) =>
-      _client.registerAppUser(email: email, password: password, role: role);
+      _client.registerAppUser(
+        email: email,
+        password: password,
+        role: role,
+        displayName: displayName,
+        phone: phone,
+        photoUrl: photoUrl,
+      );
 
   Future<List<Ride>> listRides(String token) => _client.listRides(token);
 
@@ -83,8 +98,16 @@ class TaxiAppService {
   Future<void> updateDriverLocation({
     required String token,
     required String currentZone,
+    bool? isAvailable,
   }) =>
-      _client.updateDriverLocation(token: token, currentZone: currentZone);
+      _client.updateDriverLocation(
+        token: token,
+        currentZone: currentZone,
+        isAvailable: isAvailable,
+      );
+
+  Future<Map<String, dynamic>> driverGains(String token) =>
+      _client.driverGains(token);
 
   Future<Trip> createTrip({
     required String token,
@@ -181,6 +204,9 @@ class TaxiAppService {
     required String token,
     required String route,
     required String guestName,
+    String guestPhone = '',
+    String hotelName = '',
+    String flightEta = '',
     required String roomNumber,
     required double fare,
     required String sourceCode,
@@ -189,6 +215,9 @@ class TaxiAppService {
         token: token,
         route: route,
         guestName: guestName,
+        guestPhone: guestPhone,
+        hotelName: hotelName,
+        flightEta: flightEta,
         roomNumber: roomNumber,
         fare: fare,
         sourceCode: sourceCode,
@@ -228,6 +257,10 @@ class TaxiAppService {
 
   Future<List<Map<String, dynamic>>> listAdminDriverPinAccounts(String token) =>
       _client.listAdminDriverPinAccounts(token);
+
+  Future<List<Map<String, dynamic>>> listAdminDriverWalletBreakdown(
+          String token) =>
+      _client.listAdminDriverWalletBreakdown(token);
 
   Future<Map<String, dynamic>> createAdminDriverPinAccount({
     required String token,

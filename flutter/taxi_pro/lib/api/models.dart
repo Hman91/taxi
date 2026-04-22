@@ -40,15 +40,21 @@ class LoginResponse {
   LoginResponse({
     required this.accessToken,
     required this.role,
+    this.appAccessToken,
+    this.userId,
   });
 
   final String accessToken;
   final String role;
+  final String? appAccessToken;
+  final int? userId;
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
     return LoginResponse(
       accessToken: json['access_token'] as String,
       role: json['role'] as String,
+      appAccessToken: json['app_access_token'] as String?,
+      userId: (json['user_id'] as num?)?.toInt(),
     );
   }
 }
@@ -184,10 +190,18 @@ class Ride {
     this.driverName,
     this.driverVehicle,
     this.driverPhone,
+    this.passengerName,
+    this.passengerPhone,
+    this.isRated,
     this.driverPhotoUrl,
     this.driverCarModel,
     this.driverCarColor,
     this.driverCurrentZone,
+    this.isB2b,
+    this.b2bGuestName,
+    this.b2bRoomNumber,
+    this.b2bSourceCode,
+    this.b2bFare,
     this.createdAt,
     this.updatedAt,
   });
@@ -201,10 +215,18 @@ class Ride {
   final String? driverName;
   final String? driverVehicle;
   final String? driverPhone;
+  final String? passengerName;
+  final String? passengerPhone;
+  final bool? isRated;
   final String? driverPhotoUrl;
   final String? driverCarModel;
   final String? driverCarColor;
   final String? driverCurrentZone;
+  final bool? isB2b;
+  final String? b2bGuestName;
+  final String? b2bRoomNumber;
+  final String? b2bSourceCode;
+  final double? b2bFare;
   final String? createdAt;
   final String? updatedAt;
 
@@ -219,10 +241,18 @@ class Ride {
       driverName: json['driver_name'] as String?,
       driverVehicle: json['driver_vehicle'] as String?,
       driverPhone: json['driver_phone'] as String?,
+      passengerName: json['passenger_name'] as String?,
+      passengerPhone: json['passenger_phone'] as String?,
+      isRated: json['is_rated'] as bool?,
       driverPhotoUrl: json['driver_photo_url'] as String?,
       driverCarModel: json['driver_car_model'] as String?,
       driverCarColor: json['driver_car_color'] as String?,
       driverCurrentZone: json['driver_current_zone'] as String?,
+      isB2b: json['is_b2b'] as bool?,
+      b2bGuestName: json['b2b_guest_name'] as String?,
+      b2bRoomNumber: json['b2b_room_number'] as String?,
+      b2bSourceCode: json['b2b_source_code'] as String?,
+      b2bFare: (json['b2b_fare'] as num?)?.toDouble(),
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
     );

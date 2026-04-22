@@ -37,6 +37,7 @@ class _OperatorScreenState extends State<OperatorScreen>
   List<Map<String, dynamic>> _trips = [];
   List<Map<String, dynamic>> _adminRides = [];
   List<Map<String, dynamic>> _driverPinAccounts = [];
+  List<Map<String, dynamic>> _adminB2b = [];
   List<Map<String, dynamic>> _adminB2bBookings = [];
   List<Map<String, dynamic>> _flightArrivals = [];
   List<Map<String, dynamic>> _driverRatings = [];
@@ -77,7 +78,8 @@ class _OperatorScreenState extends State<OperatorScreen>
     try {
       final trips = await _api.listTrips(t);
       final rides = await _api.listAdminRides(t);
-      final driverPins = await _api.listAdminDriverPinAccounts(t);
+      final driverPins = await _api.listAdminDriverWalletBreakdown(t);
+      final b2bTenants = await _api.listAdminB2bTenants(t);
       final b2bBookings = await _api.listAdminB2bBookings(t);
       final flights = await _api.listAdminTunisiaFlightArrivals(t);
       final ratings = await _api.listAdminDriverRatings(t);
@@ -95,6 +97,7 @@ class _OperatorScreenState extends State<OperatorScreen>
             .toList();
         _adminRides = rides;
         _driverPinAccounts = driverPins;
+        _adminB2b = b2bTenants;
         _adminB2bBookings = b2bBookings;
         _flightArrivals = flights;
         _driverRatings = ratings;
@@ -514,6 +517,11 @@ class _OperatorScreenState extends State<OperatorScreen>
       final b2bS = (d['b2b_commission_rate'] ?? 5).toString();
       var line =
           l.operatorDriverWalletLine(walletS, ownerS, b2bS);
+      line +=
+          '\n${_uiText(en: 'Simple rides total', ar: 'إجمالي الرحلات العادية', fr: 'Total courses simples', es: 'Total viajes simples', de: 'Summe einfache Fahrten', it: 'Totale corse semplici', ru: 'Итого обычные поездки', zh: '普通行程总额')}: ${(d['gross_normal'] ?? 0).toString()} DT | '
+          '${_uiText(en: 'B2B rides total', ar: 'إجمالي رحلات B2B', fr: 'Total courses B2B', es: 'Total viajes B2B', de: 'Summe B2B-Fahrten', it: 'Totale corse B2B', ru: 'Итого B2B поездки', zh: 'B2B行程总额')}: ${(d['gross_b2b'] ?? 0).toString()} DT'
+          '\n${_uiText(en: 'Deducted from simple rides', ar: 'المخصوم من الرحلات العادية', fr: 'Retenu des courses simples', es: 'Descontado de viajes simples', de: 'Abzug aus einfachen Fahrten', it: 'Detratto da corse semplici', ru: 'Удержано с обычных поездок', zh: '普通行程扣除')}: ${(d['deducted_normal'] ?? 0).toString()} DT | '
+          '${_uiText(en: 'Deducted from B2B rides', ar: 'المخصوم من رحلات B2B', fr: 'Retenu des courses B2B', es: 'Descontado de viajes B2B', de: 'Abzug aus B2B-Fahrten', it: 'Detratto da corse B2B', ru: 'Удержано с B2B поездок', zh: 'B2B行程扣除')}: ${(d['deducted_b2b'] ?? 0).toString()} DT';
       final model = (d['car_model'] ?? '').toString().trim();
       final color = (d['car_color'] ?? '').toString().trim();
       if (model.isNotEmpty) line += l.operatorDriverCarLine(model);
@@ -636,6 +644,27 @@ class _OperatorScreenState extends State<OperatorScreen>
     return row['arrival_airport_en']?.toString() ??
         row['arrival_airport_ar']?.toString() ??
         '';
+  }
+
+  String _uiText({
+    required String en,
+    required String ar,
+    required String fr,
+    required String es,
+    required String de,
+    required String it,
+    required String ru,
+    required String zh,
+  }) {
+    final code = Localizations.localeOf(context).languageCode.toLowerCase();
+    if (code.startsWith('ar')) return ar;
+    if (code.startsWith('fr')) return fr;
+    if (code.startsWith('es')) return es;
+    if (code.startsWith('de')) return de;
+    if (code.startsWith('it')) return it;
+    if (code.startsWith('ru')) return ru;
+    if (code.startsWith('zh')) return zh;
+    return en;
   }
 
   Widget _buildArrivalsTab(AppLocalizations l) {
@@ -779,6 +808,12 @@ class _OperatorScreenState extends State<OperatorScreen>
                       : '${l.createdAtLinePrefix}${r['created_at']}',
                 ),
               ),
+              trailing: Text(
+                (r['is_b2b'] == true)
+                    ? '${l.roleB2b}: ${(r['b2b_guest_name'] ?? r['passenger_name'] ?? r['user_id'] ?? '-').toString()}'
+                    : '${l.rolePassenger}: ${(r['passenger_name'] ?? r['user_id'] ?? '-').toString()}',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ),
@@ -810,6 +845,23 @@ class _OperatorScreenState extends State<OperatorScreen>
             ),
           ),
         ),
+        const SizedBox(height: 10),
+        if (_adminB2b.isNotEmpty)
+          ..._adminB2b.map(
+            (b) => Card(
+              color: Colors.white,
+              child: ListTile(
+                dense: true,
+                leading: const Icon(Icons.account_balance_wallet_outlined),
+                title: Text(
+                  b['label']?.toString() ?? b['code']?.toString() ?? '',
+                ),
+                subtitle: Text(
+                  '${b['code']?.toString() ?? ''} • ${_uiText(en: 'Wallet', ar: 'المحفظة', fr: 'Portefeuille', es: 'Billetera', de: 'Wallet', it: 'Portafoglio', ru: 'Кошелек', zh: '钱包')} ${(b['wallet_balance'] ?? 0).toString()} DT',
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -898,7 +950,16 @@ class _OperatorScreenState extends State<OperatorScreen>
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  l.operatorTabDriverManagement,
+                  _uiText(
+                    en: 'Driver management',
+                    ar: 'إدارة السائقين',
+                    fr: 'Gestion des chauffeurs',
+                    es: 'Gestion de conductores',
+                    de: 'Fahrerverwaltung',
+                    it: 'Gestione autisti',
+                    ru: 'Управление водителями',
+                    zh: '司机管理',
+                  ),
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
@@ -911,40 +972,115 @@ class _OperatorScreenState extends State<OperatorScreen>
           const SizedBox(height: 14),
           _driverMgmtSectionCard(
             icon: Icons.person_add_alt_1_outlined,
-            title: l.operatorCreateDriverAccount,
+            title: _uiText(
+              en: 'Create driver account',
+              ar: 'إنشاء حساب سائق',
+              fr: 'Creer un compte chauffeur',
+              es: 'Crear cuenta de conductor',
+              de: 'Fahrerkonto erstellen',
+              it: 'Crea account autista',
+              ru: 'Создать аккаунт водителя',
+              zh: '创建司机账户',
+            ),
             children: [
               TextField(
                 controller: _newDriverPhone,
                 keyboardType: TextInputType.phone,
-                decoration: _operatorFieldDecoration(l.operatorPhoneLabel),
+                decoration: _operatorFieldDecoration(
+                  _uiText(
+                    en: 'Phone',
+                    ar: 'الهاتف',
+                    fr: 'Telephone',
+                    es: 'Telefono',
+                    de: 'Telefon',
+                    it: 'Telefono',
+                    ru: 'Телефон',
+                    zh: '电话',
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _newDriverName,
                 textCapitalization: TextCapitalization.words,
-                decoration: _operatorFieldDecoration(l.operatorDriverNameLabel),
+                decoration: _operatorFieldDecoration(
+                  _uiText(
+                    en: 'Driver name',
+                    ar: 'اسم السائق',
+                    fr: 'Nom du chauffeur',
+                    es: 'Nombre del conductor',
+                    de: 'Fahrername',
+                    it: 'Nome autista',
+                    ru: 'Имя водителя',
+                    zh: '司机姓名',
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _newDriverPin,
                 obscureText: true,
-                decoration: _operatorFieldDecoration(l.operatorPinLabel),
+                decoration: _operatorFieldDecoration(
+                  _uiText(
+                    en: 'PIN',
+                    ar: 'رمز PIN',
+                    fr: 'PIN',
+                    es: 'PIN',
+                    de: 'PIN',
+                    it: 'PIN',
+                    ru: 'PIN',
+                    zh: 'PIN',
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _newDriverCarModel,
-                decoration: _operatorFieldDecoration(l.operatorCarModelLabel),
+                decoration: _operatorFieldDecoration(
+                  _uiText(
+                    en: 'Car model',
+                    ar: 'طراز السيارة',
+                    fr: 'Modele de voiture',
+                    es: 'Modelo del auto',
+                    de: 'Automodell',
+                    it: 'Modello auto',
+                    ru: 'Модель авто',
+                    zh: '车辆型号',
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _newDriverCarColor,
-                decoration: _operatorFieldDecoration(l.operatorCarColorLabel),
+                decoration: _operatorFieldDecoration(
+                  _uiText(
+                    en: 'Car color',
+                    ar: 'لون السيارة',
+                    fr: 'Couleur de la voiture',
+                    es: 'Color del auto',
+                    de: 'Autofarbe',
+                    it: 'Colore auto',
+                    ru: 'Цвет авто',
+                    zh: '车辆颜色',
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: _busy ? null : _pickNewDriverImage,
                 icon: const Icon(Icons.photo_library),
-                label: Text(l.operatorPickFromGallery),
+                label: Text(
+                  _uiText(
+                    en: 'Pick image from gallery',
+                    ar: 'اختيار صورة من المعرض',
+                    fr: 'Choisir une image depuis la galerie',
+                    es: 'Elegir imagen de la galeria',
+                    de: 'Bild aus Galerie waehlen',
+                    it: 'Scegli immagine dalla galleria',
+                    ru: 'Выбрать фото из галереи',
+                    zh: '从图库选择图片',
+                  ),
+                ),
               ),
               if (_newDriverPhotoData.isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -978,7 +1114,18 @@ class _OperatorScreenState extends State<OperatorScreen>
                   ),
                   onPressed: _busy ? null : _createDriverAccount,
                   icon: const Icon(Icons.add_rounded),
-                  label: Text(l.operatorCreateDriverAccount),
+                  label: Text(
+                    _uiText(
+                      en: 'Create driver account',
+                      ar: 'إنشاء حساب سائق',
+                      fr: 'Creer un compte chauffeur',
+                      es: 'Crear cuenta de conductor',
+                      de: 'Fahrerkonto erstellen',
+                      it: 'Crea account autista',
+                      ru: 'Создать аккаунт водителя',
+                      zh: '创建司机账户',
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -986,16 +1133,45 @@ class _OperatorScreenState extends State<OperatorScreen>
           const SizedBox(height: 14),
           _driverMgmtSectionCard(
             icon: Icons.account_balance_wallet_outlined,
-            title: l.operatorChooseDriverTopUp,
+            title: _uiText(
+              en: 'Choose the driver to top up:',
+              ar: 'اختر السائق لشحن الرصيد:',
+              fr: 'Choisissez le chauffeur a recharger :',
+              es: 'Elegir conductor a recargar:',
+              de: 'Fahrer zum Aufladen waehlen:',
+              it: "Scegli l'autista da ricaricare:",
+              ru: 'Выберите водителя для пополнения:',
+              zh: '选择要充值的司机：',
+            ),
             children: [
               DropdownButtonFormField<int>(
                 value: _topUpAccountId != null &&
                         pinIds.contains(_topUpAccountId)
                     ? _topUpAccountId
                     : null,
-                decoration: _operatorFieldDecoration(l.operatorDriverNameLabel),
+                decoration: _operatorFieldDecoration(
+                  _uiText(
+                    en: 'Driver name',
+                    ar: 'اسم السائق',
+                    fr: 'Nom du chauffeur',
+                    es: 'Nombre del conductor',
+                    de: 'Fahrername',
+                    it: 'Nome autista',
+                    ru: 'Имя водителя',
+                    zh: '司机姓名',
+                  ),
+                ),
                 hint: Text(
-                  l.operatorDriverNameLabel,
+                  _uiText(
+                    en: 'Driver name',
+                    ar: 'اسم السائق',
+                    fr: 'Nom du chauffeur',
+                    es: 'Nombre del conductor',
+                    de: 'Fahrername',
+                    it: 'Nome autista',
+                    ru: 'Имя водителя',
+                    zh: '司机姓名',
+                  ),
                   style: const TextStyle(color: TaxiAppColors.textSoft),
                 ),
                 isExpanded: true,
@@ -1019,7 +1195,16 @@ class _OperatorScreenState extends State<OperatorScreen>
               ),
               const SizedBox(height: 14),
               Text(
-                l.operatorAmountReceivedDt,
+                _uiText(
+                  en: 'Amount received (DT):',
+                  ar: 'المبلغ المستلم (د.ت):',
+                  fr: 'Montant recu (DT) :',
+                  es: 'Importe recibido (DT):',
+                  de: 'Erhaltener Betrag (DT):',
+                  it: 'Importo ricevuto (DT):',
+                  ru: 'Полученная сумма (DT):',
+                  zh: '收到金额 (DT)：',
+                ),
                 style: _operatorHeadingTextStyle(),
               ),
               const SizedBox(height: 8),
@@ -1044,19 +1229,50 @@ class _OperatorScreenState extends State<OperatorScreen>
                       ? null
                       : _rechargeDriverWallet,
                   icon: const Icon(Icons.savings_outlined),
-                  label: Text(l.operatorRechargeBalance),
+                  label: Text(
+                    _uiText(
+                      en: 'Recharge the balance',
+                      ar: 'شحن الرصيد',
+                      fr: 'Recharger le solde',
+                      es: 'Recargar saldo',
+                      de: 'Guthaben aufladen',
+                      it: 'Ricarica saldo',
+                      ru: 'Пополнить баланс',
+                      zh: '充值余额',
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 22),
           Text(
-            'Driver ratings',
+            _uiText(
+              en: 'Driver ratings',
+              ar: 'تقييمات السائقين',
+              fr: 'Notes des chauffeurs',
+              es: 'Calificaciones de conductores',
+              de: 'Fahrerbewertungen',
+              it: 'Valutazioni autisti',
+              ru: 'Рейтинг водителей',
+              zh: '司机评分',
+            ),
             style: _operatorHeadingTextStyle(),
           ),
           const SizedBox(height: 8),
           if (_driverRatings.isEmpty)
-            const Text('No ratings yet')
+            Text(
+              _uiText(
+                en: 'No ratings yet',
+                ar: 'لا توجد تقييمات بعد',
+                fr: 'Pas encore de notes',
+                es: 'Aun no hay calificaciones',
+                de: 'Noch keine Bewertungen',
+                it: 'Nessuna valutazione ancora',
+                ru: 'Пока нет оценок',
+                zh: '暂无评分',
+              ),
+            )
           else
             ..._driverRatings.map(
               (row) => Card(
@@ -1066,7 +1282,8 @@ class _OperatorScreenState extends State<OperatorScreen>
                   leading: const Icon(Icons.star, color: Colors.amber),
                   title: Text((row['driver_name'] ?? '').toString()),
                   subtitle: Text(
-                    'Avg: ${row['rating_average']} (${row['rating_count']} ratings)',
+                    '${_uiText(en: 'Avg', ar: 'المتوسط', fr: 'Moy', es: 'Prom', de: 'Durchschn', it: 'Media', ru: 'Средн', zh: '平均')}: ${row['rating_average']}'
+                    ' (${row['rating_count']} ${_uiText(en: 'ratings', ar: 'تقييمات', fr: 'notes', es: 'calificaciones', de: 'Bewertungen', it: 'valutazioni', ru: 'оценок', zh: '评分')})',
                   ),
                 ),
               ),
@@ -1208,7 +1425,16 @@ class _OperatorScreenState extends State<OperatorScreen>
               padding: const EdgeInsets.all(16),
               children: [
                 Text(
-                  l.operatorEmployeePasswordLabel,
+                  _uiText(
+                    en: 'Employee password:',
+                    ar: 'كلمة مرور الموظف:',
+                    fr: 'Mot de passe employe :',
+                    es: 'Contrasena del empleado:',
+                    de: 'Mitarbeiterpasswort:',
+                    it: 'Password dipendente:',
+                    ru: 'Пароль сотрудника:',
+                    zh: '员工密码：',
+                  ),
                   style: _operatorHeadingTextStyle(),
                 ),
                 const SizedBox(height: 8),
@@ -1216,7 +1442,16 @@ class _OperatorScreenState extends State<OperatorScreen>
                   controller: _secretController,
                   obscureText: _obscureOperatorPassword,
                   decoration: InputDecoration(
-                    labelText: l.operatorCode,
+                    labelText: _uiText(
+                      en: 'Operator code',
+                      ar: 'رمز الموظف',
+                      fr: 'Code operateur',
+                      es: 'Codigo de operador',
+                      de: 'Operator-Code',
+                      it: 'Codice operatore',
+                      ru: 'Код оператора',
+                      zh: '调度员代码',
+                    ),
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(
@@ -1244,7 +1479,18 @@ class _OperatorScreenState extends State<OperatorScreen>
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: _busy ? null : _login,
-                    child: Text(l.loginLoadTrips),
+                    child: Text(
+                      _uiText(
+                        en: 'Login & load trips',
+                        ar: 'دخول وتحميل الرحلات',
+                        fr: 'Connexion et chargement des courses',
+                        es: 'Entrar y cargar viajes',
+                        de: 'Anmelden & Fahrten laden',
+                        it: 'Accedi e carica corse',
+                        ru: 'Войти и загрузить поездки',
+                        zh: '登录并加载行程',
+                      ),
+                    ),
                   ),
                 ),
                 if (_message != null) ...[
@@ -1273,7 +1519,16 @@ class _OperatorScreenState extends State<OperatorScreen>
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              l.operatorWelcomeOperatingRoom,
+                              _uiText(
+                                en: 'Welcome to the operating room.',
+                                ar: 'مرحبًا بك في غرفة العمليات.',
+                                fr: 'Bienvenue dans la salle des operations.',
+                                es: 'Bienvenido a la sala de operaciones.',
+                                de: 'Willkommen im Betriebsraum.',
+                                it: 'Benvenuto nella sala operativa.',
+                                ru: 'Добро пожаловать в диспетчерскую.',
+                                zh: '欢迎来到运营控制室。',
+                              ),
                               style: const TextStyle(
                                 color: Color(0xFF065F46),
                                 fontWeight: FontWeight.w600,
@@ -1300,10 +1555,18 @@ class _OperatorScreenState extends State<OperatorScreen>
                           labelColor: TaxiAppColors.text,
                           unselectedLabelColor: TaxiAppColors.textStrong,
                           tabs: [
-                            Tab(text: '✈️  ${l.operatorTabTodaysArrivals}'),
-                            Tab(text: '💸 ${l.operatorTabLiveOrders}'),
-                            Tab(text: '👤 ${l.operatorTabDriverManagement}'),
-                            Tab(text: '🗒️ ${l.operatorTabTripHistory}'),
+                            Tab(
+                              text: '✈️  ${_uiText(en: "Today's arrivals", ar: "وصولات اليوم", fr: "Arrivees du jour", es: "Llegadas de hoy", de: "Heutige Ankuenfte", it: "Arrivi di oggi", ru: "Прилеты сегодня", zh: "今日到达")}',
+                            ),
+                            Tab(
+                              text: '💸 ${_uiText(en: "Live orders", ar: "طلبات مباشرة", fr: "Commandes en direct", es: "Pedidos en vivo", de: "Live-Auftraege", it: "Ordini live", ru: "Заказы онлайн", zh: "实时订单")}',
+                            ),
+                            Tab(
+                              text: '👤 ${_uiText(en: "Driver management", ar: "إدارة السائقين", fr: "Gestion des chauffeurs", es: "Gestion de conductores", de: "Fahrerverwaltung", it: "Gestione autisti", ru: "Управление водителями", zh: "司机管理")}',
+                            ),
+                            Tab(
+                              text: '🗒️ ${_uiText(en: "Trip history", ar: "سجل الرحلات", fr: "Historique des courses", es: "Historial de viajes", de: "Fahrtenverlauf", it: "Storico viaggi", ru: "История поездок", zh: "行程历史")}',
+                            ),
                           ],
                         ),
                       ),

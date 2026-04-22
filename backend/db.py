@@ -35,6 +35,9 @@ def _user_dict(u: User) -> Dict[str, Any]:
         "email": u.email,
         "password_hash": u.password_hash,
         "role": u.role,
+        "display_name": u.display_name or "",
+        "phone": (u.phone or None),
+        "photo_url": (u.photo_url or None),
         "preferred_language": u.preferred_language,
         "is_enabled": u.is_enabled,
     }
@@ -65,6 +68,29 @@ def _ride_dict(r: Ride) -> Dict[str, Any]:
     driver_car_model = None
     driver_car_color = None
     driver_current_zone = None
+    b2b_booking = db.session.scalars(
+        select(B2BBooking).where(B2BBooking.ride_id == int(r.id))
+    ).first()
+    passenger_name = None
+    passenger_phone = None
+    u = db.session.get(User, int(r.user_id))
+    if u is not None:
+        display = (u.display_name or "").strip()
+        if display:
+            passenger_name = display
+        else:
+            email = (u.email or "").strip()
+            if email:
+                passenger_name = email.split("@", 1)[0]
+        passenger_phone = (u.phone or "").strip() or None
+    if b2b_booking is not None:
+        passenger_name = b2b_booking.guest_name or passenger_name
+        room_blob = (b2b_booking.room_number or "").strip()
+        if "Phone:" in room_blob:
+            try:
+                passenger_phone = room_blob.split("Phone:", 1)[1].split("|", 1)[0].strip()
+            except Exception:
+                passenger_phone = None
     if r.driver_id is not None:
         d = db.session.get(Driver, int(r.driver_id))
         if d is not None:
@@ -100,6 +126,14 @@ def _ride_dict(r: Ride) -> Dict[str, Any]:
         "driver_car_model": driver_car_model,
         "driver_car_color": driver_car_color,
         "driver_current_zone": driver_current_zone,
+        "passenger_name": passenger_name,
+        "passenger_phone": passenger_phone,
+        "is_rated": rating_exists_for_ride(int(r.id)),
+        "is_b2b": b2b_booking is not None,
+        "b2b_guest_name": b2b_booking.guest_name if b2b_booking is not None else None,
+        "b2b_room_number": b2b_booking.room_number if b2b_booking is not None else None,
+        "b2b_source_code": b2b_booking.source_code if b2b_booking is not None else None,
+        "b2b_fare": float(b2b_booking.fare) if b2b_booking is not None else None,
         "created_at": _dt(r.created_at),
         "updated_at": _dt(r.updated_at),
     }
@@ -413,14 +447,53 @@ def b2b_booking_insert(
     return _b2b_booking_dict(row)
 
 
+def b2b_booking_by_ride_id(ride_id: int) -> Optional[Dict[str, Any]]:
+    row = db.session.scalars(
+        select(B2BBooking).where(B2BBooking.ride_id == int(ride_id))
+    ).first()
+    return _b2b_booking_dict(row) if row else None
+
+
+def b2b_booking_update(booking_id: int, **fields: Any) -> Optional[Dict[str, Any]]:
+    row = db.session.get(B2BBooking, int(booking_id))
+    if row is None:
+        return None
+    for k in (
+        "status",
+        "ride_id",
+        "guest_name",
+        "room_number",
+        "route",
+        "pickup",
+        "destination",
+        "fare",
+    ):
+        if k in fields and fields[k] is not None:
+            setattr(row, k, fields[k])
+    db.session.commit()
+    db.session.refresh(row)
+    return _b2b_booking_dict(row)
+
+
 # --- users / drivers (JWT app auth) ---
 
 
-def user_create(*, email: str, password_hash: str, role: str) -> int:
+def user_create(
+    *,
+    email: str,
+    password_hash: str,
+    role: str,
+    display_name: str = "",
+    phone: Optional[str] = None,
+    photo_url: Optional[str] = None,
+) -> int:
     u = User(
         email=email.strip().lower(),
         password_hash=password_hash,
         role=role,
+        display_name=(display_name or "").strip(),
+        phone=(phone or "").strip() or None,
+        photo_url=(photo_url or "").strip() or None,
     )
     db.session.add(u)
     db.session.commit()
@@ -571,6 +644,27 @@ def driver_mark_online(user_id: int, *, last_lat: float | None = None, last_lng:
         row.last_lat = float(last_lat)
     if last_lng is not None:
         row.last_lng = float(last_lng)
+    row.last_seen_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+
+def driver_touch_online(user_id: int, *, last_lat: float | None = None, last_lng: float | None = None) -> None:
+    row = db.session.scalars(select(Driver).where(Driver.user_id == user_id)).first()
+    if row is None:
+        return
+    if last_lat is not None:
+        row.last_lat = float(last_lat)
+    if last_lng is not None:
+        row.last_lng = float(last_lng)
+    row.last_seen_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+
+def driver_set_availability_by_user_id(user_id: int, is_available: bool) -> None:
+    row = db.session.scalars(select(Driver).where(Driver.user_id == user_id)).first()
+    if row is None:
+        return
+    row.is_available = bool(is_available)
     row.last_seen_at = datetime.now(timezone.utc)
     db.session.commit()
 

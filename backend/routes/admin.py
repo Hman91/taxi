@@ -208,6 +208,13 @@ def admin_list_driver_pin_accounts(**kwargs: Any) -> Tuple[Any, int]:
     return jsonify({"driver_pin_accounts": rows}), 200
 
 
+@bp.get("/driver-wallet-breakdown")
+@require_roles("owner", "operator")
+def admin_driver_wallet_breakdown(**kwargs: Any) -> Tuple[Any, int]:
+    rows = admin_service.list_driver_wallet_breakdown()
+    return jsonify({"driver_wallets": rows}), 200
+
+
 @bp.post("/driver-pin-accounts")
 @require_roles("operator")
 def admin_create_driver_pin_account(**kwargs: Any) -> Tuple[Any, int]:

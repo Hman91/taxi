@@ -14,6 +14,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
 import '../l10n/ride_status_localization.dart';
 import '../models/app_notification.dart';
+import '../models/chat_message.dart';
 import '../services/chat_socket_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/taxi_app_service.dart';
@@ -43,6 +44,11 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   List<Ride> _rides = [];
   final Set<int> _dismissedPendingRideIds = {};
   final List<AppNotification> _notifications = [];
+  final Map<int, int> _unreadChatByRideId = <int, int>{};
+  final Map<int, int> _rideIdByConversationId = <int, int>{};
+  final Map<int, int> _conversationIdByRideId = <int, int>{};
+  final Map<int, int> _lastSeenMessageIdByConversationId = <int, int>{};
+  int? _activeChatRideId;
   String? _message;
   bool _busy = false;
 
@@ -181,6 +187,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     if (t == null) return;
     _socket.connect(
       t,
+      onReceiveMessage: _onChatMessage,
       onDriverWallet: _onDriverWallet,
       onRideStatus: (data) {
         if (!mounted) return;
@@ -245,6 +252,139 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     );
   }
 
+  Future<int?> _resolveRideIdFromChatPayload(Map<String, dynamic> data) async {
+    final directRideId = (data['ride_id'] as num?)?.toInt();
+    if (directRideId != null) return directRideId;
+    final conversationId = (data['conversation_id'] as num?)?.toInt();
+    if (conversationId == null) return null;
+    final cached = _rideIdByConversationId[conversationId];
+    if (cached != null) return cached;
+    final t = _token;
+    if (t == null) return null;
+    final candidates = _rides
+        .where((r) => r.status == 'accepted' || r.status == 'ongoing')
+        .toList();
+    for (final ride in candidates) {
+      try {
+        final info = await _api.getRideConversation(token: t, rideId: ride.id);
+        if (info == null) continue;
+        _rideIdByConversationId[info.conversationId] = ride.id;
+        _conversationIdByRideId[ride.id] = info.conversationId;
+        if (info.conversationId == conversationId) {
+          return ride.id;
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  void _onChatMessage(Map<String, dynamic> data) async {
+    if (!mounted) return;
+    final msg = ChatMessage.fromJson(data);
+    if (msg.senderUserId == _userId) return;
+    final rideId = await _resolveRideIdFromChatPayload(data);
+    if (!mounted) return;
+    if (rideId == null || _activeChatRideId == rideId) return;
+    final conversationId = (data['conversation_id'] as num?)?.toInt();
+    if (conversationId != null) {
+      _lastSeenMessageIdByConversationId[conversationId] = msg.id;
+      _conversationIdByRideId[rideId] = conversationId;
+      _rideIdByConversationId[conversationId] = rideId;
+    }
+    final loc = AppLocalizations.of(context)!;
+    final body = msg.displayText.trim().isEmpty ? loc.openChatButton : msg.displayText;
+    setState(() {
+      _unreadChatByRideId[rideId] = (_unreadChatByRideId[rideId] ?? 0) + 1;
+    });
+    final senderName = (msg.senderName ?? '').trim();
+    final title = senderName.isEmpty
+        ? loc.openChatButton
+        : '${loc.openChatButton} • $senderName';
+    _pushNotification(
+      title: title,
+      body: body,
+      event: 'chat_message',
+      rideId: rideId,
+    );
+    LocalNotificationService.instance.show(title: title, body: body);
+  }
+
+  Future<void> _syncConversationRideMap(List<Ride> rides) async {
+    final t = _token;
+    if (t == null) return;
+    final candidates = rides
+        .where((r) => r.status == 'accepted' || r.status == 'ongoing')
+        .toList();
+    for (final ride in candidates) {
+      try {
+        final info = await _api.getRideConversation(token: t, rideId: ride.id);
+        if (info == null) continue;
+        _rideIdByConversationId[info.conversationId] = ride.id;
+        _conversationIdByRideId[ride.id] = info.conversationId;
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _pollChatUnreadFallback() async {
+    final t = _token;
+    final uid = _userId;
+    if (t == null || uid == null) return;
+    final l = AppLocalizations.of(context)!;
+    final pairs = _conversationIdByRideId.entries.toList();
+    for (final entry in pairs) {
+      final rideId = entry.key;
+      final conversationId = entry.value;
+      if (_activeChatRideId == rideId) continue;
+      try {
+        final msgs = await _api.listConversationMessages(
+          token: t,
+          conversationId: conversationId,
+          limit: 20,
+        );
+        if (msgs.isEmpty) continue;
+        final prevSeen = _lastSeenMessageIdByConversationId[conversationId] ?? 0;
+        int maxId = prevSeen;
+        int incomingCount = 0;
+        ChatMessage? latestIncoming;
+        for (final m in msgs) {
+          if (m.id > maxId) maxId = m.id;
+          if (prevSeen > 0 && m.id > prevSeen && m.senderUserId != uid) {
+            incomingCount++;
+            if (latestIncoming == null || m.id > latestIncoming.id) {
+              latestIncoming = m;
+            }
+          }
+        }
+        if (prevSeen == 0) {
+          _lastSeenMessageIdByConversationId[conversationId] = maxId;
+          continue;
+        }
+        if (incomingCount > 0) {
+          if (!mounted) return;
+          setState(() {
+            _unreadChatByRideId[rideId] =
+                (_unreadChatByRideId[rideId] ?? 0) + incomingCount;
+          });
+          final body = (latestIncoming?.displayText.trim().isNotEmpty ?? false)
+              ? latestIncoming!.displayText
+              : l.openChatButton;
+          final senderName = (latestIncoming?.senderName ?? '').trim();
+          final title = senderName.isEmpty
+              ? l.openChatButton
+              : '${l.openChatButton} • $senderName';
+          _pushNotification(
+            title: title,
+            body: body,
+            event: 'chat_message_fallback',
+            rideId: rideId,
+          );
+          LocalNotificationService.instance.show(title: title, body: body);
+        }
+        _lastSeenMessageIdByConversationId[conversationId] = maxId;
+      } catch (_) {}
+    }
+  }
+
   Future<void> _login() async {
     final loc = AppLocalizations.of(context)!;
     setState(() {
@@ -269,6 +409,11 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
       rememberCurrentLocaleForRole(AppUiRole.driver);
       _token = r.accessToken;
       _userId = r.userId;
+      _unreadChatByRideId.clear();
+      _rideIdByConversationId.clear();
+      _conversationIdByRideId.clear();
+      _lastSeenMessageIdByConversationId.clear();
+      _activeChatRideId = null;
       _connectRealtime();
       final fares = await _api.getAirportFares();
       _locations = _startsFromRouteKeys(fares.keys, loc);
@@ -327,6 +472,8 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
         _driverCarColor = ownColor ?? _driverCarColor;
         _message = null;
       });
+      await _syncConversationRideMap(list);
+      await _pollChatUnreadFallback();
     } catch (e) {
       setState(() => _message = e.toString());
     } finally {
@@ -404,6 +551,12 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
             .showSnackBar(SnackBar(content: Text(l.chatUnavailable)));
         return;
       }
+      setState(() {
+        _activeChatRideId = ride.id;
+        _unreadChatByRideId.remove(ride.id);
+      });
+      _rideIdByConversationId[info.conversationId] = ride.id;
+      _conversationIdByRideId[ride.id] = info.conversationId;
       await Navigator.of(context).push<void>(
         MaterialPageRoute<void>(
           builder: (_) => RideChatScreen(
@@ -414,6 +567,9 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
           ),
         ),
       );
+      if (mounted && _activeChatRideId == ride.id) {
+        setState(() => _activeChatRideId = null);
+      }
       await _refreshRides();
     } catch (e) {
       if (mounted) {
@@ -421,6 +577,9 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
             .showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
+      if (mounted && _activeChatRideId == ride.id) {
+        setState(() => _activeChatRideId = null);
+      }
       if (mounted) setState(() => _busy = false);
     }
   }
@@ -434,6 +593,9 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
       _driverCarModel = null;
       _driverCarColor = null;
       _rides = [];
+      _unreadChatByRideId.clear();
+      _rideIdByConversationId.clear();
+      _activeChatRideId = null;
       _dismissedPendingRideIds.clear();
       _notifications.clear();
       _message = null;
@@ -463,10 +625,59 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
           onPressed: _busy ? null : () => _complete(r),
           child: Text(l10n.completeRide)));
     }
-    w.add(TextButton(
-        onPressed: _busy ? null : () => _openChat(r),
-        child: Text(l10n.openChatButton)));
+    w.add(_chatActionButton(r, l10n));
     return w;
+  }
+
+  Widget _chatActionButton(Ride ride, AppLocalizations l10n) {
+    final unread = _unreadChatByRideId[ride.id] ?? 0;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: TextButton.icon(
+        onPressed: _busy ? null : () => _openChat(ride),
+        icon: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l10n.openChatButton,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (unread > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  unread > 99 ? '99+' : '$unread',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        ),
+      ),
+    );
   }
 
   bool _isMine(Ride r) => _userId != null && r.driverId == _userId;
@@ -648,6 +859,20 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
                           localizedRideStatusLabel(l, r.status),
                         ),
                       ),
+                      if (r.isB2b == true)
+                        Text(
+                          'B2B • ${r.b2bGuestName ?? '-'} • Room ${r.b2bRoomNumber ?? '-'}'
+                          ' • ${r.b2bSourceCode ?? '-'}'
+                          ' • ${((r.b2bFare ?? 0)).toStringAsFixed(3)} DT',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      if ((r.passengerName ?? '').trim().isNotEmpty ||
+                          (r.passengerPhone ?? '').trim().isNotEmpty)
+                        Text(
+                          'Passenger: ${(r.passengerName ?? '').trim().isEmpty ? '-' : r.passengerName}'
+                          ' • ${(r.passengerPhone ?? '').trim().isEmpty ? '-' : r.passengerPhone}',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
                       Wrap(spacing: 4, children: _actionsFor(r)),
                     ],
                   ),

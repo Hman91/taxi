@@ -11,6 +11,7 @@ from werkzeug.security import generate_password_hash
 from .. import db as db_module
 from ..auth_tokens import issue_token, verify_token_safe
 from ..services import pricing
+from ..services import rides as rides_service
 from ..services import users as users_service
 from .jwt_auth import require_jwt_with_uid
 
@@ -26,6 +27,20 @@ _DRIVER_PIN_DEFAULTS = [
 _B2B_TENANT_DEFAULTS = [
     {"code": "Biz2026", "label": "Default B2B Tenant", "is_enabled": True},
 ]
+
+
+def _ensure_b2b_operator_user(source_code: str) -> int:
+    code = (source_code or "b2b").strip().lower()
+    email = f"b2b_operator_{code}@taxipro.local"
+    row = db_module.user_by_email(email)
+    if row is not None:
+        return int(row["id"])
+    uid = db_module.user_create(
+        email=email,
+        password_hash=generate_password_hash(f"b2b::{code}"),
+        role="user",
+    )
+    return int(uid)
 
 
 def _preferred_language_for_uid(uid: int) -> str:
@@ -141,12 +156,19 @@ def login() -> Tuple[Any, int]:
         tenant = db_module.b2b_tenant_by_code(secret)
         if tenant is None or not tenant.get("is_enabled", False):
             return jsonify({"error": "invalid_credentials"}), 401
+        b2b_uid = _ensure_b2b_operator_user(secret)
+        app_token = issue_token("user", user_id=b2b_uid)
     else:
         if secret != checks[role]:
             return jsonify({"error": "invalid_credentials"}), 401
 
     token = issue_token(role)
-    return jsonify({"access_token": token, "token_type": "Bearer", "role": role}), 200
+    out = {"access_token": token, "token_type": "Bearer", "role": role}
+    if role == "b2b":
+        out["app_access_token"] = app_token
+        out["app_role"] = "user"
+        out["user_id"] = b2b_uid
+    return jsonify(out), 200
 
 
 @bp.post("/auth/login-driver-pin")
@@ -210,6 +232,9 @@ def create_b2b_booking(**kwargs: Any) -> Tuple[Any, int]:
     data = request.get_json(silent=True) or {}
     route = (data.get("route") or "").strip()
     guest_name = (data.get("guest_name") or "").strip()
+    guest_phone = (data.get("guest_phone") or "").strip()
+    hotel_name = (data.get("hotel_name") or "").strip()
+    flight_eta = (data.get("flight_eta") or "").strip()
     room_number = (data.get("room_number") or "").strip()
     source_code = (data.get("source_code") or "").strip()
     try:
@@ -227,19 +252,40 @@ def create_b2b_booking(**kwargs: Any) -> Tuple[Any, int]:
     tenant = db_module.b2b_tenant_by_code(source_code) if source_code else None
     if source_code and (tenant is None or not tenant.get("is_enabled", False)):
         return jsonify({"error": "invalid_source_code"}), 400
+    room_compound = " | ".join(
+        [
+            f"Room: {room_number or '-'}",
+            f"Hotel: {hotel_name or '-'}",
+            f"Phone: {guest_phone or '-'}",
+            f"Flight: {flight_eta or '-'}",
+        ]
+    )
     booking = db_module.b2b_booking_insert(
         tenant_id=int(tenant["id"]) if tenant else None,
         route=route,
         pickup=pickup,
         destination=destination,
         guest_name=guest_name,
-        room_number=room_number,
+        room_number=room_compound,
         fare=fare,
         status="pending",
         source_code=source_code or "b2b",
         ride_id=None,
     )
-    return jsonify({"booking": booking}), 201
+    b2b_user_id = _ensure_b2b_operator_user(source_code or "b2b")
+    ride, err = rides_service.request_ride(
+        b2b_user_id,
+        pickup,
+        destination,
+        enforce_single_active=False,
+    )
+    if ride is not None:
+        booking = db_module.b2b_booking_update(
+            int(booking["id"]),
+            ride_id=int(ride["id"]),
+            status="requested",
+        ) or booking
+    return jsonify({"booking": booking, "ride": ride, "ride_error": err}), 201
 
 
 @bp.post("/auth/register")
@@ -248,9 +294,17 @@ def register() -> Tuple[Any, int]:
     email = (data.get("email") or "").strip()
     password = data.get("password") or ""
     role = (data.get("role") or "user").strip().lower()
-    if role == "user":
-        return jsonify({"error": "use_google_login_required"}), 403
-    user, err = users_service.register(email, password, role)
+    display_name = (data.get("display_name") or data.get("name") or "").strip()
+    phone = (data.get("phone") or "").strip()
+    photo_url = (data.get("photo_url") or data.get("image") or "").strip()
+    user, err = users_service.register(
+        email,
+        password,
+        role,
+        display_name=display_name,
+        phone=phone,
+        photo_url=photo_url,
+    )
     if err:
         code = 409 if err == "email_taken" else 400
         return jsonify({"error": err}), code
@@ -267,8 +321,8 @@ def login_app() -> Tuple[Any, int]:
     if err:
         code = 403 if err == "account_disabled" else 401
         return jsonify({"error": err}), code
-    if user["role"] == "user":
-        return jsonify({"error": "use_google_login_required"}), 403
+    if user["role"] == "user" and not str(user.get("phone") or "").strip():
+        return jsonify({"error": "phone_required"}), 400
     token = issue_token(user["role"], user_id=int(user["id"]))
     return (
         jsonify(
@@ -277,6 +331,9 @@ def login_app() -> Tuple[Any, int]:
                 "token_type": "Bearer",
                 "role": user["role"],
                 "user_id": user["id"],
+                "display_name": user.get("display_name"),
+                "phone": user.get("phone"),
+                "photo_url": user.get("photo_url"),
                 "preferred_language": str(user.get("preferred_language") or "en").strip()
                 or "en",
             }
@@ -291,6 +348,7 @@ def login_google() -> Tuple[Any, int]:
     data = request.get_json(silent=True) or {}
     id_token = data.get("id_token") or ""
     access_token = data.get("access_token") or ""
+    phone = (data.get("phone") or "").strip()
     if id_token:
         user, err = users_service.authenticate_google_id_token(id_token)
         # Flutter Web may return an unusable ID token while access token is valid.
@@ -303,6 +361,13 @@ def login_google() -> Tuple[Any, int]:
     if err:
         code = 403 if err == "account_disabled" else 401
         return jsonify({"error": err}), code
+    if not str(user.get("phone") or "").strip():
+        if not phone:
+            return jsonify({"error": "phone_required"}), 400
+        patched, perr = users_service.set_phone(int(user["id"]), phone)
+        if perr:
+            return jsonify({"error": perr}), 400
+        user = patched
     token = issue_token(user["role"], user_id=int(user["id"]))
     return (
         jsonify(

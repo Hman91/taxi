@@ -32,13 +32,11 @@ class _OwnerScreenState extends State<OwnerScreen>
   Map<String, dynamic>? _adminMetrics;
   List<Map<String, dynamic>> _trips = [];
   List<Map<String, dynamic>> _adminRides = [];
-  List<Map<String, dynamic>> _adminUsers = [];
   List<Map<String, dynamic>> _adminB2b = [];
   List<Map<String, dynamic>> _adminB2bBookings = [];
   List<Map<String, dynamic>> _flightArrivals = [];
   List<Map<String, dynamic>> _fareRoutes = [];
-  List<Map<String, dynamic>> _driverPinAccounts = [];
-  List<Map<String, dynamic>> _driverRatings = [];
+  List<Map<String, dynamic>> _driverWalletBreakdown = [];
   final Map<int, TextEditingController> _fareCtrls = {};
   double _commissionDemoPercent = 10.0;
 
@@ -83,6 +81,27 @@ class _OwnerScreenState extends State<OwnerScreen>
     return line;
   }
 
+  String _uiText({
+    required String en,
+    required String ar,
+    required String fr,
+    required String es,
+    required String de,
+    required String it,
+    required String ru,
+    required String zh,
+  }) {
+    final code = Localizations.localeOf(context).languageCode.toLowerCase();
+    if (code.startsWith('ar')) return ar;
+    if (code.startsWith('fr')) return fr;
+    if (code.startsWith('es')) return es;
+    if (code.startsWith('de')) return de;
+    if (code.startsWith('it')) return it;
+    if (code.startsWith('ru')) return ru;
+    if (code.startsWith('zh')) return zh;
+    return en;
+  }
+
   Future<void> _login() async {
     setState(() {
       _busy = true;
@@ -108,14 +127,12 @@ class _OwnerScreenState extends State<OwnerScreen>
       final m = await _api.ownerMetrics(t);
       final trips = await _api.listTrips(t);
       final adminRides = await _api.listAdminRides(t);
-      final adminUsers = await _api.listAdminUsers(t);
       final adminB2b = await _api.listAdminB2bTenants(t);
       final adminB2bBookings = await _api.listAdminB2bBookings(t);
       final adminMetrics = await _api.adminOwnerMetrics(t);
       final flights = await _api.listAdminTunisiaFlightArrivals(t);
       final fareRoutes = await _api.listAdminFareRoutes(t);
-      final driverPins = await _api.listAdminDriverPinAccounts(t);
-      final driverRatings = await _api.listAdminDriverRatings(t);
+      final driverWallets = await _api.listAdminDriverWalletBreakdown(t);
       if (!mounted) return;
       setState(() {
         _metrics = m;
@@ -133,13 +150,11 @@ class _OwnerScreenState extends State<OwnerScreen>
             )
             .toList();
         _adminRides = adminRides;
-        _adminUsers = adminUsers;
         _adminB2b = adminB2b;
         _adminB2bBookings = adminB2bBookings;
         _flightArrivals = flights;
         _fareRoutes = fareRoutes;
-        _driverPinAccounts = driverPins;
-        _driverRatings = driverRatings;
+        _driverWalletBreakdown = driverWallets;
         _syncFareControllers(fareRoutes);
         _message = null;
       });
@@ -156,7 +171,18 @@ class _OwnerScreenState extends State<OwnerScreen>
     if (t == null || ctrl == null) return;
     final v = double.tryParse(ctrl.text.trim().replaceAll(',', '.'));
     if (v == null || v < 0) {
-      setState(() => _message = 'Invalid fare');
+      setState(
+        () => _message = _uiText(
+          en: 'Invalid fare',
+          ar: 'تعرفة غير صالحة',
+          fr: 'Tarif invalide',
+          es: 'Tarifa invalida',
+          de: 'Ungueltiger Fahrpreis',
+          it: 'Tariffa non valida',
+          ru: 'Неверный тариф',
+          zh: '无效费用',
+        ),
+      );
       return;
     }
     setState(() {
@@ -168,30 +194,6 @@ class _OwnerScreenState extends State<OwnerScreen>
         token: t,
         routeId: routeId,
         baseFare: v,
-      );
-      await _refreshAll();
-    } catch (e) {
-      setState(() => _message = e.toString());
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _toggleUser(Map<String, dynamic> user) async {
-    final t = _token;
-    if (t == null) return;
-    final idRaw = user['id'];
-    if (idRaw is! num) return;
-    final current = (user['is_enabled'] == true);
-    setState(() {
-      _busy = true;
-      _message = null;
-    });
-    try {
-      await _api.setAdminUserEnabled(
-        token: t,
-        userId: idRaw.toInt(),
-        isEnabled: !current,
       );
       await _refreshAll();
     } catch (e) {
@@ -418,7 +420,7 @@ class _OwnerScreenState extends State<OwnerScreen>
             ],
           ),
           const SizedBox(height: 8),
-          if (_driverPinAccounts.isEmpty)
+          if (_driverWalletBreakdown.isEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
@@ -427,7 +429,7 @@ class _OwnerScreenState extends State<OwnerScreen>
               ),
             )
           else
-            ..._driverPinAccounts.map(
+            ..._driverWalletBreakdown.map(
               (d) => Card(
                 color: Colors.white,
                 margin: const EdgeInsets.only(bottom: 10),
@@ -449,36 +451,17 @@ class _OwnerScreenState extends State<OwnerScreen>
                     ),
                   ),
                   subtitle: Text(
-                    _ownerDriverPinSubtitle(l, d),
+                    '${_ownerDriverPinSubtitle(l, d)}'
+                    '\n${_uiText(en: 'Simple rides total', ar: 'إجمالي الرحلات العادية', fr: 'Total courses simples', es: 'Total viajes simples', de: 'Summe einfache Fahrten', it: 'Totale corse semplici', ru: 'Итого обычные поездки', zh: '普通行程总额')}: ${(d['gross_normal'] ?? 0).toString()} DT'
+                    ' | ${_uiText(en: 'B2B rides total', ar: 'إجمالي رحلات B2B', fr: 'Total courses B2B', es: 'Total viajes B2B', de: 'Summe B2B-Fahrten', it: 'Totale corse B2B', ru: 'Итого B2B поездки', zh: 'B2B行程总额')}: ${(d['gross_b2b'] ?? 0).toString()} DT'
+                    '\n${_uiText(en: 'Deducted from simple rides', ar: 'المخصوم من الرحلات العادية', fr: 'Retenu des courses simples', es: 'Descontado de viajes simples', de: 'Abzug aus einfachen Fahrten', it: 'Detratto da corse semplici', ru: 'Удержано с обычных поездок', zh: '普通行程扣除')}: ${(d['deducted_normal'] ?? 0).toString()} DT'
+                    ' | ${_uiText(en: 'Deducted from B2B rides', ar: 'المخصوم من رحلات B2B', fr: 'Retenu des courses B2B', es: 'Descontado de viajes B2B', de: 'Abzug aus B2B-Fahrten', it: 'Detratto da corse B2B', ru: 'Удержано с B2B поездок', zh: 'B2B行程扣除')}: ${(d['deducted_b2b'] ?? 0).toString()} DT',
                     style: const TextStyle(
                       fontSize: 12.5,
                       height: 1.35,
                       color: TaxiAppColors.textSoft,
                     ),
                   ),
-                ),
-              ),
-            ),
-          const Divider(height: 28),
-          Text(
-            'Driver ratings',
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              color: TaxiAppColors.textStrong,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 8),
-          if (_driverRatings.isEmpty)
-            const Text('No ratings yet')
-          else
-            ..._driverRatings.map(
-              (row) => ListTile(
-                dense: true,
-                leading: const Icon(Icons.star, color: Colors.amber),
-                title: Text((row['driver_name'] ?? '').toString()),
-                subtitle: Text(
-                  'Avg: ${row['rating_average']} (${row['rating_count']} ratings)',
                 ),
               ),
             ),
@@ -546,12 +529,21 @@ class _OwnerScreenState extends State<OwnerScreen>
                       ),
                     ),
                     subtitle: Text(
-                      l.rideStatusFmt(
-                        localizedRideStatusLabel(
-                          l,
-                          r['status']?.toString(),
-                        ),
+                      l.operatorRideSubtitleLine(
+                        '${l.statusLinePrefix}${localizedRideStatusLabel(l, r['status']?.toString())}',
+                        ((r['driver_name'] ?? r['driver_id'] ?? '').toString().trim().isEmpty)
+                            ? ''
+                            : '${l.driverLabelPrefix}${(r['driver_name'] ?? r['driver_id']).toString()}',
+                        (r['created_at'] ?? '').toString().trim().isEmpty
+                            ? ''
+                            : '${l.createdAtLinePrefix}${r['created_at']}',
                       ),
+                    ),
+                    trailing: Text(
+                      (r['is_b2b'] == true)
+                          ? '${l.roleB2b}: ${(r['b2b_guest_name'] ?? r['passenger_name'] ?? r['user_id'] ?? '-').toString()}'
+                          : '${l.rolePassenger}: ${(r['passenger_name'] ?? r['user_id'] ?? '-').toString()}',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -804,27 +796,12 @@ class _OwnerScreenState extends State<OwnerScreen>
               dense: true,
               title: Text(
                   b['label']?.toString() ?? b['code']?.toString() ?? ''),
-              subtitle: Text(b['code']?.toString() ?? ''),
+              subtitle: Text(
+                '${b['code']?.toString() ?? ''}'
+                ' • ${_uiText(en: 'Wallet', ar: 'المحفظة', fr: 'Portefeuille', es: 'Billetera', de: 'Wallet', it: 'Portafoglio', ru: 'Кошелек', zh: '钱包')} ${(b['wallet_balance'] ?? 0).toString()} DT',
+              ),
               value: b['is_enabled'] == true,
               onChanged: _busy ? null : (_) => _toggleB2b(b),
-            ),
-          ),
-          const Divider(height: 28),
-          Text(
-            l.operatorUserAccountsHeading,
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              color: TaxiAppColors.textStrong,
-            ),
-          ),
-          const SizedBox(height: 8),
-          ..._adminUsers.map(
-            (u) => SwitchListTile(
-              dense: true,
-              title: Text(u['email']?.toString() ?? ''),
-              subtitle: Text(u['role']?.toString() ?? ''),
-              value: u['is_enabled'] == true,
-              onChanged: _busy ? null : (_) => _toggleUser(u),
             ),
           ),
         ],

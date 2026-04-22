@@ -68,6 +68,27 @@ class _PassengerScreenState extends State<PassengerScreen> {
     }
   }
 
+  String _uiText({
+    required String en,
+    required String ar,
+    required String fr,
+    required String es,
+    required String de,
+    required String it,
+    required String ru,
+    required String zh,
+  }) {
+    final code = Localizations.localeOf(context).languageCode.toLowerCase();
+    if (code.startsWith('ar')) return ar;
+    if (code.startsWith('fr')) return fr;
+    if (code.startsWith('es')) return es;
+    if (code.startsWith('de')) return de;
+    if (code.startsWith('it')) return it;
+    if (code.startsWith('ru')) return ru;
+    if (code.startsWith('zh')) return zh;
+    return en;
+  }
+
   Future<void> _detectPassengerLocation() async {
     _setStateIfMounted(() {
       _locating = true;
@@ -319,7 +340,7 @@ class _PassengerScreenState extends State<PassengerScreen> {
         const SizedBox(height: 12),
         TextField(
           controller: _promoController,
-          decoration: const InputDecoration(labelText: 'WELCOME26'),
+          decoration: InputDecoration(labelText: l.promoCodeOptionalLabel),
           onChanged: (_) => _quoteAirport(),
         ),
         const SizedBox(height: 16),
@@ -363,7 +384,18 @@ class _PassengerScreenState extends State<PassengerScreen> {
                 child: OutlinedButton.icon(
                   onPressed: _callTaxi,
                   icon: const Icon(Icons.phone),
-                  label: const Text('Call'),
+                  label: Text(
+                    _uiText(
+                      en: 'Call',
+                      ar: 'اتصال',
+                      fr: 'Appeler',
+                      es: 'Llamar',
+                      de: 'Anrufen',
+                      it: 'Chiama',
+                      ru: 'Позвонить',
+                      zh: '呼叫',
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -371,7 +403,18 @@ class _PassengerScreenState extends State<PassengerScreen> {
                 child: OutlinedButton.icon(
                   onPressed: _openWhatsApp,
                   icon: const Icon(Icons.chat),
-                  label: const Text('WhatsApp'),
+                  label: Text(
+                    _uiText(
+                      en: 'WhatsApp',
+                      ar: 'واتساب',
+                      fr: 'WhatsApp',
+                      es: 'WhatsApp',
+                      de: 'WhatsApp',
+                      it: 'WhatsApp',
+                      ru: 'WhatsApp',
+                      zh: 'WhatsApp',
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -385,16 +428,25 @@ class _PassengerScreenState extends State<PassengerScreen> {
               subtitle: Text([
                 l.rideStatusFmt(_activeRequest!.status),
                 if ((_activeRequest!.driverName ?? '').isNotEmpty)
-                  'Driver: ${_activeRequest!.driverName}',
+                  l.passengerDriverLine(_activeRequest!.driverName!),
                 if ((_activeRequest!.driverPhone ?? '').isNotEmpty)
-                  'Phone: ${_activeRequest!.driverPhone}',
+                  l.passengerPhoneLine(_activeRequest!.driverPhone!),
               ].join('\n')),
               trailing: Text('${_activeRequest!.price.toStringAsFixed(3)} DT'),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Searching nearby drivers...',
+            _uiText(
+              en: 'Searching nearby drivers...',
+              ar: 'جاري البحث عن سائقين قريبين...',
+              fr: 'Recherche de chauffeurs a proximite...',
+              es: 'Buscando conductores cercanos...',
+              de: 'Suche nach Fahrern in der Naehe...',
+              it: 'Ricerca di autisti nelle vicinanze...',
+              ru: 'Поиск ближайших водителей...',
+              zh: '正在查找附近司机...',
+            ),
             style: const TextStyle(color: Colors.deepOrange),
           ),
           const SizedBox(height: 8),
@@ -429,7 +481,18 @@ class _PassengerScreenState extends State<PassengerScreen> {
           const SizedBox(height: 8),
           OutlinedButton(
             onPressed: () => _syncActiveRequestFromBackend(),
-            child: const Text('Refresh ride status'),
+            child: Text(
+              _uiText(
+                en: 'Refresh ride status',
+                ar: 'تحديث حالة الرحلة',
+                fr: 'Actualiser le statut de la course',
+                es: 'Actualizar estado del viaje',
+                de: 'Fahrtstatus aktualisieren',
+                it: 'Aggiorna stato corsa',
+                ru: 'Обновить статус поездки',
+                zh: '刷新行程状态',
+              ),
+            ),
           ),
           const Divider(height: 24),
         ],
@@ -468,7 +531,18 @@ class _PassengerScreenState extends State<PassengerScreen> {
         FilledButton.icon(
           onPressed: _callTaxi,
           icon: const Icon(Icons.emergency),
-          label: const Text('Emergency Call'),
+          label: Text(
+            _uiText(
+              en: 'Emergency call',
+              ar: 'مكالمة طوارئ',
+              fr: 'Appel d urgence',
+              es: 'Llamada de emergencia',
+              de: 'Notruf',
+              it: 'Chiamata di emergenza',
+              ru: 'Экстренный вызов',
+              zh: '紧急呼叫',
+            ),
+          ),
         ),
         const SizedBox(height: 16),
         Text(l.rateYourLastRide,
@@ -574,12 +648,13 @@ class _PassengerScreenState extends State<PassengerScreen> {
         );
       });
       if (mounted) {
+        final l = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Request sent. Waiting for drivers...')),
+          SnackBar(content: Text(l.notificationRequestSentBody)),
         );
         LocalNotificationService.instance.show(
-          title: 'Request sent',
-          body: 'Waiting for nearby drivers to accept your ride.',
+          title: l.notificationRequestSentTitle,
+          body: l.notificationRequestSentBody,
         );
       }
       await _saveGuestSession();
@@ -622,8 +697,9 @@ class _PassengerScreenState extends State<PassengerScreen> {
       );
       if (!mounted) return;
       if (info == null) {
+        final l = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Chat opens after driver accepts')),
+          SnackBar(content: Text(l.chatUnavailable)),
         );
         return;
       }
@@ -667,30 +743,31 @@ class _PassengerScreenState extends State<PassengerScreen> {
         );
       });
       if (!mounted) return;
+      final l = AppLocalizations.of(context)!;
       if (row.status == 'completed' && _pendingRatingRideId == null) {
         _setStateIfMounted(() => _pendingRatingRideId = row!.id);
       }
       if (previous == 'pending' && row.status == 'accepted') {
-        final driver = row.driverName ?? 'Driver';
+        final driver = row.driverName ?? l.driverNameFallback;
         final phone =
             (row.driverPhone != null && row.driverPhone!.isNotEmpty) ? ' (${row.driverPhone})' : '';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Driver accepted: $driver$phone')),
+          SnackBar(content: Text(l.notificationDriverAcceptedSnack(driver, phone))),
         );
         LocalNotificationService.instance.show(
-          title: 'Driver accepted',
-          body: '$driver$phone accepted your request.',
+          title: l.notificationDriverAcceptedTitle,
+          body: l.notificationDriverAcceptedBody(driver, phone),
         );
       }
       if (row.status == 'accepted' &&
           (row.driverCurrentZone ?? '').trim().isNotEmpty &&
           row.driverCurrentZone!.trim() == row.pickup.trim()) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Driver is near your pickup point.')),
+          SnackBar(content: Text(l.passengerDriverNearPickupSnack)),
         );
         LocalNotificationService.instance.show(
-          title: 'Driver near pickup',
-          body: 'Your driver is near pickup in ${row.pickup}.',
+          title: l.notificationDriverNearPickupTitle,
+          body: l.notificationDriverNearPickupBody(row.pickup),
         );
       }
       await _saveGuestSession();
