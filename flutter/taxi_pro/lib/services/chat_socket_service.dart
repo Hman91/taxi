@@ -7,6 +7,18 @@ import '../config.dart';
 
 typedef JsonMap = Map<String, dynamic>;
 
+/// Flask-SocketIO + Werkzeug dev (`python -m backend`) does not reliably upgrade
+/// WebSockets; Engine.IO long-polling over HTTP works. Production (e.g. Gunicorn +
+/// eventlet) supports WebSocket.
+bool _isLoopbackApiBase(String base) {
+  try {
+    final h = Uri.parse(base).host.toLowerCase();
+    return h == 'localhost' || h == '127.0.0.1' || h == '::1';
+  } catch (_) {
+    return false;
+  }
+}
+
 /// Real-time chat + ride pushes; no UI logic (see `.cursor/rules.md`).
 class ChatSocketService {
   ChatSocketService({String? baseUrl}) : _base = baseUrl ?? apiBaseUrl;
@@ -26,15 +38,16 @@ class ChatSocketService {
     List<String>? transports,
   }) {
     disconnect();
-    var resolvedTransports =
-        List<String>.from(transports ?? (kIsWeb ? ['websocket', 'polling'] : ['polling']));
-    // On Flutter web, polling transport can intermittently yield malformed
-    // payload chunks in socket_io_common; prefer websocket first.
-    if (kIsWeb &&
-        resolvedTransports.length == 1 &&
-        resolvedTransports.first == 'polling') {
-      resolvedTransports = ['websocket', 'polling'];
-    }
+    final loopback = _isLoopbackApiBase(_base);
+    // Do not rewrite an explicit transport list (callers may force polling only).
+    final resolvedTransports = List<String>.from(
+      transports ??
+          (kIsWeb
+              ? (loopback
+                  ? <String>['polling']
+                  : <String>['websocket', 'polling'])
+              : <String>['polling']),
+    );
     _socket = socket_io.io(
       _base,
       socket_io.OptionBuilder()

@@ -565,47 +565,11 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   }
 
   Future<String?> _askRequiredPhoneForGoogle() async {
-    final ctrl = TextEditingController();
-    final focusNode = FocusNode();
-    final result = await showDialog<String>(
+    return showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (focusNode.canRequestFocus) {
-            focusNode.requestFocus();
-          }
-        });
-        return AlertDialog(
-          title: const Text('Phone required'),
-          content: TextField(
-            controller: ctrl,
-            focusNode: focusNode,
-            autofocus: true,
-            keyboardType: TextInputType.phone,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
-            decoration: const InputDecoration(
-              labelText: 'Phone number',
-              hintText: 'Enter your phone number',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
+      builder: (ctx) => const _PassengerGooglePhoneDialog(),
     );
-    focusNode.dispose();
-    ctrl.dispose();
-    return result;
   }
 
   Future<void> _loginWithEmailPassword() async {
@@ -1700,6 +1664,54 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       }
     }
     return NetworkImage(raw);
+  }
+}
+
+/// Owns [TextEditingController] for the phone dialog so disposal matches route
+/// teardown (avoids FocusNode / controller disposed while pop animation runs).
+class _PassengerGooglePhoneDialog extends StatefulWidget {
+  const _PassengerGooglePhoneDialog();
+
+  @override
+  State<_PassengerGooglePhoneDialog> createState() =>
+      _PassengerGooglePhoneDialogState();
+}
+
+class _PassengerGooglePhoneDialogState extends State<_PassengerGooglePhoneDialog> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Phone required'),
+      content: TextField(
+        controller: _ctrl,
+        autofocus: true,
+        keyboardType: TextInputType.phone,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (v) => Navigator.of(context).pop(v.trim()),
+        decoration: const InputDecoration(
+          labelText: 'Phone number',
+          hintText: 'Enter your phone number',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_ctrl.text.trim()),
+          child: const Text('Save'),
+        ),
+      ],
+    );
   }
 }
 
