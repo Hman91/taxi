@@ -4,9 +4,17 @@ from __future__ import annotations
 import os
 from logging.config import fileConfig
 
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
 from alembic import context
 from sqlalchemy import create_engine, pool
 
+from backend.config import _normalize_database_url
 from backend.extensions import db
 
 import backend.models  # noqa: F401 — ensure models bind to metadata
@@ -19,9 +27,11 @@ target_metadata = db.metadata
 
 
 def get_url() -> str:
-    return os.environ.get(
-        "DATABASE_URL",
-        "postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/taxi",
+    return _normalize_database_url(
+        os.environ.get(
+            "DATABASE_URL",
+            "postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/taxi",
+        )
     )
 
 

@@ -1096,7 +1096,14 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         gradient: const LinearGradient(
           colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: TextButton.icon(
         onPressed: _busy ? null : () => _openChat(ride),
@@ -1133,8 +1140,8 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         ),
         style: TextButton.styleFrom(
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         ),
       ),
     );
@@ -1216,15 +1223,86 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           if (_token == null) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0F172A), Color(0xFF1D4ED8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.22),
+                    blurRadius: 14,
+                    offset: const Offset(0, 7),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.16),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.local_taxi, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l.appPassengerTitle,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 17,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l.signInApp,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.86),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Card(
+              elevation: 7,
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      l.roleAppPassenger,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.person),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          l.roleAppPassenger,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -1263,14 +1341,29 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
               ),
             const SizedBox(height: 12),
             Card(
+              elevation: 7,
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      l.registerAppAccount,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.person_add_alt_1),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          l.registerAppAccount,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 10),
                     TextField(
@@ -1337,8 +1430,52 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
               ),
             ),
           ] else ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF14532D), Color(0xFF16A34A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.18),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.16),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.verified_user, color: Colors.white),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      l.sessionActive,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Card(
               color: TaxiAppColors.darkPanel,
+              elevation: 8,
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
@@ -1372,6 +1509,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
             ),
             const SizedBox(height: 8),
             Card(
+              elevation: 7,
               child: ListTile(
                 dense: true,
                 leading: const Icon(Icons.my_location),
@@ -1397,6 +1535,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
             ),
             const SizedBox(height: 8),
             Card(
+              elevation: 7,
               child: Padding(
                 padding: const EdgeInsets.all(10),
                 child: Column(
@@ -1425,44 +1564,71 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
             const SizedBox(height: 16),
             Text(
               l.myRidesHeading,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
             ),
             if (_rides.isEmpty) Text(l.noRidesYetApp),
             ..._rides.map(
               (r) => Card(
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  title: Text(localizedRideRouteRow(l, r.pickup, r.destination)),
-                  subtitle: Text([
-                    l.rideStatusFmt(localizedRideStatusLabel(l, r.status)),
-                    if ((r.driverName ?? '').isNotEmpty)
-                      l.passengerDriverLine(r.driverName!),
-                    if ((r.driverPhone ?? '').isNotEmpty)
-                      l.passengerPhoneLine(r.driverPhone!),
-                  ].join('\n')),
-                  isThreeLine: true,
-                  leading: (() {
-                    final provider = _imageProviderFromString(r.driverPhotoUrl);
-                    if (provider == null) return const CircleAvatar(child: Icon(Icons.person));
-                    return CircleAvatar(backgroundImage: provider);
-                  })(),
-                  trailing: Wrap(
-                    spacing: 4,
+                elevation: 7,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (r.status != 'completed' && r.status != 'cancelled')
-                        TextButton(
-                          onPressed: _busy ? null : () => _cancelRide(r),
-                          child: Text(l.cancelRidePassenger),
+                      Row(
+                        children: [
+                          (() {
+                            final provider = _imageProviderFromString(r.driverPhotoUrl);
+                            if (provider == null) {
+                              return const CircleAvatar(child: Icon(Icons.person));
+                            }
+                            return CircleAvatar(backgroundImage: provider);
+                          })(),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              localizedRideRouteRow(l, r.pickup, r.destination),
+                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.65),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      _chatActionButton(r),
-                      if (r.status == 'completed' && !_ratedRideIds.contains(r.id))
-                        TextButton(
-                          onPressed: _busy ? null : () => _rateCompletedRide(r),
-                          child: Text(l.submitRating),
+                        child: Text(
+                          [
+                            l.rideStatusFmt(localizedRideStatusLabel(l, r.status)),
+                            if ((r.driverName ?? '').isNotEmpty)
+                              l.passengerDriverLine(r.driverName!),
+                            if ((r.driverPhone ?? '').isNotEmpty)
+                              l.passengerPhoneLine(r.driverPhone!),
+                          ].join('\n'),
                         ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          if (r.status != 'completed' && r.status != 'cancelled')
+                            TextButton(
+                              onPressed: _busy ? null : () => _cancelRide(r),
+                              child: Text(l.cancelRidePassenger),
+                            ),
+                          _chatActionButton(r),
+                          if (r.status == 'completed' && !_ratedRideIds.contains(r.id))
+                            FilledButton.tonal(
+                              onPressed: _busy ? null : () => _rateCompletedRide(r),
+                              child: Text(l.submitRating),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                 ),

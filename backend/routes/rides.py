@@ -157,7 +157,11 @@ def driver_location(**kwargs: Any) -> Tuple[Any, int]:
     body = request.get_json(silent=True) or {}
     current_zone = (body.get("current_zone") or "").strip()
     if "is_available" in body and isinstance(body.get("is_available"), bool):
-        rides_service.set_driver_availability(uid, bool(body.get("is_available")))
+        err_avail = rides_service.set_driver_availability(
+            uid, bool(body.get("is_available"))
+        )
+        if err_avail:
+            return jsonify({"error": err_avail}), 400
     lat_raw = body.get("lat")
     lng_raw = body.get("lng")
     lat = None

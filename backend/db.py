@@ -614,11 +614,24 @@ def rides_list_pending() -> List[Dict[str, Any]]:
     return [_ride_dict(x) for x in rows]
 
 
+def driver_pin_wallet_balance_for_user(user_id: int) -> float:
+    """Wallet from driver_pin account; 0 if missing (PIN drivers only)."""
+    acct = driver_pin_account_by_user_id(user_id)
+    if acct is None:
+        return 0.0
+    return float(acct.get("wallet_balance") or 0.0)
+
+
 def driver_profiles_for_dispatch() -> List[Dict[str, Any]]:
     rows = db.session.scalars(
         select(Driver).where(Driver.is_available.is_(True)).order_by(Driver.id.asc())
     ).all()
-    return [_driver_dict(x) for x in rows]
+    eligible = [
+        x
+        for x in rows
+        if driver_pin_wallet_balance_for_user(int(x.user_id)) > 0.0
+    ]
+    return [_driver_dict(x) for x in eligible]
 
 
 def driver_profiles_for_dispatch_online(window_minutes: int = 30) -> List[Dict[str, Any]]:
@@ -632,14 +645,20 @@ def driver_profiles_for_dispatch_online(window_minutes: int = 30) -> List[Dict[s
         )
         .order_by(Driver.last_seen_at.desc(), Driver.id.asc())
     ).all()
-    return [_driver_dict(x) for x in rows]
+    eligible = [
+        x
+        for x in rows
+        if driver_pin_wallet_balance_for_user(int(x.user_id)) > 0.0
+    ]
+    return [_driver_dict(x) for x in eligible]
 
 
 def driver_mark_online(user_id: int, *, last_lat: float | None = None, last_lng: float | None = None) -> None:
     row = db.session.scalars(select(Driver).where(Driver.user_id == user_id)).first()
     if row is None:
         return
-    row.is_available = True
+    # Cannot be "available" for dispatch with zero (or negative) wallet balance.
+    row.is_available = driver_pin_wallet_balance_for_user(user_id) > 0.0
     if last_lat is not None:
         row.last_lat = float(last_lat)
     if last_lng is not None:

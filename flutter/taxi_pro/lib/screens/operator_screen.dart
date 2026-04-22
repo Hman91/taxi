@@ -1424,6 +1424,49 @@ class _OperatorScreenState extends State<OperatorScreen>
           ? ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0F172A), Color(0xFF0E7490)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 12,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.16),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.headset_mic, color: Colors.white),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          l.operatorTitle,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 Text(
                   _uiText(
                     en: 'Employee password:',
@@ -1509,13 +1552,31 @@ class _OperatorScreenState extends State<OperatorScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFD1FAE5),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF34D399)),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF14532D), Color(0xFF16A34A)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.16),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.check_circle, color: Color(0xFF065F46)),
+                          Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -1530,8 +1591,8 @@ class _OperatorScreenState extends State<OperatorScreen>
                                 zh: '欢迎来到运营控制室。',
                               ),
                               style: const TextStyle(
-                                color: Color(0xFF065F46),
-                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),

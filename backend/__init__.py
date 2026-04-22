@@ -20,10 +20,14 @@ def create_app() -> Flask:
     app.config.from_object(Config)
     app.logger.setLevel(logging.INFO)
     orm_db.init_app(app)
+    # Use eventlet with Gunicorn (-k eventlet); local dev defaults to threading.
+    _socket_mode = (os.environ.get("SOCKETIO_ASYNC_MODE") or "threading").strip().lower()
+    if _socket_mode not in ("threading", "eventlet", "gevent"):
+        _socket_mode = "threading"
     socketio.init_app(
         app,
         cors_allowed_origins="*",
-        async_mode="threading",
+        async_mode=_socket_mode,
     )
     CORS(
         app,

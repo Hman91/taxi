@@ -107,6 +107,8 @@ def _apply_wallet_on_complete(
     old_bal = float(acct["wallet_balance"] or 0.0)
     new_bal = round(old_bal - deduct, 3)
     db_module.driver_pin_update(int(acct["id"]), wallet_balance=new_bal)
+    if new_bal <= 0.0:
+        db_module.driver_set_availability_by_user_id(driver_user_id, False)
     realtime_broadcast.emit_driver_wallet(
         driver_user_id,
         {
@@ -117,6 +119,7 @@ def _apply_wallet_on_complete(
             "commission_rate_applied": effective_rate,
             "is_b2b_ride": is_b2b,
             "ride_id": int(ride_before_complete["id"]),
+            "is_available": new_bal > 0.0,
         },
     )
     if new_bal <= 0 < old_bal:
@@ -214,8 +217,14 @@ def driver_gains_summary(driver_user_id: int) -> Dict[str, Any]:
     }
 
 
-def set_driver_availability(driver_user_id: int, is_available: bool) -> None:
+def set_driver_availability(driver_user_id: int, is_available: bool) -> Optional[str]:
+    if is_available:
+        bal = db_module.driver_pin_wallet_balance_for_user(driver_user_id)
+        if bal <= 0.0:
+            db_module.driver_set_availability_by_user_id(driver_user_id, False)
+            return "wallet_empty_cannot_enable"
     db_module.driver_set_availability_by_user_id(driver_user_id, is_available)
+    return None
 
 
 def list_for_app_user(user_id: int, role: str) -> List[Dict[str, Any]]:
@@ -236,6 +245,8 @@ def accept_ride(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[str, A
     d = db_module.driver_by_user_id(driver_user_id)
     if d is None:
         return None, "not_a_driver"
+    if db_module.driver_pin_wallet_balance_for_user(driver_user_id) <= 0.0:
+        return None, "wallet_empty"
     row = db_module.ride_get(ride_id)
     if row is None:
         return None, "not_found"

@@ -34,6 +34,9 @@ abstract final class TaxiAppColors {
 
   /// Streamlit `.taxi-dark-panel` — dispatch / promo strip on dark background
   static const Color darkPanel = Color(0xFF1A1A1A);
+  static const Color success = Color(0xFF15803D);
+  static const Color danger = Color(0xFFB91C1C);
+  static const Color softGlass = Color(0xE6FFFFFF);
 }
 
 /// Full-screen background (Streamlit `stApp` gradient).
@@ -118,9 +121,7 @@ ThemeData buildTaxiProTheme() {
     ),
   );
 
-  final buttonShape = RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(12),
-  );
+  final buttonShape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
 
   return ThemeData(
     useMaterial3: true,
@@ -129,24 +130,27 @@ ThemeData buildTaxiProTheme() {
     textTheme: baseText,
     appBarTheme: AppBarTheme(
       elevation: 0,
-      scrolledUnderElevation: 2,
+      scrolledUnderElevation: 0.5,
       centerTitle: true,
-      backgroundColor: TaxiAppColors.appBarFill,
+      backgroundColor: TaxiAppColors.appBarFill.withOpacity(0.92),
       foregroundColor: TaxiAppColors.textStrong,
       surfaceTintColor: Colors.transparent,
       iconTheme: const IconThemeData(color: TaxiAppColors.textStrong),
-      titleTextStyle: baseText.titleLarge?.copyWith(fontSize: 19),
+      titleTextStyle: baseText.titleLarge?.copyWith(
+        fontSize: 20,
+        fontWeight: FontWeight.w800,
+      ),
     ),
     cardTheme: CardThemeData(
-      elevation: 3,
-      shadowColor: Colors.black.withOpacity(0.12),
+      elevation: 6,
+      shadowColor: Colors.black.withOpacity(0.14),
       surfaceTintColor: Colors.transparent,
-      color: TaxiAppColors.cardFill,
+      color: TaxiAppColors.softGlass,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
         side: const BorderSide(color: TaxiAppColors.cardBorder),
       ),
-      margin: const EdgeInsets.symmetric(vertical: 6),
+      margin: const EdgeInsets.symmetric(vertical: 7),
     ),
     dividerTheme: const DividerThemeData(
       color: Color(0x38785A00),
@@ -154,7 +158,7 @@ ThemeData buildTaxiProTheme() {
       space: 1,
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: Colors.white.withOpacity(0.72),
+      backgroundColor: Colors.white.withOpacity(0.85),
       side: const BorderSide(color: Color(0x488B1428)),
       labelStyle: TextStyle(
         color: TaxiAppColors.textStrong,
@@ -162,27 +166,27 @@ ThemeData buildTaxiProTheme() {
         fontSize: 13,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: TaxiAppColors.buttonDark,
         foregroundColor: Colors.white,
         disabledBackgroundColor: Colors.grey.shade400,
-        elevation: 4,
+        elevation: 2,
         shadowColor: Colors.black.withOpacity(0.18),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         shape: buttonShape,
-        textStyle: const TextStyle(fontWeight: FontWeight.w600, letterSpacing: 0.2),
+        textStyle: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.2),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: TaxiAppColors.buttonDark,
         foregroundColor: Colors.white,
-        elevation: 4,
+        elevation: 2,
         shadowColor: Colors.black.withOpacity(0.18),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         shape: buttonShape,
       ),
     ),
@@ -190,7 +194,7 @@ ThemeData buildTaxiProTheme() {
       style: OutlinedButton.styleFrom(
         foregroundColor: TaxiAppColors.textStrong,
         side: const BorderSide(color: Color(0x668B1428)),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         shape: buttonShape,
       ),
     ),
@@ -201,7 +205,7 @@ ThemeData buildTaxiProTheme() {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.white.withOpacity(0.65),
+      fillColor: Colors.white.withOpacity(0.84),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0x44B48C00)),
@@ -229,6 +233,8 @@ ThemeData buildTaxiProTheme() {
       iconColor: TaxiAppColors.textStrong,
       textColor: TaxiAppColors.text,
       titleTextStyle: baseText.titleMedium,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
     ),
     iconTheme: const IconThemeData(color: TaxiAppColors.textStrong),
     dialogTheme: DialogThemeData(
@@ -247,6 +253,7 @@ ThemeData buildTaxiProTheme() {
       labelColor: TaxiAppColors.textStrong,
       unselectedLabelColor: TaxiAppColors.text.withOpacity(0.75),
       indicatorColor: TaxiAppColors.textStrong,
+      dividerColor: Colors.transparent,
     ),
     progressIndicatorTheme: const ProgressIndicatorThemeData(
       color: TaxiAppColors.textStrong,

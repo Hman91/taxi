@@ -165,7 +165,7 @@ class _DriverScreenState extends State<DriverScreen> {
         _driverId = r.driverId;
         _driverName = r.driverName;
         _walletBalance = r.walletBalance;
-        _isAvailable = true;
+        _isAvailable = r.walletBalance > 0;
         _carModel = r.carModel;
         _carColor = r.carColor;
         _photoUrl = r.photoUrl;
@@ -245,7 +245,11 @@ class _DriverScreenState extends State<DriverScreen> {
       if (!mounted) return;
       setState(() {
         _gains = g;
-        _isAvailable = (g['is_available'] == true);
+        final wb = (g['wallet_balance'] as num?)?.toDouble();
+        if (wb != null) {
+          _walletBalance = wb;
+        }
+        _isAvailable = (g['is_available'] == true) && _walletBalance > 0;
       });
     } catch (_) {}
   }
@@ -466,6 +470,14 @@ class _DriverScreenState extends State<DriverScreen> {
   Future<void> _setAvailability(bool v) async {
     final t = _token;
     if (t == null) return;
+    if (v && _walletBalance <= 0) {
+      if (!mounted) return;
+      final l = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.driverWalletDepletedTitle)),
+      );
+      return;
+    }
     setState(() => _isAvailable = v);
     try {
       await _api.updateDriverLocation(
@@ -498,7 +510,13 @@ class _DriverScreenState extends State<DriverScreen> {
     final loc = AppLocalizations.of(context)!;
     final wb = data['wallet_balance'];
     if (wb is num) {
-      setState(() => _walletBalance = wb.toDouble());
+      final bal = wb.toDouble();
+      setState(() {
+        _walletBalance = bal;
+        if (bal <= 0) {
+          _isAvailable = false;
+        }
+      });
     }
     final event = (data['event'] ?? '').toString();
     if (event != 'wallet_depleted') return;
@@ -875,15 +893,74 @@ class _DriverScreenState extends State<DriverScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (_token == null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0F172A), Color(0xFF1D4ED8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.16),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.local_taxi, color: Colors.white),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      l.appDriverTitle,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Card(
+            elevation: 7,
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    l.roleAppDriver,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.badge_outlined),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        l.roleAppDriver,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 10),
                   TextField(
@@ -907,18 +984,30 @@ class _DriverScreenState extends State<DriverScreen> {
           ),
           if (_token != null)
             Card(
-              color: Colors.green.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(10),
+              elevation: 7,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF14532D), Color(0xFF16A34A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                padding: const EdgeInsets.all(12),
                 child: Text(
                   '${l.sessionActive}${_driverName == null ? '' : ' — $_driverName'}'
                   ' | ${l.walletWithAmount(_walletBalance.toStringAsFixed(3))}',
-                  style: TextStyle(color: Colors.green.shade900),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
           if (_token != null)
             Card(
+              elevation: 7,
               child: SwitchListTile(
                 value: _isAvailable,
                 onChanged: _busy ? null : _setAvailability,
@@ -932,6 +1021,7 @@ class _DriverScreenState extends State<DriverScreen> {
             ),
           if (_token != null && _gains != null)
             Card(
+              elevation: 7,
               child: ListTile(
                 leading: const Icon(Icons.savings_outlined),
                 title: Text(
@@ -986,6 +1076,7 @@ class _DriverScreenState extends State<DriverScreen> {
           if (_token != null && (_carModel != null || _carColor != null)) ...[
             const SizedBox(height: 6),
             Card(
+              elevation: 7,
               child: ListTile(
                 dense: true,
                 leading: const Icon(Icons.directions_car),

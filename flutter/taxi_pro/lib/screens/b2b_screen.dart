@@ -453,15 +453,74 @@ class _B2bScreenState extends State<B2bScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (!_ok)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1E1B4B), Color(0xFF7C3AED)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.16),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.business, color: Colors.white),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      l.b2bAppBarTitle,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Card(
+            elevation: 7,
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    l.b2bPortalHeading,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.apartment),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        l.b2bPortalHeading,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   TextField(
@@ -484,7 +543,35 @@ class _B2bScreenState extends State<B2bScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF14532D), Color(0xFF16A34A)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.verified, color: Colors.white),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            l.sessionActive,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   Card(
+                    elevation: 7,
                     color: TaxiAppColors.darkPanel,
                     child: ListTile(
                       dense: true,
@@ -505,6 +592,7 @@ class _B2bScreenState extends State<B2bScreen> {
                   ),
                   const SizedBox(height: 12),
                   Card(
+                    elevation: 7,
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Column(
@@ -512,7 +600,7 @@ class _B2bScreenState extends State<B2bScreen> {
                         children: [
                           Text(
                             l.b2bBookOnAccountHeading,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
+                            style: const TextStyle(fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: 8),
                           TextField(
@@ -625,6 +713,7 @@ class _B2bScreenState extends State<B2bScreen> {
                   ),
                   const SizedBox(height: 8),
                   Card(
+                    elevation: 7,
                     child: ListTile(
                       leading: const Icon(Icons.bar_chart),
                       title: Text(l.b2bMonthlyUsageTitle),
