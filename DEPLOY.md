@@ -15,15 +15,21 @@ This repo is wired for:
 2. Copy the **connection string** (URI). Use the **Session** or **Transaction** pooler if you prefer; ensure the password is correct.
 3. You will set it on Render as **`DATABASE_URL`** (see below). **Session pooler** (URI type) is a good default for Render.
 
-Run migrations against that URL (from your machine, once):
+**You do not need Render Shell** to migrate. Do one of the following:
+
+1. **Automatic (recommended for Render):** the **`Procfile`** runs `python -m alembic upgrade head` before Gunicorn on every start. As long as **`DATABASE_URL`** is set in the service environment, new migrations apply on deploy without using Shell.
+
+2. **From your PC (free):** point at Supabase the same way the server does, then run Alembic locally:
 
 ```bash
 cd /path/to/taxi
-set DATABASE_URL=postgresql://...   # Windows: set VAR=value
-alembic upgrade head
+# Windows (cmd):  set DATABASE_URL=postgresql+psycopg2://...
+# PowerShell:     $env:DATABASE_URL = "postgresql+psycopg2://..."
+pip install -r requirements.txt
+python -m alembic upgrade head
 ```
 
-On Render, add the same env var and run migrations in the **Build Command** (see §3).
+On Render, add **`DATABASE_URL`** in the service **Environment** before the app or Alembic can talk to the DB (see §3).
 
 **Quick DB connectivity test** (after `pip install -r requirements.txt`, with `DATABASE_URL` in a `.env` file at the repo root or exported in the shell):
 
@@ -39,7 +45,7 @@ Set these in the Render service **Environment**:
 
 | Variable | Required | Notes |
 |----------|----------|--------|
-| `DATABASE_URL` | Yes | Supabase Session pooler URI; `postgres://` / `postgresql://` are normalized to `postgresql+psycopg2://` for SQLAlchemy. |
+| `DATABASE_URL` | **Yes** | Supabase Session pooler URI. **Required** for the running app. If you run Alembic during build, it must be set before that step or Alembic falls back to `127.0.0.1:5432` and the build fails. |
 | `SECRET_KEY` or `FLASK_SECRET_KEY` | Yes (prod) | Long random string for sessions/JWT (`SECRET_KEY` is the usual Render/docs name; either works). |
 | `SOCKETIO_ASYNC_MODE` | Auto in Procfile | Procfile sets `eventlet` for Gunicorn; do not override unless you know why. |
 | `GOOGLE_OAUTH_CLIENT_ID` | For Google login | Same Web client ID as in Flutter `config.dart`. |
@@ -53,17 +59,30 @@ Set these in the Render service **Environment**:
 
 **Root directory**: repository root (where `wsgi.py`, `requirements.txt`, `alembic.ini` live).
 
-Suggested **Build command**:
+**Build command** must install **`requirements.txt`** (Flask, gunicorn, eventlet).  
+If your build log only shows **Streamlit / pandas / numpy**, you are installing **`requirements-legacy.txt`** by mistake — change it to `requirements.txt` or the service will fail with `gunicorn: command not found`.
+
+**Build command (recommended — no database required during build):**
 
 ```bash
-pip install -r requirements.txt && alembic upgrade head
+pip install -r requirements.txt
 ```
 
-**Start command** (also in `Procfile`):
+**Why not `alembic upgrade head` in the build?** If **`DATABASE_URL`** is missing in Render’s environment, Alembic uses the dev default `127.0.0.1:5432` and the build fails with *connection refused*. **Recommended:** keep the build to `pip install -r requirements.txt` only; migrations run at **web start** via the `Procfile` (see above) once `DATABASE_URL` is set.
+
+**If you really want migrations in the build** (not required): set **`DATABASE_URL`** in Render first, then:
 
 ```bash
-env SOCKETIO_ASYNC_MODE=eventlet gunicorn -w 1 -k eventlet -b 0.0.0.0:$PORT wsgi:app
+pip install -r requirements.txt && python -m alembic upgrade head
 ```
+
+**Start command** is defined in the **`Procfile`**: it runs `python -m alembic upgrade head`, then Gunicorn with `python -m gunicorn` (reliable on PATH). Equivalent:
+
+```bash
+python -m alembic upgrade head && env SOCKETIO_ASYNC_MODE=eventlet python -m gunicorn -w 1 -k eventlet -b 0.0.0.0:$PORT wsgi:app
+```
+
+If you ever need **Render Shell** (optional, paid on some plans), you can run `python -m alembic upgrade head` from the project root the same way; it is not required for normal deploys.
 
 After deploy, your API base URL is:
 
@@ -81,7 +100,7 @@ After deploy, your API base URL is:
 pip install -r requirements.txt
 set DATABASE_URL=... 
 set SOCKETIO_ASYNC_MODE=eventlet
-gunicorn -w 1 -k eventlet -b 127.0.0.1:5000 wsgi:app
+python -m gunicorn -w 1 -k eventlet -b 127.0.0.1:5000 wsgi:app
 ```
 
 Open `http://127.0.0.1:5000/api/health`.

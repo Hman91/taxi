@@ -1,4 +1,6 @@
-# Optional: original Streamlit UI (see legacy/streamlit_app.py)
+# Optional: original Streamlit UI (see legacy/streamlit_app.py).
+# Do not use this file alone to deploy the Flask API on Render — it has no gunicorn/flask.
+# Use requirements.txt (or build with: pip install -r requirements.txt).
 streamlit>=1.28.0
 pandas>=2.0.0
 numpy>=1.24.0

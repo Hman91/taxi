@@ -26,13 +26,24 @@ if config.config_file_name is not None:
 target_metadata = db.metadata
 
 
+def _is_hosted_builder() -> bool:
+    """True on Render/CI when local postgres default must not be used."""
+    if os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_ID") or os.environ.get("CI"):
+        return True
+    return "/opt/render/" in os.getcwd().replace("\\", "/")
+
+
 def get_url() -> str:
-    return _normalize_database_url(
-        os.environ.get(
-            "DATABASE_URL",
-            "postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/taxi",
+    raw = (os.environ.get("DATABASE_URL") or "").strip()
+    if not raw and _is_hosted_builder():
+        raise RuntimeError(
+            "DATABASE_URL is not set. In Render → Environment, add your Supabase "
+            "Session pooler URI. Build command should be: pip install -r requirements.txt "
+            "(no alembic in build) — then run alembic upgrade head in Render Shell after deploy."
         )
-    )
+    if not raw:
+        raw = "postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/taxi"
+    return _normalize_database_url(raw)
 
 
 def run_migrations_offline() -> None:
