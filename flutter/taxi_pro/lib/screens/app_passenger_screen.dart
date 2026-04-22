@@ -566,21 +566,14 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
 
   Future<String?> _askRequiredPhoneForGoogle() async {
     final ctrl = TextEditingController();
-    final focusNode = FocusNode();
     final result = await showDialog<String>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (focusNode.canRequestFocus) {
-            focusNode.requestFocus();
-          }
-        });
         return AlertDialog(
           title: const Text('Phone required'),
           content: TextField(
             controller: ctrl,
-            focusNode: focusNode,
             autofocus: true,
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.done,
@@ -603,8 +596,11 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         );
       },
     );
-    focusNode.dispose();
-    ctrl.dispose();
+    // Dialog pop can still animate; disposing the focus node here races with TextField
+    // teardown (FocusNode used after dispose). Defer until after the route is offstage.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ctrl.dispose();
+    });
     return result;
   }
 

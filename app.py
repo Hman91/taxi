@@ -3,6 +3,8 @@ Root entry point (same layout as `main` branch).
 
 - `python app.py` — runs the Streamlit prototype from `legacy/streamlit_app.py`.
 - REST API: `python -m backend` (see README).
+
+**Render / Gunicorn:** the Flask + Socket.IO app is **not** here. Use **`wsgi:app`** (see `wsgi.py`), never `gunicorn app:app`.
 """
 from __future__ import annotations
 
