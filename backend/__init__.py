@@ -5,7 +5,7 @@ import logging
 import os
 import time
 
-from flask import Flask, g, request
+from flask import Flask, g, jsonify, request
 from flask_cors import CORS
 
 from .config import Config
@@ -50,6 +50,22 @@ def create_app() -> Flask:
     app.register_blueprint(rides_bp)
     app.register_blueprint(chat_bp)
     app.register_blueprint(users_bp)
+
+    @app.route("/", methods=["GET", "HEAD"])
+    def _root():
+        """Avoid 404 on bare domain (e.g. opening the Render URL in a browser)."""
+        if request.method == "HEAD":
+            return "", 200
+        return (
+            jsonify(
+                {
+                    "service": "taxi-pro-api",
+                    "status": "ok",
+                    "health": "/api/health",
+                }
+            ),
+            200,
+        )
 
     @app.before_request
     def _request_timer_start() -> None:

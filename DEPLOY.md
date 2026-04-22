@@ -86,6 +86,21 @@ gunicorn -w 1 -k eventlet -b 127.0.0.1:5000 wsgi:app
 
 Open `http://127.0.0.1:5000/api/health`.
 
+### Windows: Gunicorn does not run locally
+
+**Gunicorn is Unix-only** (it uses `fcntl`, which does not exist on Windows). You will see:
+
+`ModuleNotFoundError: No module named 'fcntl'`
+
+That is expected. Do this instead:
+
+| Goal | Command |
+|------|--------|
+| Local API on Windows (dev) | From repo root: `python -m backend` (uses Socket.IO + threading; `.env` loaded via `config.py`) |
+| Production-like HTTP on Windows | Use [WSL2](https://learn.microsoft.com/windows/wsl/) and run the Gunicorn command inside Linux, or deploy to Render and test there |
+
+Check: `http://127.0.0.1:5000/api/health` (default port from `backend/__main__.py`).
+
 ---
 
 ## 5) Flutter — point to production API
