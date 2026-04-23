@@ -2,6 +2,10 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.env
+.env.local
+.env.production
+.env.staging
 .streamlit/secrets.toml
 backend/data/*.db
 # Local key files — do not commit

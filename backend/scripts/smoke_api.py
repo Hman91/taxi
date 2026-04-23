@@ -9,7 +9,7 @@ Usage (server must be up, DB migrated):
     python -m backend.scripts.smoke_api
     python -m backend.scripts.smoke_api --base-url http://127.0.0.1:5000
 
-Optional env (defaults match dev Config): OPERATOR_CODE, OWNER_PASSWORD
+Optional env (defaults match dev Config): OPERATOR_CODE, OWNER_PASSWORD, SMOKE_USER_PHONE
 """
 from __future__ import annotations
 
@@ -70,6 +70,7 @@ def main() -> None:
     base = args.base_url.rstrip("/")
     op_secret = os.environ.get("OPERATOR_CODE", "Operator2026")
     owner_secret = os.environ.get("OWNER_PASSWORD", "NabeulGold2026")
+    passenger_phone = os.environ.get("SMOKE_USER_PHONE", "98123456").strip() or "98123456"
     suffix = uuid4().hex[:10]
     pass_email = f"smoke_p_{suffix}@example.com"
     drv_email = f"smoke_d_{suffix}@example.com"
@@ -84,7 +85,12 @@ def main() -> None:
     st, body = _request(
         "POST",
         f"{base}/api/auth/register",
-        json_body={"email": pass_email, "password": password, "role": "user"},
+        json_body={
+            "email": pass_email,
+            "password": password,
+            "role": "user",
+            "phone": passenger_phone,
+        },
     )
     if st != 201:
         _fail("POST /api/auth/register (user)", st, body)
