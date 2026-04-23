@@ -42,6 +42,10 @@ def _select_top5_driver_user_ids_for_pickup(pickup_zone: str) -> List[int]:
     scored: List[tuple[float, int]] = []
     for d in candidates:
         uid = int(d["user_id"])
+        acct = db_module.driver_pin_account_by_user_id(uid)
+        if acct is not None and float(acct.get("wallet_balance") or 0.0) <= 0.0:
+            # Depleted wallet drivers must not receive new dispatch offers.
+            continue
         current_zone = (db_module.driver_current_zone_by_user_id(uid) or "").strip()
         # Hard business rule: offer only to drivers currently in the same pickup zone.
         if current_zone != pickup_norm:
@@ -107,6 +111,8 @@ def _apply_wallet_on_complete(
     old_bal = float(acct["wallet_balance"] or 0.0)
     new_bal = round(old_bal - deduct, 3)
     db_module.driver_pin_update(int(acct["id"]), wallet_balance=new_bal)
+    if new_bal <= 0.0:
+        db_module.driver_set_availability_by_user_id(driver_user_id, False)
     realtime_broadcast.emit_driver_wallet(
         driver_user_id,
         {
@@ -223,7 +229,13 @@ def list_for_app_user(user_id: int, role: str) -> List[Dict[str, Any]]:
         return db_module.rides_for_user(user_id)
     if role == "driver":
         d = db_module.driver_by_user_id(user_id)
-        pending = db_module.ride_dispatch_pending_for_driver_user(user_id)
+        acct = db_module.driver_pin_account_by_user_id(user_id)
+        depleted = acct is not None and float(acct.get("wallet_balance") or 0.0) <= 0.0
+        is_available = bool(int((d or {}).get("is_available", 0)))
+        pending: List[Dict[str, Any]] = []
+        # Depleted/unavailable drivers must not see dispatch offers.
+        if is_available and not depleted:
+            pending = db_module.ride_dispatch_pending_for_driver_user(user_id)
         if d is None:
             return pending
         mine = db_module.rides_for_driver(int(d["id"]))
@@ -236,6 +248,11 @@ def accept_ride(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[str, A
     d = db_module.driver_by_user_id(driver_user_id)
     if d is None:
         return None, "not_a_driver"
+    acct = db_module.driver_pin_account_by_user_id(driver_user_id)
+    if acct is not None and float(acct.get("wallet_balance") or 0.0) <= 0.0:
+        return None, "wallet_depleted"
+    if not bool(int(d.get("is_available", 0))):
+        return None, "driver_unavailable"
     row = db_module.ride_get(ride_id)
     if row is None:
         return None, "not_found"

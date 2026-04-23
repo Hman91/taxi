@@ -639,7 +639,12 @@ def driver_mark_online(user_id: int, *, last_lat: float | None = None, last_lng:
     row = db.session.scalars(select(Driver).where(Driver.user_id == user_id)).first()
     if row is None:
         return
-    row.is_available = True
+    acct = driver_pin_account_by_user_id(user_id)
+    # PIN drivers with depleted wallet cannot be marked available.
+    if acct is not None and float(acct.get("wallet_balance") or 0.0) <= 0.0:
+        row.is_available = False
+    else:
+        row.is_available = True
     if last_lat is not None:
         row.last_lat = float(last_lat)
     if last_lng is not None:
@@ -664,7 +669,12 @@ def driver_set_availability_by_user_id(user_id: int, is_available: bool) -> None
     row = db.session.scalars(select(Driver).where(Driver.user_id == user_id)).first()
     if row is None:
         return
-    row.is_available = bool(is_available)
+    acct = driver_pin_account_by_user_id(user_id)
+    # Never allow availability=True when wallet is depleted.
+    if bool(is_available) and acct is not None and float(acct.get("wallet_balance") or 0.0) <= 0.0:
+        row.is_available = False
+    else:
+        row.is_available = bool(is_available)
     row.last_seen_at = datetime.now(timezone.utc)
     db.session.commit()
 
