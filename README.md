@@ -57,6 +57,11 @@ On connect, the server joins the client to **`user:<user_id>`** for targeted pus
 | `TRANSLATION_TIMEOUT_SECONDS` | Vendor call timeout | `5` |
 | `SMOKE_API_BASE` | Default base URL for `smoke_api.py` (optional) | `http://127.0.0.1:5000` |
 
+**Local work after deploying to production**
+
+- **Chat translation:** If your Render env uses **`TRANSLATION_PROVIDER=none`**, the deployed API will **not** translate chat lines (by design, to avoid Google/deep-translator calls). Locally, the default is **`google`** and translation works as long as you do **not** put `none` in a root `.env`. If you copied production env into `.env` for local testing, remove that line or set `TRANSLATION_PROVIDER=google`. To turn translation on in production again, set `TRANSLATION_PROVIDER=google` in Render and redeploy the service (or accept the cost of outbound calls).
+- **Flutter web:** For local code changes, run the web app against the local API, e.g. `flutter/taxi_pro/run_web.ps1` (defaults to `http://127.0.0.1:5000`) while **`python -m backend`** is running. A production build uses `API_BASE_URL` pointing at Render; that is separate from this backend setting.
+
 ### Runbook: `DATABASE_URL`, Socket URL, workers
 
 **`DATABASE_URL` (PostgreSQL)**  

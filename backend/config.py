@@ -38,8 +38,8 @@ class Config:
             "DATABASE_URL",
             "postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/taxi",
         )
-
- = False
+    )
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
     OWNER_PASSWORD = os.environ.get("OWNER_PASSWORD", "NabeulGold2026")
     DRIVER_CODE = os.environ.get("DRIVER_CODE", "Driver2026")

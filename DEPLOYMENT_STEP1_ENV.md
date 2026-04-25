@@ -67,3 +67,4 @@ For strict production, replace `*` with your web domain (`.web.app` / custom dom
 - [ ] `API_BASE_URL` value decided for Flutter web/APK builds
 - [ ] `.env.example` copied to `.env.local` (local only, not committed)
 - [ ] `config.production.tpl` copied to your deployment secret manager values
+- [ ] Flutter web/APK: follow **`DEPLOYMENT_FLUTTER.md`** so `API_BASE_URL` points at the deployed API
