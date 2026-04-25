@@ -1,0 +1,672 @@
+{
+  "@@locale": "de",
+  "appTitle": "Taxi Pro Tunesien",
+  "loginAs": "Anmelden als",
+  "language": "Sprache",
+  "rolePassenger": "Fahrgast",
+  "roleDriver": "Fahrer",
+  "roleOwner": "Inhaber",
+  "roleOperator": "Disponent",
+  "roleB2b": "B2B / Firma",
+  "passengerTitle": "Fahrgast",
+  "tabAirport": "Flughafen",
+  "tabGps": "GPS",
+  "route": "Route",
+  "nightFare50": "+50 % Nachtzuschlag",
+  "rateYourLastRide": "Letzte Fahrt bewerten",
+  "submitRating": "Bewertung senden",
+  "thankYouFeedback": "Danke für Ihr Feedback!",
+  "distanceKmOptional": "Entfernung in km (optional — Schätzung wenn leer)",
+  "getEstimate": "Schätzung anfordern",
+  "distanceKm": "Entfernung: {km} km",
+  "fareDt": "Fahrpreis: {amount} DT",
+  "driverTitle": "Fahrer",
+  "driverCode": "Fahrercode",
+  "login": "Anmelden",
+  "sessionActive": "Sitzung aktiv",
+  "fareAmount": "Fahrpreis (DT)",
+  "paymentType": "Zahlungsart",
+  "cashOrCard": "Bar / Karte",
+  "b2bInvoice": "Firmenrechnung",
+  "completeTripCommission": "Fahrt abschließen (10 % Provision)",
+  "loggedInAs": "Angemeldet als {role}",
+  "loginFirst": "Bitte zuerst anmelden",
+  "invalidFare": "Ungültiger Fahrpreis",
+  "tripRecorded": "Fahrt Nr. {id} erfasst. Provision {commission} DT",
+  "ownerTitle": "Inhaber-Zentrale",
+  "ownerPassword": "Inhaber-Passwort",
+  "loginLoadDashboard": "Anmelden & Dashboard laden",
+  "commissionLabel": "Provision (DT): {amount}",
+  "tripsCount": "Fahrten: {count}",
+  "avgRatingLabel": "Ø Bewertung: {avg} ({count} Stimmen)",
+  "tripsHeading": "Fahrten",
+  "noTripsYet": "Noch keine Fahrten",
+  "tripListSubtitle": "{date} · Prov. {commission}",
+  "operatorTitle": "Disponent",
+  "operatorCode": "Disponent-Code",
+  "loginLoadTrips": "Anmelden & Fahrten laden",
+  "noTripsLoaded": "Keine Fahrten geladen",
+  "operatorTripSubtitle": "{date} · {fare} DT",
+  "b2bTitle": "B2B Unternehmen",
+  "companyCode": "Firmencode",
+  "verifyCompanyCode": "Firmencode prüfen",
+  "b2bConnectedStub": "Mit Monatsabrechnung verbunden (Demo). Fahrtanfragen und PDF-Rechnung können später an die API angebunden werden.",
+  "roleAppPassenger": "Fahrgast (Fahrten & Chat)",
+  "roleAppDriver": "Fahrer (App)",
+  "appPassengerTitle": "Fahrgast — Fahrten",
+  "appDriverTitle": "Fahrer — App",
+  "emailLabel": "E-Mail",
+  "passwordLabel": "Passwort",
+  "signInApp": "Anmelden",
+  "registerAppAccount": "Fahrgastkonto erstellen",
+  "registerDriverAccount": "Fahrerkonto erstellen",
+  "logoutApp": "Abmelden",
+  "genericCancel": "Abbrechen",
+  "syncPreferredLanguage": "Sprache im Profil speichern",
+  "profileLanguageSynced": "Bevorzugte Sprache aktualisiert.",
+  "myRidesHeading": "Meine Fahrten",
+  "ridePickupLabel": "Abholung",
+  "rideDestinationLabel": "Ziel",
+  "requestRideButton": "Fahrt anfragen",
+  "openChatButton": "Chat",
+  "chatUnavailable": "Chat für diese Fahrt noch nicht verfügbar.",
+  "noRidesYetApp": "Keine Fahrten.",
+  "driverPendingRides": "Fahrtenpool",
+  "acceptRide": "Annehmen",
+  "rejectRide": "Freigeben",
+  "startRide": "Starten",
+  "completeRide": "Beenden",
+  "cancelRidePassenger": "Fahrt stornieren",
+  "rideStatusFmt": "Status: {status}",
+  "adminOversightHeading": "Live-Überblick",
+  "adminLoadRidesBtn": "App-Fahrten laden",
+  "adminLoadDriversBtn": "Fahrerstandorte",
+  "adminLoadOwnerMetricsBtn": "Admin-Kennzahlen",
+  "adminRidesHeading": "App-Fahrten",
+  "adminDriversHeading": "Fahrer",
+  "adminNoRidesLoaded": "Tippen Sie auf „App-Fahrten laden“.",
+  "adminNoDriversData": "Tippen Sie auf „Fahrerstandorte“.",
+  "adminRideRow": "{pickup} → {destination}",
+  "driverLocationRow": "Breite {lat}, Länge {lng}",
+  "chatScreenTitle": "Fahrt-Chat",
+  "messageFieldHint": "Nachricht eingeben",
+  "sendChatMessage": "Senden",
+  "accountDisabledContactAdmin": "Konto deaktiviert. Wenden Sie sich an einen Administrator.",
+  "signedInWithGoogle": "Mit Google angemeldet",
+  "passengerGoogleLoginRequired": "Für Fahrgäste ist die Anmeldung mit Google erforderlich.",
+  "continueWithGoogle": "Weiter mit Google",
+  "passengerDispatchPanelTitle": "Premium-Dispositionspanel",
+  "passengerActiveRidesChip": "Aktive Fahrten: {count}",
+  "passengerTotalRidesChip": "Fahrten gesamt: {count}",
+  "passengerBookingSectionTitle": "Buchung",
+  "passengerLocationCurrent": "Ihr aktueller Standort",
+  "passengerLocationDetecting": "Standort wird ermittelt…",
+  "passengerLocationUnavailable": "Standort nicht verfügbar",
+  "passengerRefreshLocationTooltip": "Standort aktualisieren",
+  "passengerDriverLine": "Fahrer: {name}",
+  "passengerPhoneLine": "Telefon: {phone}",
+  "rideStatusPending": "Ausstehend",
+  "rideStatusAccepted": "Angenommen",
+  "rideStatusOngoing": "Läuft",
+  "rideStatusCompleted": "Abgeschlossen",
+  "rideStatusCancelled": "Storniert",
+  "rideStatusActive": "Aktiv",
+  "passengerLocationServiceDisabled": "Standortdienst ist deaktiviert.",
+  "passengerLocationPermissionDenied": "Standortberechtigung verweigert.",
+  "passengerNoNotificationsYet": "Noch keine Benachrichtigungen.",
+  "dialogOk": "OK",
+  "passengerRideNotificationTitle": "Fahrtdetails",
+  "passengerRideNumberLine": "Fahrt Nr. {id}",
+  "@distanceKm": {
+    "placeholders": {
+      "km": {
+        "type": "Object"
+      }
+    }
+  },
+  "@fareDt": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "@loggedInAs": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "@tripRecorded": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      },
+      "commission": {
+        "type": "Object"
+      }
+    }
+  },
+  "@commissionLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "@tripsCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@avgRatingLabel": {
+    "placeholders": {
+      "avg": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@tripListSubtitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "commission": {
+        "type": "Object"
+      }
+    }
+  },
+  "@operatorTripSubtitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "Object"
+      }
+    }
+  },
+  "@rideStatusFmt": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "@adminRideRow": {
+    "placeholders": {
+      "pickup": {
+        "type": "String"
+      },
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "@driverLocationRow": {
+    "placeholders": {
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
+    }
+  },
+  "@passengerActiveRidesChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@passengerTotalRidesChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@passengerDriverLine": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@passengerPhoneLine": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "@passengerRideNumberLine": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsEmpty": "No notifications yet.",
+  "notificationRideUpdateTitle": "Ride update",
+  "notificationRideUpdatedBody": "Ride #{id} updated.",
+  "@notificationRideUpdatedBody": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "errorGoogleSignInMissingToken": "Google sign-in failed: missing Google token.",
+  "driverNameFallback": "Driver",
+  "notificationDriverAcceptedTitle": "Driver accepted",
+  "notificationDriverAcceptedBody": "{driver}{phoneSuffix} accepted your request.",
+  "@notificationDriverAcceptedBody": {
+    "placeholders": {
+      "driver": {
+        "type": "String"
+      },
+      "phoneSuffix": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationDriverAcceptedSnack": "Driver accepted: {driver}{phoneSuffix}",
+  "@notificationDriverAcceptedSnack": {
+    "placeholders": {
+      "driver": {
+        "type": "String"
+      },
+      "phoneSuffix": {
+        "type": "String"
+      }
+    }
+  },
+  "passengerDriverNearPickupSnack": "Driver is now near your pickup point.",
+  "notificationDriverNearPickupTitle": "Driver near pickup",
+  "notificationDriverNearPickupBody": "Your driver is near pickup in {pickup}.",
+  "@notificationDriverNearPickupBody": {
+    "placeholders": {
+      "pickup": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationRequestSentTitle": "Request sent",
+  "notificationRequestSentBody": "We sent your ride request to nearby drivers.",
+  "requestSentSnackLine": "Request sent. {farePart}{promoPart}",
+  "@requestSentSnackLine": {
+    "placeholders": {
+      "farePart": {
+        "type": "String"
+      },
+      "promoPart": {
+        "type": "String"
+      }
+    }
+  },
+  "promoCodeOptionalLabel": "Promo code",
+  "driverNotificationNewNearbyTitle": "New nearby ride",
+  "driverNotificationNewNearbyBodyDefault": "A nearby passenger requested a ride.",
+  "driverNotificationTakenTitle": "Request already accepted",
+  "driverNotificationTakenBodyDefault": "Another driver accepted this request.",
+  "driverNotificationCancelledTitle": "Ride cancelled",
+  "driverNotificationCancelledBodyDefault": "Passenger cancelled this ride request.",
+  "driverNotificationRequestClosedTitle": "Request closed",
+  "driverNotificationRequestClosedBodyOther": "This request was accepted by another driver or cancelled.",
+  "driverNotificationRequestClosedBodyTaken": "This request was accepted by another driver.",
+  "driverNotificationNewRideTitle": "New ride request",
+  "driverNotificationNewRideBodyDefault": "A nearby passenger sent a new request.",
+  "snackDriverNewNearbyRide": "New nearby ride request received.",
+  "driverRideRequestBannerTitle": "New ride request!",
+  "driverOfferFromLabel": "From",
+  "driverOfferToLabel": "To",
+  "driverRejectOfferButton": "Reject",
+  "driverOfferFareChip": "{amount} DT",
+  "@driverOfferFareChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "driverOfferDistanceChip": "{distance} km",
+  "@driverOfferDistanceChip": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "driverOfferTimeChip": "{minutes} min",
+  "@driverOfferTimeChip": {
+    "placeholders": {
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "snackDriverRideTakenOther": "Ride accepted by another driver.",
+  "snackDriverPassengerCancelled": "Passenger cancelled this request.",
+  "snackDriverChatAfterAcceptance": "Chat will open after ride acceptance",
+  "driverMyVehicleTitle": "My vehicle",
+  "driverVehicleSummaryLine": "Car: {model} | Color: {color}",
+  "@driverVehicleSummaryLine": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "color": {
+        "type": "String"
+      }
+    }
+  },
+  "driverVehicleIdentityTitle": "Vehicle identity",
+  "driverOpenRequestsChip": "Open requests: {count}",
+  "@driverOpenRequestsChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "driverUnreadAlertsChip": "Unread alerts: {count}",
+  "@driverUnreadAlertsChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "b2bAppBarTitle": "Taxi Pro Corporate",
+  "b2bPortalHeading": "Corporate & hotel portal",
+  "b2bConnectedWorkflowSubtitle": "Connected to monthly billing workflow",
+  "b2bBookOnAccountHeading": "Book on company account",
+  "b2bMonthlyUsageTitle": "Current month usage (stub)",
+  "b2bMonthlyAmountDue": "Amount due (DT): {amount}",
+  "@b2bMonthlyAmountDue": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "b2bBookingSuccessMessage": "{action} #{id} • {guest} • {route}",
+  "@b2bBookingSuccessMessage": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "id": {
+        "type": "Object"
+      },
+      "guest": {
+        "type": "String"
+      },
+      "route": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerAppBarTitle": "Inhaber-Zentrale",
+  "ownerProfitChip": "Gewinn: {amount} DT",
+  "@ownerProfitChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerTripsCountChip": "Fahrten: {count}",
+  "@ownerTripsCountChip": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerRatingChip": "{avg} ★ ({votes})",
+  "@ownerRatingChip": {
+    "placeholders": {
+      "avg": {
+        "type": "String"
+      },
+      "votes": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerVaultHeading": "Fahrtenarchiv",
+  "ownerAdminOversightHeading": "Admin-Überwachung",
+  "ownerCommissionChip": "Provision: {amount} DT",
+  "@ownerCommissionChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerTripRouteFareRow": "{route} — {fare} DT",
+  "@ownerTripRouteFareRow": {
+    "placeholders": {
+      "route": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerHqPortalHeading": "Zentralleitstelle",
+  "operatorDispatchCenterHeading": "Disposition & Überwachung",
+  "operatorDispatchPendingBlurb": "Es gibt offene Anfragen, die zugewiesen werden müssen.",
+  "operatorDispatchIdleBlurb": "System verbunden. Keine offenen Buchungen.",
+  "operatorChipPending": "Ausstehend: {count}",
+  "@operatorChipPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorChipAccepted": "Angenommen: {count}",
+  "@operatorChipAccepted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorChipOngoing": "Laufend: {count}",
+  "@operatorChipOngoing": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorChipCompleted": "Abgeschlossen: {count}",
+  "@operatorChipCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorRideSubtitleLine": "{status}{driver}{created}",
+  "@operatorRideSubtitleLine": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "driver": {
+        "type": "String"
+      },
+      "created": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorDriversOnlineCount": "Fahrer online: {count}",
+  "@operatorDriversOnlineCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorPhoneLabel": "Telefon",
+  "operatorDriverNameLabel": "Fahrername",
+  "operatorPinLabel": "PIN",
+  "operatorCreateDriverAccount": "Fahrerkonto erstellen",
+  "operatorRefreshCorporateBookings": "Firmenbuchungen aktualisieren",
+  "operatorTripVaultHeading": "Fahrtenarchiv",
+  "operatorTripVaultTripsChip": "Fahrten: {count}",
+  "@operatorTripVaultTripsChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorTripVaultRevenueChip": "Umsatz: {amount} DT",
+  "@operatorTripVaultRevenueChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorWalletBalanceLabel": "Wallet-Guthaben",
+  "operatorOwnerCommissionLabel": "Eigentümer-Provision %",
+  "operatorB2bCommissionLabel": "B2B-Provision %",
+  "operatorAutoDeductEnabled": "Automatischer Abzug aktiv",
+  "operatorCarModelLabel": "Automodell",
+  "operatorCarColorLabel": "Autofarbe",
+  "operatorPickFromGallery": "Bild aus Galerie wählen",
+  "operatorRemovePickedImage": "Gewähltes Bild entfernen",
+  "operatorPhotoUrlOptional": "Foto-URL (optional)",
+  "operatorCancel": "Abbrechen",
+  "operatorSave": "Speichern",
+  "operatorDriverWalletLine": "Wallet: {wallet} DT | Eigentümer %: {owner} | B2B %: {b2b}",
+  "@operatorDriverWalletLine": {
+    "placeholders": {
+      "wallet": {
+        "type": "String"
+      },
+      "owner": {
+        "type": "String"
+      },
+      "b2b": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorDriverCarColorAppend": " | Farbe: {color}",
+  "@operatorDriverCarColorAppend": {
+    "placeholders": {
+      "color": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorDriverCarLine": "\nAuto: {model}",
+  "@operatorDriverCarLine": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "statusLinePrefix": "Status: ",
+  "driverLabelPrefix": " | Fahrer: ",
+  "createdAtLinePrefix": "\nUm: ",
+  "walletWithAmount": "Wallet: {amount} DT",
+  "@walletWithAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "b2bFareAdminPercentSuffix": "• 5% Admin",
+  "adminB2bBookingRowSubtitle": "{guest} • {room} • {fare} DT",
+  "@adminB2bBookingRowSubtitle": {
+    "placeholders": {
+      "guest": {
+        "type": "String"
+      },
+      "room": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorTabDispatch": "Disposition",
+  "operatorTabDrivers": "Fahrer",
+  "operatorTabB2b": "B2B",
+  "operatorTabTripVault": "Fahrtenarchiv",
+  "operatorFillDriverFields": "Telefon, Fahrername und PIN eingeben.",
+  "placeCarthageAirport": "Carthage Airport (Tunis)",
+  "placeEnfidhaAirport": "Enfidha–Hammamet Airport",
+  "placeMonastirAirport": "Monastir Airport",
+  "placeSousseCenter": "Stadtzentrum Sousse",
+  "placeHammamet": "Hammamet",
+  "placeSousse": "Sousse",
+  "placePortElKantaoui": "Port El Kantaoui",
+  "placeNabeul": "Nabeul",
+  "homeWhatIsTitle": "Was ist Taxi Pro?",
+  "homeWhatIsBody": "Taxi Pro Tunisia verbindet Sie mit Fahrern für Flughafentransfers und Stadtfahrten. Die Preise sind pro Strecke in der App festgelegt; zwischen 21:00 und 05:00 kann ein Nachtzuschlag gelten. Buchen Sie in der App, verfolgen Sie Ihre Fahrt und nutzen Sie bei Bedarf die Hilfe.",
+  "passengerFareFinalEstimate": "Endgültige Schätzung für die Fahrt",
+  "passengerPayCash": "Barzahlung",
+  "passengerPayCardTpe": "Karte (TPE)",
+  "operatorEntryGateLabel": "Eingangstor:",
+  "operatorEmployeePasswordLabel": "Mitarbeiterpasswort:",
+  "operatorWelcomeOperatingRoom": "Willkommen im Betriebsraum.",
+  "operatorTabTodaysArrivals": "Heutige Ankünfte",
+  "operatorTabLiveOrders": "Live-Aufträge",
+  "operatorTabDriverManagement": "Fahrerverwaltung",
+  "operatorTabTripHistory": "Fahrtenverlauf",
+  "operatorArrivalsDemoHeading": "Heutige Ankünfte — Tunesien (Demodaten)",
+  "operatorColFlightNumber": "Flugnummer",
+  "operatorColDepartureAirport": "Abflughafen",
+  "operatorColTakeoffTime": "Abflugzeit",
+  "operatorColExpectedArrival": "Erwartete Ankunft (heute)",
+  "operatorColArrivalAirportTn": "Ankunftsflughafen (Tunesien)",
+  "operatorChooseDriverTopUp": "Fahrer zum Aufladen wählen:",
+  "operatorAmountReceivedDt": "Erhaltener Betrag (DT):",
+  "operatorRechargeBalance": "Guthaben aufladen",
+  "operatorCorporateBookingsSection": "Firmenbuchungen (B2B)",
+  "operatorRoleAdminHq": "Admin-Zentrale",
+  "operatorNoFlightArrivals": "Keine Ankunftszeilen geladen.",
+  "operatorUserAccountsHeading": "App-Benutzerkonten",
+  "ownerPasswordCeoLabel": "Eigentümer-(CEO)-Passwort:",
+  "ownerWelcomeHq": "Willkommen in der Inhaber-Zentrale.",
+  "ownerTabTreasury": "Kasse und Gewinne",
+  "ownerTabSettings": "Einstellungen",
+  "ownerTabHostelB2b": "Hotelkonten (B2B)",
+  "ownerSettingsCommissionLabel": "Abgezogener Provisionssatz (%):",
+  "ownerSettingsCommissionHint": "Nur Anzeige — mit Fahrerkonten für Live-Sätze verknüpfen.",
+  "ownerSettingsRouteFaresHeading": "Basispreise pro Route (DT)",
+  "ownerSaveRouteFare": "Speichern",
+  "driverWalletDepletedTitle": "Wallet leer",
+  "driverWalletDepletedBody": "Zahlen Sie {amount} DT an den Eigentümer (über den Operator) zum Aufladen.",
+  "@driverWalletDepletedBody": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerDriverPinWalletsHeading": "Fahrer-Wallets",
+  "ownerDriverPinWalletsEmpty": "Keine PIN-Fahrerkonten geladen."
+}

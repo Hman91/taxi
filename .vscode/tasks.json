@@ -1,0 +1,47 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Backend API (auto-reload)",
+      "type": "shell",
+      "command": "python -m backend",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "FLASK_DEBUG": "1"
+        }
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "taxi",
+        "showReuseMessage": false
+      }
+    },
+    {
+      "label": "Flutter — Chrome (API localhost:5000)",
+      "type": "shell",
+      "command": "flutter run -d chrome --dart-define=API_BASE_URL=http://127.0.0.1:5000",
+      "options": {
+        "cwd": "${workspaceFolder}/flutter/taxi_pro"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "taxi",
+        "showReuseMessage": false
+      }
+    },
+    {
+      "label": "Full stack: Backend + Flutter (parallel)",
+      "dependsOn": [
+        "Backend API (auto-reload)",
+        "Flutter — Chrome (API localhost:5000)"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    }
+  ]
+}

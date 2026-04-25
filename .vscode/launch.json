@@ -1,0 +1,45 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend API (FLASK_DEBUG reload)",
+      "type": "python",
+      "request": "launch",
+      "module": "backend",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "FLASK_DEBUG": "1"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "taxi_pro (Chrome + API to host)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "${workspaceFolder}/flutter/taxi_pro",
+      "program": "lib/main.dart",
+      "deviceId": "chrome",
+      "toolArgs": [
+        "--dart-define=API_BASE_URL=http://127.0.0.1:5000"
+      ]
+    },
+    {
+      "name": "taxi_pro (device — default API per platform)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "${workspaceFolder}/flutter/taxi_pro",
+      "program": "lib/main.dart"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full stack: Backend + Flutter (Chrome)",
+      "configurations": [
+        "Backend API (FLASK_DEBUG reload)",
+        "taxi_pro (Chrome + API to host)"
+      ],
+      "stopAll": true
+    }
+  ]
+}

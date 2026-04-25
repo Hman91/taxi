@@ -1,0 +1,672 @@
+{
+  "@@locale": "zh",
+  "appTitle": "Taxi Pro 突尼斯",
+  "loginAs": "登录身份",
+  "language": "语言",
+  "rolePassenger": "乘客",
+  "roleDriver": "司机",
+  "roleOwner": "车主",
+  "roleOperator": "调度员",
+  "roleB2b": "企业 / B2B",
+  "passengerTitle": "乘客",
+  "tabAirport": "机场",
+  "tabGps": "GPS",
+  "route": "路线",
+  "nightFare50": "+50% 夜间加价",
+  "rateYourLastRide": "评价上一程",
+  "submitRating": "提交评分",
+  "thankYouFeedback": "感谢您的反馈！",
+  "distanceKmOptional": "距离（公里，可选 — 空则估算）",
+  "getEstimate": "获取估价",
+  "distanceKm": "距离：{km} 公里",
+  "fareDt": "车费：{amount} DT",
+  "driverTitle": "司机",
+  "driverCode": "司机代码",
+  "login": "登录",
+  "sessionActive": "已登录",
+  "fareAmount": "车费（DT）",
+  "paymentType": "支付方式",
+  "cashOrCard": "现金 / 刷卡",
+  "b2bInvoice": "企业账单",
+  "completeTripCommission": "完成行程（10% 佣金）",
+  "loggedInAs": "已以 {role} 身份登录",
+  "loginFirst": "请先登录",
+  "invalidFare": "车费无效",
+  "tripRecorded": "行程 #{id} 已记录。佣金 {commission} DT",
+  "ownerTitle": "车主后台",
+  "ownerPassword": "车主密码",
+  "loginLoadDashboard": "登录并加载仪表盘",
+  "commissionLabel": "佣金（DT）：{amount}",
+  "tripsCount": "行程数：{count}",
+  "avgRatingLabel": "平均评分：{avg}（{count} 票）",
+  "tripsHeading": "行程",
+  "noTripsYet": "暂无行程",
+  "tripListSubtitle": "{date} · 佣金 {commission}",
+  "operatorTitle": "调度 / 运营",
+  "operatorCode": "调度员代码",
+  "loginLoadTrips": "登录并加载行程",
+  "noTripsLoaded": "未加载行程",
+  "operatorTripSubtitle": "{date} · {fare} DT",
+  "b2bTitle": "B2B 企业",
+  "companyCode": "企业代码",
+  "verifyCompanyCode": "验证企业代码",
+  "b2bConnectedStub": "已连接月度账单（演示）。后续可将叫车与 PDF 发票接入 API。",
+  "roleAppPassenger": "乘客（行程与聊天）",
+  "roleAppDriver": "司机（应用）",
+  "appPassengerTitle": "乘客 — 行程",
+  "appDriverTitle": "司机 — 应用",
+  "emailLabel": "邮箱",
+  "passwordLabel": "密码",
+  "signInApp": "登录",
+  "registerAppAccount": "注册乘客账号",
+  "registerDriverAccount": "注册司机账号",
+  "logoutApp": "退出",
+  "genericCancel": "取消",
+  "syncPreferredLanguage": "将语言同步到个人资料",
+  "profileLanguageSynced": "已更新首选语言。",
+  "myRidesHeading": "我的行程",
+  "ridePickupLabel": "上车点",
+  "rideDestinationLabel": "目的地",
+  "requestRideButton": "叫车",
+  "openChatButton": "聊天",
+  "chatUnavailable": "此行程尚未开启聊天。",
+  "noRidesYetApp": "暂无行程。",
+  "driverPendingRides": "待接订单",
+  "acceptRide": "接单",
+  "rejectRide": "释放",
+  "startRide": "开始",
+  "completeRide": "完成",
+  "cancelRidePassenger": "取消行程",
+  "rideStatusFmt": "状态：{status}",
+  "adminOversightHeading": "实时监控",
+  "adminLoadRidesBtn": "加载应用行程",
+  "adminLoadDriversBtn": "司机位置",
+  "adminLoadOwnerMetricsBtn": "管理指标",
+  "adminRidesHeading": "应用行程",
+  "adminDriversHeading": "司机",
+  "adminNoRidesLoaded": "点击「加载应用行程」。",
+  "adminNoDriversData": "点击「司机位置」。",
+  "adminRideRow": "{pickup} → {destination}",
+  "driverLocationRow": "纬度 {lat}，经度 {lng}",
+  "chatScreenTitle": "行程聊天",
+  "messageFieldHint": "输入消息",
+  "sendChatMessage": "发送",
+  "accountDisabledContactAdmin": "账号已停用，请联系管理员。",
+  "signedInWithGoogle": "已使用 Google 登录",
+  "passengerGoogleLoginRequired": "乘客必须使用 Google 登录。",
+  "continueWithGoogle": "使用 Google 继续",
+  "passengerDispatchPanelTitle": "高级调度面板",
+  "passengerActiveRidesChip": "进行中的行程：{count}",
+  "passengerTotalRidesChip": "行程总数：{count}",
+  "passengerBookingSectionTitle": "预订",
+  "passengerLocationCurrent": "您当前的位置",
+  "passengerLocationDetecting": "正在获取位置...",
+  "passengerLocationUnavailable": "无法获取位置",
+  "passengerRefreshLocationTooltip": "刷新位置",
+  "passengerDriverLine": "司机：{name}",
+  "passengerPhoneLine": "电话：{phone}",
+  "rideStatusPending": "待接单",
+  "rideStatusAccepted": "已接单",
+  "rideStatusOngoing": "进行中",
+  "rideStatusCompleted": "已完成",
+  "rideStatusCancelled": "已取消",
+  "rideStatusActive": "进行中",
+  "passengerLocationServiceDisabled": "定位服务已关闭。",
+  "passengerLocationPermissionDenied": "未授予位置权限。",
+  "passengerNoNotificationsYet": "暂无通知。",
+  "dialogOk": "确定",
+  "passengerRideNotificationTitle": "行程详情",
+  "passengerRideNumberLine": "行程 #{id}",
+  "@distanceKm": {
+    "placeholders": {
+      "km": {
+        "type": "Object"
+      }
+    }
+  },
+  "@fareDt": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "@loggedInAs": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "@tripRecorded": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      },
+      "commission": {
+        "type": "Object"
+      }
+    }
+  },
+  "@commissionLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "Object"
+      }
+    }
+  },
+  "@tripsCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@avgRatingLabel": {
+    "placeholders": {
+      "avg": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@tripListSubtitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "commission": {
+        "type": "Object"
+      }
+    }
+  },
+  "@operatorTripSubtitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "Object"
+      }
+    }
+  },
+  "@rideStatusFmt": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "@adminRideRow": {
+    "placeholders": {
+      "pickup": {
+        "type": "String"
+      },
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "@driverLocationRow": {
+    "placeholders": {
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
+    }
+  },
+  "@passengerActiveRidesChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@passengerTotalRidesChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@passengerDriverLine": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@passengerPhoneLine": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "@passengerRideNumberLine": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsEmpty": "No notifications yet.",
+  "notificationRideUpdateTitle": "Ride update",
+  "notificationRideUpdatedBody": "Ride #{id} updated.",
+  "@notificationRideUpdatedBody": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "errorGoogleSignInMissingToken": "Google sign-in failed: missing Google token.",
+  "driverNameFallback": "Driver",
+  "notificationDriverAcceptedTitle": "Driver accepted",
+  "notificationDriverAcceptedBody": "{driver}{phoneSuffix} accepted your request.",
+  "@notificationDriverAcceptedBody": {
+    "placeholders": {
+      "driver": {
+        "type": "String"
+      },
+      "phoneSuffix": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationDriverAcceptedSnack": "Driver accepted: {driver}{phoneSuffix}",
+  "@notificationDriverAcceptedSnack": {
+    "placeholders": {
+      "driver": {
+        "type": "String"
+      },
+      "phoneSuffix": {
+        "type": "String"
+      }
+    }
+  },
+  "passengerDriverNearPickupSnack": "Driver is now near your pickup point.",
+  "notificationDriverNearPickupTitle": "Driver near pickup",
+  "notificationDriverNearPickupBody": "Your driver is near pickup in {pickup}.",
+  "@notificationDriverNearPickupBody": {
+    "placeholders": {
+      "pickup": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationRequestSentTitle": "Request sent",
+  "notificationRequestSentBody": "We sent your ride request to nearby drivers.",
+  "requestSentSnackLine": "Request sent. {farePart}{promoPart}",
+  "@requestSentSnackLine": {
+    "placeholders": {
+      "farePart": {
+        "type": "String"
+      },
+      "promoPart": {
+        "type": "String"
+      }
+    }
+  },
+  "promoCodeOptionalLabel": "Promo code",
+  "driverNotificationNewNearbyTitle": "New nearby ride",
+  "driverNotificationNewNearbyBodyDefault": "A nearby passenger requested a ride.",
+  "driverNotificationTakenTitle": "Request already accepted",
+  "driverNotificationTakenBodyDefault": "Another driver accepted this request.",
+  "driverNotificationCancelledTitle": "Ride cancelled",
+  "driverNotificationCancelledBodyDefault": "Passenger cancelled this ride request.",
+  "driverNotificationRequestClosedTitle": "Request closed",
+  "driverNotificationRequestClosedBodyOther": "This request was accepted by another driver or cancelled.",
+  "driverNotificationRequestClosedBodyTaken": "This request was accepted by another driver.",
+  "driverNotificationNewRideTitle": "New ride request",
+  "driverNotificationNewRideBodyDefault": "A nearby passenger sent a new request.",
+  "snackDriverNewNearbyRide": "New nearby ride request received.",
+  "driverRideRequestBannerTitle": "New ride request!",
+  "driverOfferFromLabel": "From",
+  "driverOfferToLabel": "To",
+  "driverRejectOfferButton": "Reject",
+  "driverOfferFareChip": "{amount} DT",
+  "@driverOfferFareChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "driverOfferDistanceChip": "{distance} km",
+  "@driverOfferDistanceChip": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "driverOfferTimeChip": "{minutes} min",
+  "@driverOfferTimeChip": {
+    "placeholders": {
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "snackDriverRideTakenOther": "Ride accepted by another driver.",
+  "snackDriverPassengerCancelled": "Passenger cancelled this request.",
+  "snackDriverChatAfterAcceptance": "Chat will open after ride acceptance",
+  "driverMyVehicleTitle": "My vehicle",
+  "driverVehicleSummaryLine": "Car: {model} | Color: {color}",
+  "@driverVehicleSummaryLine": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "color": {
+        "type": "String"
+      }
+    }
+  },
+  "driverVehicleIdentityTitle": "Vehicle identity",
+  "driverOpenRequestsChip": "Open requests: {count}",
+  "@driverOpenRequestsChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "driverUnreadAlertsChip": "Unread alerts: {count}",
+  "@driverUnreadAlertsChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "b2bAppBarTitle": "Taxi Pro Corporate",
+  "b2bPortalHeading": "Corporate & hotel portal",
+  "b2bConnectedWorkflowSubtitle": "Connected to monthly billing workflow",
+  "b2bBookOnAccountHeading": "Book on company account",
+  "b2bMonthlyUsageTitle": "Current month usage (stub)",
+  "b2bMonthlyAmountDue": "Amount due (DT): {amount}",
+  "@b2bMonthlyAmountDue": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "b2bBookingSuccessMessage": "{action} #{id} • {guest} • {route}",
+  "@b2bBookingSuccessMessage": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "id": {
+        "type": "Object"
+      },
+      "guest": {
+        "type": "String"
+      },
+      "route": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerAppBarTitle": "车主总部",
+  "ownerProfitChip": "利润: {amount} DT",
+  "@ownerProfitChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerTripsCountChip": "行程: {count}",
+  "@ownerTripsCountChip": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerRatingChip": "{avg} ★ ({votes})",
+  "@ownerRatingChip": {
+    "placeholders": {
+      "avg": {
+        "type": "String"
+      },
+      "votes": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerVaultHeading": "行程档案",
+  "ownerAdminOversightHeading": "管理监控",
+  "ownerCommissionChip": "佣金: {amount} DT",
+  "@ownerCommissionChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerTripRouteFareRow": "{route} — {fare} DT",
+  "@ownerTripRouteFareRow": {
+    "placeholders": {
+      "route": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerHqPortalHeading": "总部指挥中心",
+  "operatorDispatchCenterHeading": "调度与监控",
+  "operatorDispatchPendingBlurb": "有待分配的请求。",
+  "operatorDispatchIdleBlurb": "系统已连接。暂无待处理预订。",
+  "operatorChipPending": "待处理: {count}",
+  "@operatorChipPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorChipAccepted": "已接受: {count}",
+  "@operatorChipAccepted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorChipOngoing": "进行中: {count}",
+  "@operatorChipOngoing": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorChipCompleted": "已完成: {count}",
+  "@operatorChipCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorRideSubtitleLine": "{status}{driver}{created}",
+  "@operatorRideSubtitleLine": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "driver": {
+        "type": "String"
+      },
+      "created": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorDriversOnlineCount": "在线司机: {count}",
+  "@operatorDriversOnlineCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorPhoneLabel": "电话",
+  "operatorDriverNameLabel": "司机姓名",
+  "operatorPinLabel": "PIN",
+  "operatorCreateDriverAccount": "创建司机账户",
+  "operatorRefreshCorporateBookings": "刷新企业预订",
+  "operatorTripVaultHeading": "行程档案",
+  "operatorTripVaultTripsChip": "行程: {count}",
+  "@operatorTripVaultTripsChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "operatorTripVaultRevenueChip": "收入: {amount} DT",
+  "@operatorTripVaultRevenueChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorWalletBalanceLabel": "钱包余额",
+  "operatorOwnerCommissionLabel": "车主佣金 %",
+  "operatorB2bCommissionLabel": "B2B 佣金 %",
+  "operatorAutoDeductEnabled": "自动扣款已启用",
+  "operatorCarModelLabel": "车辆型号",
+  "operatorCarColorLabel": "车辆颜色",
+  "operatorPickFromGallery": "从图库选择图片",
+  "operatorRemovePickedImage": "移除已选图片",
+  "operatorPhotoUrlOptional": "照片 URL（可选）",
+  "operatorCancel": "取消",
+  "operatorSave": "保存",
+  "operatorDriverWalletLine": "钱包: {wallet} DT | 车主 %: {owner} | B2B %: {b2b}",
+  "@operatorDriverWalletLine": {
+    "placeholders": {
+      "wallet": {
+        "type": "String"
+      },
+      "owner": {
+        "type": "String"
+      },
+      "b2b": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorDriverCarColorAppend": " | 颜色: {color}",
+  "@operatorDriverCarColorAppend": {
+    "placeholders": {
+      "color": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorDriverCarLine": "\n车辆: {model}",
+  "@operatorDriverCarLine": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "statusLinePrefix": "状态: ",
+  "driverLabelPrefix": " | 司机: ",
+  "createdAtLinePrefix": "\n时间: ",
+  "walletWithAmount": "Wallet: {amount} DT",
+  "@walletWithAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "b2bFareAdminPercentSuffix": "• 5% admin",
+  "adminB2bBookingRowSubtitle": "{guest} • {room} • {fare} DT",
+  "@adminB2bBookingRowSubtitle": {
+    "placeholders": {
+      "guest": {
+        "type": "String"
+      },
+      "room": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "String"
+      }
+    }
+  },
+  "operatorTabDispatch": "调度",
+  "operatorTabDrivers": "司机",
+  "operatorTabB2b": "B2B",
+  "operatorTabTripVault": "行程档案",
+  "operatorFillDriverFields": "请输入电话、司机姓名和 PIN。",
+  "placeCarthageAirport": "Carthage Airport (Tunis)",
+  "placeEnfidhaAirport": "Enfidha–Hammamet Airport",
+  "placeMonastirAirport": "Monastir Airport",
+  "placeSousseCenter": "苏斯市中心",
+  "placeHammamet": "Hammamet",
+  "placeSousse": "Sousse",
+  "placePortElKantaoui": "Port El Kantaoui",
+  "placeNabeul": "Nabeul",
+  "homeWhatIsTitle": "什么是 Taxi Pro？",
+  "homeWhatIsBody": "Taxi Pro Tunisia 可将您与司机连接，用于机场接送和城市出行。应用内按线路固定价格；21:00 到 05:00 可能加收夜间附加费。可在应用中下单、追踪行程，并在需要时使用应用内帮助。",
+  "passengerFareFinalEstimate": "行程最终预估",
+  "passengerPayCash": "现金",
+  "passengerPayCardTpe": "刷卡 (TPE)",
+  "operatorEntryGateLabel": "入口闸门:",
+  "operatorEmployeePasswordLabel": "员工密码:",
+  "operatorWelcomeOperatingRoom": "欢迎来到运营控制室。",
+  "operatorTabTodaysArrivals": "今日到达",
+  "operatorTabLiveOrders": "实时订单",
+  "operatorTabDriverManagement": "司机管理",
+  "operatorTabTripHistory": "行程历史",
+  "operatorArrivalsDemoHeading": "今日到达 — 突尼斯（演示数据）",
+  "operatorColFlightNumber": "航班号",
+  "operatorColDepartureAirport": "出发机场",
+  "operatorColTakeoffTime": "起飞时间",
+  "operatorColExpectedArrival": "预计到达（今日）",
+  "operatorColArrivalAirportTn": "到达机场（突尼斯）",
+  "operatorChooseDriverTopUp": "选择要充值的司机:",
+  "operatorAmountReceivedDt": "收到金额 (DT):",
+  "operatorRechargeBalance": "充值余额",
+  "operatorCorporateBookingsSection": "企业预订 (B2B)",
+  "operatorRoleAdminHq": "总部管理",
+  "operatorNoFlightArrivals": "未加载到达记录。",
+  "operatorUserAccountsHeading": "应用用户账户",
+  "ownerPasswordCeoLabel": "车主（CEO）密码:",
+  "ownerWelcomeHq": "欢迎来到车主总部。",
+  "ownerTabTreasury": "财务与利润",
+  "ownerTabSettings": "设置",
+  "ownerTabHostelB2b": "酒店账户 (B2B)",
+  "ownerSettingsCommissionLabel": "扣除佣金比例 (%):",
+  "ownerSettingsCommissionHint": "仅显示 — 可连接司机账户以显示实时费率。",
+  "ownerSettingsRouteFaresHeading": "路线基础价格 (DT)",
+  "ownerSaveRouteFare": "保存",
+  "driverWalletDepletedTitle": "钱包为空",
+  "driverWalletDepletedBody": "请通过运营商向店主支付 {amount} DT 以充值。",
+  "@driverWalletDepletedBody": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerDriverPinWalletsHeading": "司机钱包",
+  "ownerDriverPinWalletsEmpty": "暂无已加载的 PIN 司机账户。"
+}
