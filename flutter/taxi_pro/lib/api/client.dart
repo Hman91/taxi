@@ -524,6 +524,55 @@ class TaxiApiClient {
     return Map<String, dynamic>.from(body['b2b_tenant'] as Map);
   }
 
+  Future<Map<String, dynamic>> createAdminB2bTenant({
+    required String token,
+    required String code,
+    String label = '',
+    String contactName = '',
+    String pin = '',
+    String phone = '',
+    String hotel = '',
+    bool isEnabled = true,
+  }) async {
+    final r = await _http.post(
+      _u('/api/admin/b2b-tenants'),
+      headers: _jsonHeaders(bearer: token),
+      body: jsonEncode({
+        'code': code,
+        'label': label,
+        'contact_name': contactName,
+        'pin': pin,
+        'phone': phone,
+        'hotel': hotel,
+        'is_enabled': isEnabled,
+      }),
+    );
+    if (r.statusCode != 201) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return Map<String, dynamic>.from(body['b2b_tenant'] as Map);
+  }
+
+  Future<Map<String, dynamic>> patchAdminB2bTenant({
+    required String token,
+    required int tenantId,
+    Map<String, dynamic> payload = const {},
+  }) async {
+    final r = await _http.patch(
+      _u('/api/admin/b2b-tenants/$tenantId'),
+      headers: _jsonHeaders(bearer: token),
+      body: jsonEncode(payload),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return Map<String, dynamic>.from(body['b2b_tenant'] as Map);
+  }
+
   Future<List<Map<String, dynamic>>> listAdminDriverPinAccounts(
       String token) async {
     final r = await _http.get(

@@ -255,6 +255,38 @@ class TaxiAppService {
         isEnabled: isEnabled,
       );
 
+  Future<Map<String, dynamic>> createAdminB2bTenant({
+    required String token,
+    required String code,
+    String label = '',
+    String contactName = '',
+    String pin = '',
+    String phone = '',
+    String hotel = '',
+    bool isEnabled = true,
+  }) =>
+      _client.createAdminB2bTenant(
+        token: token,
+        code: code,
+        label: label,
+        contactName: contactName,
+        pin: pin,
+        phone: phone,
+        hotel: hotel,
+        isEnabled: isEnabled,
+      );
+
+  Future<Map<String, dynamic>> patchAdminB2bTenant({
+    required String token,
+    required int tenantId,
+    Map<String, dynamic> payload = const {},
+  }) =>
+      _client.patchAdminB2bTenant(
+        token: token,
+        tenantId: tenantId,
+        payload: payload,
+      );
+
   Future<List<Map<String, dynamic>>> listAdminDriverPinAccounts(String token) =>
       _client.listAdminDriverPinAccounts(token);
 

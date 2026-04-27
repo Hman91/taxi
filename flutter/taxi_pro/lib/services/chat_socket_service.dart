@@ -26,24 +26,29 @@ class ChatSocketService {
     List<String>? transports,
   }) {
     disconnect();
+    final connectUrl = normalizeApiBaseUrl(_base);
     var resolvedTransports =
         List<String>.from(transports ?? (kIsWeb ? ['websocket', 'polling'] : ['polling']));
-    // On Flutter web, polling transport can intermittently yield malformed
-    // payload chunks in socket_io_common; prefer websocket first.
-    if (kIsWeb &&
-        resolvedTransports.length == 1 &&
-        resolvedTransports.first == 'polling') {
-      resolvedTransports = ['websocket', 'polling'];
+    if (kIsWeb) {
+      final host = Uri.tryParse(connectUrl)?.host.toLowerCase() ?? '';
+      final isLocalHost =
+          host == '127.0.0.1' || host == 'localhost' || host == '0.0.0.0';
+      // Local Flask/Werkzeug often serves Socket.IO over polling only.
+      // Deployed hosts usually handle websocket properly.
+      resolvedTransports = isLocalHost ? ['polling'] : ['websocket'];
     }
-    _socket = socket_io.io(
-      _base,
-      socket_io.OptionBuilder()
-          .setTransports(resolvedTransports)
-          .disableAutoConnect()
-          .setAuth({'token': token})
-          .setQuery({'token': token})
-          .build(),
-    );
+    final opts = socket_io.OptionBuilder()
+        .setTransports(resolvedTransports)
+        .disableAutoConnect()
+        .setAuth({'token': token})
+        .setQuery({'token': token})
+        .build();
+    // Engine.IO on mobile often probes WebSocket upgrade; some hosts/proxies return 200
+    // without 101. Stay on long-polling only for native (avoids spurious WebSocketException).
+    if (!kIsWeb) {
+      opts['upgrade'] = false;
+    }
+    _socket = socket_io.io(connectUrl, opts);
 
     void mapEvent(dynamic raw, void Function(JsonMap) handler) {
       JsonMap? payload;

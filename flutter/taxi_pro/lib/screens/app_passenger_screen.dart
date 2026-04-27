@@ -565,25 +565,18 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   }
 
   Future<String?> _askRequiredPhoneForGoogle() async {
-    final ctrl = TextEditingController();
-    final focusNode = FocusNode();
+    var phone = '';
     final result = await showDialog<String>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (focusNode.canRequestFocus) {
-            focusNode.requestFocus();
-          }
-        });
         return AlertDialog(
           title: const Text('Phone required'),
           content: TextField(
-            controller: ctrl,
-            focusNode: focusNode,
             autofocus: true,
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.done,
+            onChanged: (v) => phone = v,
             onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
             decoration: const InputDecoration(
               labelText: 'Phone number',
@@ -596,15 +589,13 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+              onPressed: () => Navigator.of(ctx).pop(phone.trim()),
               child: const Text('Save'),
             ),
           ],
         );
       },
     );
-    focusNode.dispose();
-    ctrl.dispose();
     return result;
   }
 

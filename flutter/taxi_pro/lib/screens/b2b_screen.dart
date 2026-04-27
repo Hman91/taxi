@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../app_locale.dart' show AppUiRole, restoreUiRoleLocale;
+import '../config.dart';
 import '../api/models.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
 import '../l10n/ride_status_localization.dart';
 import '../models/app_notification.dart';
+import '../models/chat_message.dart';
 import '../services/chat_socket_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/taxi_app_service.dart';
@@ -40,10 +44,12 @@ class _B2bScreenState extends State<B2bScreen> {
   final List<AppNotification> _notifications = [];
   final Map<int, int> _unreadChatByRideId = {};
   final Map<int, int> _rideIdByConversationId = {};
+  final Map<int, int> _lastSeenMessageIdByConversationId = <int, int>{};
   final Set<int> _ratedRideIds = <int>{};
   final Map<int, int> _ratingByRideId = <int, int>{};
   int? _activeChatRideId;
   int? _pendingRatingRideId;
+  Timer? _pollingTimer;
   String? _message;
   bool _busy = false;
   bool _ok = false;
@@ -99,6 +105,7 @@ class _B2bScreenState extends State<B2bScreen> {
       if (_appToken != null) {
         _connectRealtime(_appToken!);
         await _refreshRides();
+        _startPolling();
       }
       setState(() {
         _ok = true;
@@ -159,6 +166,14 @@ class _B2bScreenState extends State<B2bScreen> {
   }
 
   void _connectRealtime(String token) {
+    final host = Uri.tryParse(apiBaseUrl)?.host.toLowerCase() ?? '';
+    final isWebLocal =
+        kIsWeb && (host == '127.0.0.1' || host == 'localhost' || host == '0.0.0.0');
+    // On Flutter Web local, socket_io_common polling can throw decode RangeError.
+    // Keep chat/notification via HTTP fallback polling instead.
+    if (isWebLocal) {
+      return;
+    }
     _socket.connect(
       token,
       transports: const ['polling'],
@@ -230,9 +245,79 @@ class _B2bScreenState extends State<B2bScreen> {
           final info = await _api.getRideConversation(token: t, rideId: r.id);
           if (info == null) continue;
           _rideIdByConversationId[info.conversationId] = r.id;
+          _lastSeenMessageIdByConversationId.putIfAbsent(info.conversationId, () => 0);
         } catch (_) {}
       }
     } catch (_) {}
+  }
+
+  void _startPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
+      if (!mounted || !_ok || _busy || _appToken == null) return;
+      await _refreshRides();
+      await _pollChatUnreadFallback();
+    });
+  }
+
+  Future<void> _pollChatUnreadFallback() async {
+    final t = _appToken;
+    final uid = _userId;
+    if (t == null || uid == null) return;
+    final l = AppLocalizations.of(context)!;
+    final pairs = _rideIdByConversationId.entries.toList();
+    for (final entry in pairs) {
+      final conversationId = entry.key;
+      final rideId = entry.value;
+      if (_activeChatRideId == rideId) continue;
+      try {
+        final msgs = await _api.listConversationMessages(
+          token: t,
+          conversationId: conversationId,
+          limit: 20,
+        );
+        if (msgs.isEmpty) continue;
+        final prevSeen = _lastSeenMessageIdByConversationId[conversationId] ?? 0;
+        int maxId = prevSeen;
+        int incomingCount = 0;
+        ChatMessage? latestIncoming;
+        for (final m in msgs) {
+          if (m.id > maxId) maxId = m.id;
+          if (prevSeen > 0 && m.id > prevSeen && m.senderUserId != uid) {
+            incomingCount++;
+            if (latestIncoming == null || m.id > latestIncoming.id) {
+              latestIncoming = m;
+            }
+          }
+        }
+        if (prevSeen == 0) {
+          _lastSeenMessageIdByConversationId[conversationId] = maxId;
+          continue;
+        }
+        if (incomingCount > 0) {
+          if (!mounted) return;
+          setState(() {
+            _unreadChatByRideId[rideId] =
+                (_unreadChatByRideId[rideId] ?? 0) + incomingCount;
+          });
+          final body = (latestIncoming?.displayText.trim().isNotEmpty ?? false)
+              ? latestIncoming!.displayText
+              : l.openChatButton;
+          final senderName = (latestIncoming?.senderName ?? '').trim();
+          final title = senderName.isEmpty
+              ? l.openChatButton
+              : '${l.openChatButton} • $senderName';
+          _pushNotification(
+            title: title,
+            body: body,
+            event: 'chat_message_fallback',
+            rideId: rideId,
+          );
+          LocalNotificationService.instance.show(title: title, body: body);
+        }
+        _lastSeenMessageIdByConversationId[conversationId] = maxId;
+      } catch (_) {}
+    }
   }
 
   void _pushNotification({
@@ -402,6 +487,7 @@ class _B2bScreenState extends State<B2bScreen> {
 
   @override
   void dispose() {
+    _pollingTimer?.cancel();
     _socket.disconnect();
     _secretController.dispose();
     _guestController.dispose();

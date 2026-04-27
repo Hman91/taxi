@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 
 import '../app_locale.dart' show AppUiRole, restoreUiRoleLocale;
 import '../l10n/app_localizations.dart';
@@ -20,7 +22,16 @@ class OwnerScreen extends StatefulWidget {
 class _OwnerScreenState extends State<OwnerScreen>
     with SingleTickerProviderStateMixin {
   final _api = TaxiAppService();
+  final _imagePicker = ImagePicker();
   final _secretController = TextEditingController(text: 'NabeulGold2026');
+  final _newDriverPhone = TextEditingController();
+  final _newDriverName = TextEditingController();
+  final _newDriverPin = TextEditingController();
+  final _newDriverCarModel = TextEditingController();
+  final _newDriverCarColor = TextEditingController();
+  String _newDriverPhotoData = '';
+  final _topUpAmountController = TextEditingController(text: '10');
+  int? _topUpAccountId;
   TabController? _tabController;
 
   bool _obscurePassword = true;
@@ -37,6 +48,7 @@ class _OwnerScreenState extends State<OwnerScreen>
   List<Map<String, dynamic>> _flightArrivals = [];
   List<Map<String, dynamic>> _fareRoutes = [];
   List<Map<String, dynamic>> _driverWalletBreakdown = [];
+  List<Map<String, dynamic>> _driverRatings = [];
   final Map<int, TextEditingController> _fareCtrls = {};
   double _commissionDemoPercent = 10.0;
 
@@ -133,6 +145,7 @@ class _OwnerScreenState extends State<OwnerScreen>
       final flights = await _api.listAdminTunisiaFlightArrivals(t);
       final fareRoutes = await _api.listAdminFareRoutes(t);
       final driverWallets = await _api.listAdminDriverWalletBreakdown(t);
+      final ratings = await _api.listAdminDriverRatings(t);
       if (!mounted) return;
       setState(() {
         _metrics = m;
@@ -155,11 +168,34 @@ class _OwnerScreenState extends State<OwnerScreen>
         _flightArrivals = flights;
         _fareRoutes = fareRoutes;
         _driverWalletBreakdown = driverWallets;
+        _driverRatings = ratings;
+        final ids = driverWallets
+            .map((e) => (e['id'] as num?)?.toInt())
+            .whereType<int>()
+            .toList();
+        if (_topUpAccountId != null && !ids.contains(_topUpAccountId)) {
+          _topUpAccountId = null;
+        }
+        _topUpAccountId ??= ids.isEmpty ? null : ids.first;
         _syncFareControllers(fareRoutes);
         _message = null;
       });
     } catch (e) {
-      setState(() => _message = e.toString());
+      final msg = e.toString();
+      setState(
+        () => _message = msg.contains('phone_exists_or_invalid')
+            ? _uiText(
+                en: 'Phone already exists or invalid.',
+                ar: 'رقم الهاتف موجود مسبقا أو غير صالح.',
+                fr: 'Le numero existe deja ou est invalide.',
+                es: 'El telefono ya existe o no es valido.',
+                de: 'Telefon existiert bereits oder ist ungueltig.',
+                it: 'Il telefono esiste gia o non e valido.',
+                ru: 'Телефон уже существует или недействителен.',
+                zh: '电话号码已存在或无效。',
+              )
+            : msg,
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -225,6 +261,369 @@ class _OwnerScreenState extends State<OwnerScreen>
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _pickNewDriverImage() async {
+    final picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1600,
+    );
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    final name = picked.name.toLowerCase();
+    final ext = name.contains('.') ? name.split('.').last : 'jpeg';
+    final mime = ext == 'png'
+        ? 'image/png'
+        : ext == 'webp'
+            ? 'image/webp'
+            : 'image/jpeg';
+    if (!mounted) return;
+    setState(() {
+      _newDriverPhotoData = 'data:$mime;base64,${base64Encode(bytes)}';
+    });
+  }
+
+  Future<void> _createDriverAccount() async {
+    final t = _token;
+    if (t == null) return;
+    final phone = _newDriverPhone.text.trim();
+    final name = _newDriverName.text.trim();
+    final pin = _newDriverPin.text.trim();
+    final carModel = _newDriverCarModel.text.trim();
+    final carColor = _newDriverCarColor.text.trim();
+    final photoUrl = _newDriverPhotoData.trim();
+    final loc = AppLocalizations.of(context)!;
+    if (phone.isEmpty ||
+        name.isEmpty ||
+        pin.isEmpty ||
+        carModel.isEmpty ||
+        carColor.isEmpty) {
+      setState(() => _message = loc.operatorFillDriverFields);
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      await _api.createAdminDriverPinAccount(
+        token: t,
+        phone: phone,
+        pin: pin,
+        driverName: name,
+        carModel: carModel,
+        carColor: carColor,
+        photoUrl: photoUrl,
+      );
+      _newDriverPhone.clear();
+      _newDriverName.clear();
+      _newDriverPin.clear();
+      _newDriverCarModel.clear();
+      _newDriverCarColor.clear();
+      _newDriverPhotoData = '';
+      await _refreshAll();
+    } catch (e) {
+      setState(() => _message = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _editDriverAccount(Map<String, dynamic> row) async {
+    final t = _token;
+    if (t == null) return;
+    final id = (row['id'] as num?)?.toInt();
+    if (id == null) return;
+    final walletCtrl = TextEditingController(
+      text: (row['wallet_balance'] ?? 0).toString(),
+    );
+    final ownerRateCtrl = TextEditingController(
+      text: (row['owner_commission_rate'] ?? 10).toString(),
+    );
+    final b2bRateCtrl = TextEditingController(
+      text: (row['b2b_commission_rate'] ?? 5).toString(),
+    );
+    final modelCtrl = TextEditingController(text: row['car_model']?.toString() ?? '');
+    final colorCtrl = TextEditingController(text: row['car_color']?.toString() ?? '');
+    bool autoDeduct = row['auto_deduct_enabled'] == true;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) => AlertDialog(
+          title: Text((row['driver_name'] ?? 'Driver').toString()),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: walletCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(labelText: AppLocalizations.of(ctx)!.operatorWalletBalanceLabel),
+                ),
+                TextField(
+                  controller: ownerRateCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(labelText: AppLocalizations.of(ctx)!.operatorOwnerCommissionLabel),
+                ),
+                TextField(
+                  controller: b2bRateCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(labelText: AppLocalizations.of(ctx)!.operatorB2bCommissionLabel),
+                ),
+                SwitchListTile(
+                  dense: true,
+                  title: Text(AppLocalizations.of(ctx)!.operatorAutoDeductEnabled),
+                  value: autoDeduct,
+                  onChanged: (v) => setSt(() => autoDeduct = v),
+                ),
+                TextField(
+                  controller: modelCtrl,
+                  decoration: InputDecoration(labelText: AppLocalizations.of(ctx)!.operatorCarModelLabel),
+                ),
+                TextField(
+                  controller: colorCtrl,
+                  decoration: InputDecoration(labelText: AppLocalizations.of(ctx)!.operatorCarColorLabel),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(AppLocalizations.of(ctx)!.operatorCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(AppLocalizations.of(ctx)!.operatorSave),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok == true) {
+      setState(() {
+        _busy = true;
+        _message = null;
+      });
+      try {
+        await _api.patchAdminDriverPinAccount(
+          token: t,
+          accountId: id,
+          payload: {
+            'wallet_balance': double.tryParse(walletCtrl.text.trim().replaceAll(',', '.')) ??
+                (row['wallet_balance'] as num?)?.toDouble() ??
+                0.0,
+            'owner_commission_rate':
+                double.tryParse(ownerRateCtrl.text.trim().replaceAll(',', '.')) ??
+                    (row['owner_commission_rate'] as num?)?.toDouble() ??
+                    10.0,
+            'b2b_commission_rate':
+                double.tryParse(b2bRateCtrl.text.trim().replaceAll(',', '.')) ??
+                    (row['b2b_commission_rate'] as num?)?.toDouble() ??
+                    5.0,
+            'auto_deduct_enabled': autoDeduct,
+            'car_model': modelCtrl.text.trim(),
+            'car_color': colorCtrl.text.trim(),
+          },
+        );
+        await _refreshAll();
+      } catch (e) {
+        setState(() => _message = e.toString());
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+    }
+    walletCtrl.dispose();
+    ownerRateCtrl.dispose();
+    b2bRateCtrl.dispose();
+    modelCtrl.dispose();
+    colorCtrl.dispose();
+  }
+
+  Future<void> _rechargeDriverWallet() async {
+    final t = _token;
+    final id = _topUpAccountId;
+    if (t == null || id == null) return;
+    final amount =
+        double.tryParse(_topUpAmountController.text.trim().replaceAll(',', '.')) ?? 0.0;
+    if (amount <= 0) {
+      setState(
+        () => _message = _uiText(
+          en: 'Invalid recharge amount',
+          ar: 'مبلغ الشحن غير صالح',
+          fr: 'Montant de recharge invalide',
+          es: 'Importe de recarga invalido',
+          de: 'Ungueltiger Aufladebetrag',
+          it: 'Importo ricarica non valido',
+          ru: 'Неверная сумма пополнения',
+          zh: '充值金额无效',
+        ),
+      );
+      return;
+    }
+    final row = _driverWalletBreakdown.firstWhere(
+      (e) => (e['id'] as num?)?.toInt() == id,
+      orElse: () => const <String, dynamic>{},
+    );
+    if (row.isEmpty) return;
+    final current = (row['wallet_balance'] as num?)?.toDouble() ?? 0.0;
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      await _api.patchAdminDriverPinAccount(
+        token: t,
+        accountId: id,
+        payload: {'wallet_balance': current + amount},
+      );
+      _topUpAmountController.text = '10';
+      await _refreshAll();
+    } catch (e) {
+      setState(() => _message = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _createB2bTenant() async {
+    final t = _token;
+    if (t == null) return;
+    final codeCtrl = TextEditingController();
+    final labelCtrl = TextEditingController();
+    final nameCtrl = TextEditingController();
+    final pinCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final hotelCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Create B2B account'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: codeCtrl, decoration: const InputDecoration(labelText: 'Code')),
+              TextField(controller: labelCtrl, decoration: const InputDecoration(labelText: 'Label')),
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
+              TextField(controller: pinCtrl, decoration: const InputDecoration(labelText: 'PIN')),
+              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone')),
+              TextField(controller: hotelCtrl, decoration: const InputDecoration(labelText: 'Hotel')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Create')),
+        ],
+      ),
+    );
+    if (ok == true) {
+      setState(() {
+        _busy = true;
+        _message = null;
+      });
+      try {
+        await _api.createAdminB2bTenant(
+          token: t,
+          code: codeCtrl.text.trim(),
+          label: labelCtrl.text.trim(),
+          contactName: nameCtrl.text.trim(),
+          pin: pinCtrl.text.trim(),
+          phone: phoneCtrl.text.trim(),
+          hotel: hotelCtrl.text.trim(),
+        );
+        await _refreshAll();
+      } catch (e) {
+        setState(() => _message = e.toString());
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+    }
+    codeCtrl.dispose();
+    labelCtrl.dispose();
+    nameCtrl.dispose();
+    pinCtrl.dispose();
+    phoneCtrl.dispose();
+    hotelCtrl.dispose();
+  }
+
+  Future<void> _editB2bTenant(Map<String, dynamic> row) async {
+    final t = _token;
+    if (t == null) return;
+    final id = (row['id'] as num?)?.toInt();
+    if (id == null) return;
+    final codeCtrl = TextEditingController(text: (row['code'] ?? '').toString());
+    final labelCtrl = TextEditingController(text: (row['label'] ?? '').toString());
+    final nameCtrl = TextEditingController(text: (row['contact_name'] ?? '').toString());
+    final pinCtrl = TextEditingController(text: (row['pin'] ?? '').toString());
+    final phoneCtrl = TextEditingController(text: (row['phone'] ?? '').toString());
+    final hotelCtrl = TextEditingController(text: (row['hotel'] ?? '').toString());
+    bool enabled = row['is_enabled'] == true;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) => AlertDialog(
+          title: const Text('Edit B2B account'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: codeCtrl, decoration: const InputDecoration(labelText: 'Code')),
+                TextField(controller: labelCtrl, decoration: const InputDecoration(labelText: 'Label')),
+                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
+                TextField(controller: pinCtrl, decoration: const InputDecoration(labelText: 'PIN')),
+                TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone')),
+                TextField(controller: hotelCtrl, decoration: const InputDecoration(labelText: 'Hotel')),
+                SwitchListTile(
+                  dense: true,
+                  title: const Text('Enabled'),
+                  value: enabled,
+                  onChanged: (v) => setSt(() => enabled = v),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+          ],
+        ),
+      ),
+    );
+    if (ok == true) {
+      setState(() {
+        _busy = true;
+        _message = null;
+      });
+      try {
+        await _api.patchAdminB2bTenant(
+          token: t,
+          tenantId: id,
+          payload: {
+            'code': codeCtrl.text.trim(),
+            'label': labelCtrl.text.trim(),
+            'contact_name': nameCtrl.text.trim(),
+            'pin': pinCtrl.text.trim(),
+            'phone': phoneCtrl.text.trim(),
+            'hotel': hotelCtrl.text.trim(),
+            'is_enabled': enabled,
+          },
+        );
+        await _refreshAll();
+      } catch (e) {
+        setState(() => _message = e.toString());
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+    }
+    codeCtrl.dispose();
+    labelCtrl.dispose();
+    nameCtrl.dispose();
+    pinCtrl.dispose();
+    phoneCtrl.dispose();
+    hotelCtrl.dispose();
   }
 
   String _arrivalAirportLabel(Map<String, dynamic> row) {
@@ -400,6 +799,154 @@ class _OwnerScreenState extends State<OwnerScreen>
             child: Text(l.adminLoadOwnerMetricsBtn),
           ),
           const Divider(height: 28),
+          Text(
+            _uiText(
+              en: 'Driver management',
+              ar: 'إدارة السائقين',
+              fr: 'Gestion des chauffeurs',
+              es: 'Gestion de conductores',
+              de: 'Fahrerverwaltung',
+              it: 'Gestione autisti',
+              ru: 'Управление водителями',
+              zh: '司机管理',
+            ),
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: TaxiAppColors.textStrong,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            color: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _newDriverPhone,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: _uiText(
+                        en: 'Phone',
+                        ar: 'الهاتف',
+                        fr: 'Telephone',
+                        es: 'Telefono',
+                        de: 'Telefon',
+                        it: 'Telefono',
+                        ru: 'Телефон',
+                        zh: '电话',
+                      ),
+                    ),
+                  ),
+                  TextField(
+                    controller: _newDriverName,
+                    decoration: InputDecoration(labelText: l.operatorDriverNameLabel),
+                  ),
+                  TextField(
+                    controller: _newDriverPin,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: _uiText(
+                        en: 'PIN',
+                        ar: 'رمز PIN',
+                        fr: 'PIN',
+                        es: 'PIN',
+                        de: 'PIN',
+                        it: 'PIN',
+                        ru: 'PIN',
+                        zh: 'PIN',
+                      ),
+                    ),
+                  ),
+                  TextField(
+                    controller: _newDriverCarModel,
+                    decoration: InputDecoration(labelText: l.operatorCarModelLabel),
+                  ),
+                  TextField(
+                    controller: _newDriverCarColor,
+                    decoration: InputDecoration(labelText: l.operatorCarColorLabel),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _pickNewDriverImage,
+                    icon: const Icon(Icons.photo_library),
+                    label: Text(l.operatorPickFromGallery),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _busy ? null : _createDriverAccount,
+                      child: Text(
+                        _uiText(
+                          en: 'Create driver account',
+                          ar: 'إنشاء حساب سائق',
+                          fr: 'Creer un compte chauffeur',
+                          es: 'Crear cuenta de conductor',
+                          de: 'Fahrerkonto erstellen',
+                          it: 'Crea account autista',
+                          ru: 'Создать аккаунт водителя',
+                          zh: '创建司机账户',
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          value: _topUpAccountId,
+                          decoration: InputDecoration(labelText: l.operatorDriverNameLabel),
+                          items: _driverWalletBreakdown
+                              .map((d) => DropdownMenuItem<int>(
+                                    value: (d['id'] as num?)?.toInt(),
+                                    child: Text(
+                                      '${d['driver_name'] ?? ''} (${d['phone'] ?? ''})',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ))
+                              .toList(),
+                          onChanged: _busy ? null : (v) => setState(() => _topUpAccountId = v),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 120,
+                        child: TextField(
+                          controller: _topUpAmountController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(labelText: 'DT'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _busy || _topUpAccountId == null ? null : _rechargeDriverWallet,
+                      icon: const Icon(Icons.savings_outlined),
+                      label: Text(
+                        _uiText(
+                          en: 'Recharge the balance',
+                          ar: 'شحن الرصيد',
+                          fr: 'Recharger le solde',
+                          es: 'Recargar saldo',
+                          de: 'Guthaben aufladen',
+                          it: 'Ricarica saldo',
+                          ru: 'Пополнить баланс',
+                          zh: '充值余额',
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               const Icon(
@@ -438,6 +985,7 @@ class _OwnerScreenState extends State<OwnerScreen>
                   side: const BorderSide(color: Color(0x55991B1B)),
                 ),
                 child: ListTile(
+                  onTap: _busy ? null : () => _editDriverAccount(d),
                   dense: true,
                   leading: const Icon(
                     Icons.local_taxi_outlined,
@@ -461,6 +1009,57 @@ class _OwnerScreenState extends State<OwnerScreen>
                       height: 1.35,
                       color: TaxiAppColors.textSoft,
                     ),
+                  ),
+                  trailing: IconButton(
+                    onPressed: _busy ? null : () => _editDriverAccount(d),
+                    icon: const Icon(Icons.edit_outlined),
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: 14),
+          Text(
+            _uiText(
+              en: 'Driver ratings',
+              ar: 'تقييمات السائقين',
+              fr: 'Notes des chauffeurs',
+              es: 'Calificaciones de conductores',
+              de: 'Fahrerbewertungen',
+              it: 'Valutazioni autisti',
+              ru: 'Рейтинг водителей',
+              zh: '司机评分',
+            ),
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: TaxiAppColors.textStrong,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (_driverRatings.isEmpty)
+            Text(
+              _uiText(
+                en: 'No ratings yet',
+                ar: 'لا توجد تقييمات بعد',
+                fr: 'Pas encore de notes',
+                es: 'Aun no hay calificaciones',
+                de: 'Noch keine Bewertungen',
+                it: 'Nessuna valutazione ancora',
+                ru: 'Пока нет оценок',
+                zh: '暂无评分',
+              ),
+            )
+          else
+            ..._driverRatings.map(
+              (row) => Card(
+                color: Colors.white,
+                child: ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.star, color: Colors.amber),
+                  title: Text((row['driver_name'] ?? '').toString()),
+                  subtitle: Text(
+                    '${_uiText(en: 'Avg', ar: 'المتوسط', fr: 'Moy', es: 'Prom', de: 'Durchschn', it: 'Media', ru: 'Средн', zh: '平均')}: ${row['rating_average']}'
+                    ' (${row['rating_count']} ${_uiText(en: 'ratings', ar: 'تقييمات', fr: 'notes', es: 'calificaciones', de: 'Bewertungen', it: 'valutazioni', ru: 'оценок', zh: '评分')})',
                   ),
                 ),
               ),
@@ -756,6 +1355,12 @@ class _OwnerScreenState extends State<OwnerScreen>
             onPressed: _busy ? null : _refreshAll,
             child: Text(l.operatorRefreshCorporateBookings),
           ),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: _busy ? null : _createB2bTenant,
+            icon: const Icon(Icons.add_business_outlined),
+            label: const Text('Create B2B account'),
+          ),
           const SizedBox(height: 16),
           Text(
             l.ownerAdminOversightHeading,
@@ -798,10 +1403,16 @@ class _OwnerScreenState extends State<OwnerScreen>
                   b['label']?.toString() ?? b['code']?.toString() ?? ''),
               subtitle: Text(
                 '${b['code']?.toString() ?? ''}'
-                ' • ${_uiText(en: 'Wallet', ar: 'المحفظة', fr: 'Portefeuille', es: 'Billetera', de: 'Wallet', it: 'Portafoglio', ru: 'Кошелек', zh: '钱包')} ${(b['wallet_balance'] ?? 0).toString()} DT',
+                ' • ${_uiText(en: 'Wallet', ar: 'المحفظة', fr: 'Portefeuille', es: 'Billetera', de: 'Wallet', it: 'Portafoglio', ru: 'Кошелек', zh: '钱包')} ${(b['wallet_balance'] ?? 0).toString()} DT'
+                '\nName: ${(b['contact_name'] ?? '').toString()} | PIN: ${(b['pin'] ?? '').toString()}'
+                '\nPhone: ${(b['phone'] ?? '').toString()} | Hotel: ${(b['hotel'] ?? '').toString()}',
               ),
               value: b['is_enabled'] == true,
               onChanged: _busy ? null : (_) => _toggleB2b(b),
+              secondary: IconButton(
+                onPressed: _busy ? null : () => _editB2bTenant(b),
+                icon: const Icon(Icons.edit_outlined),
+              ),
             ),
           ),
         ],
@@ -823,6 +1434,12 @@ class _OwnerScreenState extends State<OwnerScreen>
   void dispose() {
     _tabController?.dispose();
     _secretController.dispose();
+    _newDriverPhone.dispose();
+    _newDriverName.dispose();
+    _newDriverPin.dispose();
+    _newDriverCarModel.dispose();
+    _newDriverCarColor.dispose();
+    _topUpAmountController.dispose();
     for (final c in _fareCtrls.values) {
       c.dispose();
     }
