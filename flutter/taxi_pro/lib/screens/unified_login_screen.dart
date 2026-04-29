@@ -8,10 +8,12 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../api/client.dart';
 import '../api/models.dart';
+import '../app_locale.dart';
 import '../config.dart';
 import '../l10n/app_localizations.dart';
 import '../services/taxi_app_service.dart';
 import '../theme/taxi_app_theme.dart';
+import '../widgets/locale_popup_menu.dart';
 import 'app_passenger_screen.dart';
 import 'b2b_screen.dart';
 import 'driver_screen.dart';
@@ -295,6 +297,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
             floating: false,
             pinned: true,
             backgroundColor: _C.charcoal,
+            actions: const [
+              LocalePopupMenuButton(uiRole: AppUiRole.home),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,

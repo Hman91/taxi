@@ -823,7 +823,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
             _TaxiCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const _SectionLabel('Create Account'),
               const SizedBox(height: 14),
-              TextField(controller: _signupNameCtrl, decoration: _fd(l.operatorDriverNameLabel, icon: Icons.badge_outlined)),
+              TextField(controller: _signupNameCtrl, decoration: _fd('Passenger name', icon: Icons.badge_outlined)),
               const SizedBox(height: 10),
               TextField(controller: _signupEmailCtrl, decoration: _fd(l.emailLabel, icon: Icons.alternate_email_rounded)),
               const SizedBox(height: 10),
