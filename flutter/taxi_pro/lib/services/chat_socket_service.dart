@@ -30,12 +30,10 @@ class ChatSocketService {
     var resolvedTransports =
         List<String>.from(transports ?? (kIsWeb ? ['websocket', 'polling'] : ['polling']));
     if (kIsWeb) {
-      final host = Uri.tryParse(connectUrl)?.host.toLowerCase() ?? '';
-      final isLocalHost =
-          host == '127.0.0.1' || host == 'localhost' || host == '0.0.0.0';
-      // Local Flask/Werkzeug often serves Socket.IO over polling only.
-      // Deployed hosts usually handle websocket properly.
-      resolvedTransports = isLocalHost ? ['polling'] : ['websocket'];
+      // WebSocket-only transport has been flaky in this stack (web client parser crashes like
+      // "Cannot read properties of undefined (reading 'payload')" on some hosts/proxies).
+      // Polling is more stable with Flask-SocketIO threading mode across all roles.
+      resolvedTransports = ['polling'];
     }
     final opts = socket_io.OptionBuilder()
         .setTransports(resolvedTransports)
