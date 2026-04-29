@@ -2,7 +2,7 @@
 # This template is committed; replace all placeholders with real values.
 
 # Backend (Flask)
-DATABASE_URL=postgresql+psycopg2://neondb_owner:npg_TFRmEG5n7wSo@ep-square-field-anrygocl.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL=postgresql+psycopg2://neondb_owner:npg_J7kSVHl4bWCp@ep-calm-waterfall-am8rboyy-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 FLASK_SECRET_KEY=;P6UgN5}K6+]ISU+
 OWNER_PASSWORD=NabeulGold2026
 DRIVER_CODE=Driver2026
