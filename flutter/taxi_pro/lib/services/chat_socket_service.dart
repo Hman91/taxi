@@ -48,26 +48,29 @@ class ChatSocketService {
     }
     _socket = socket_io.io(connectUrl, opts);
 
-    void mapEvent(dynamic raw, void Function(JsonMap) handler) {
-      JsonMap? payload;
+    JsonMap? _normalizePayload(dynamic raw) {
       if (raw is Map) {
-        payload = Map<String, dynamic>.from(raw);
-      } else if (raw is String) {
+        return Map<String, dynamic>.from(raw);
+      }
+      if (raw is List && raw.isNotEmpty) {
+        // socket_io_client may wrap event data in a single-item list.
+        return _normalizePayload(raw.first);
+      }
+      if (raw is String) {
         final text = raw.trim();
-        if (text.isNotEmpty) {
-          try {
-            final decoded = jsonDecode(text);
-            if (decoded is Map) {
-              payload = Map<String, dynamic>.from(decoded);
-            }
-          } catch (_) {
-            // Ignore non-JSON payloads.
-          }
+        if (text.isEmpty) return null;
+        try {
+          return _normalizePayload(jsonDecode(text));
+        } catch (_) {
+          return null;
         }
       }
-      if (payload != null) {
-        handler(payload);
-      }
+      return null;
+    }
+
+    void mapEvent(dynamic raw, void Function(JsonMap) handler) {
+      final payload = _normalizePayload(raw);
+      if (payload != null) handler(payload);
     }
 
     _socket!.on('receive_message', (d) => mapEvent(d, onReceiveMessage ?? (_) {}));

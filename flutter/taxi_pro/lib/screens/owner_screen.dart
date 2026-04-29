@@ -575,13 +575,43 @@ class _OwnerScreenState extends State<OwnerScreen> with SingleTickerProviderStat
     final t = _token; final id = _topUpAccountId; if (t == null || id == null) return;
     final amount = double.tryParse(_topUpAmountController.text.trim().replaceAll(',', '.')) ?? 0.0;
     if (amount <= 0) { setState(() => _message = _uiText(en: 'Invalid recharge amount', ar: 'مبلغ الشحن غير صالح', fr: 'Montant de recharge invalide', es: 'Importe de recarga invalido', de: 'Ungueltiger Aufladebetrag', it: 'Importo ricarica non valido', ru: 'Неверная сумма пополнения', zh: '充值金额无效')); return; }
-    final row = _driverWalletBreakdown.firstWhere((e) => (e['id'] as num?)?.toInt() == id, orElse: () => const <String, dynamic>{});
-    if (row.isEmpty) return;
+    int? _toIntId(dynamic v) {
+      if (v is num) return v.toInt();
+      if (v is String) return int.tryParse(v.trim());
+      return null;
+    }
+    final row = _driverWalletBreakdown.firstWhere((e) => _toIntId(e['id']) == id, orElse: () => const <String, dynamic>{});
+    if (row.isEmpty) {
+      setState(() => _message = _uiText(
+        en: 'Selected driver wallet not found. Refresh and retry.',
+        ar: 'محفظة السائق المحدد غير موجودة. حدّث الصفحة وأعد المحاولة.',
+        fr: 'Portefeuille du chauffeur introuvable. Rafraichissez puis reessayez.',
+        es: 'No se encontro la billetera del conductor. Actualiza y reintenta.',
+        de: 'Fahrer-Wallet nicht gefunden. Aktualisieren und erneut versuchen.',
+        it: 'Wallet autista non trovato. Aggiorna e riprova.',
+        ru: 'Кошелек водителя не найден. Обновите и повторите.',
+        zh: '未找到所选司机钱包，请刷新后重试。',
+      ));
+      return;
+    }
     final current = (row['wallet_balance'] as num?)?.toDouble() ?? 0.0;
     setState(() { _busy = true; _message = null; });
     try {
       await _api.patchAdminDriverPinAccount(token: t, accountId: id, payload: {'wallet_balance': current + amount});
-      _topUpAmountController.text = '10'; await _refreshAll();
+      _topUpAmountController.text = '10';
+      await _refreshAll();
+      if (mounted) {
+        setState(() => _message = _uiText(
+          en: 'Wallet recharged successfully.',
+          ar: 'تم شحن المحفظة بنجاح.',
+          fr: 'Portefeuille recharge avec succes.',
+          es: 'Billetera recargada con exito.',
+          de: 'Wallet erfolgreich aufgeladen.',
+          it: 'Wallet ricaricato con successo.',
+          ru: 'Кошелек успешно пополнен.',
+          zh: '钱包充值成功。',
+        ));
+      }
     } catch (e) { setState(() => _message = e.toString()); }
     finally { if (mounted) setState(() => _busy = false); }
   }
