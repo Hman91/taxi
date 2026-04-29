@@ -221,6 +221,72 @@ def main() -> None:
     if st != 200:
         _fail("PATCH /api/admin/users (re-enable)", st, body)
 
+    # --- B2B flow: booking + ride chat authorization ---
+    # Regression: B2B chat must not be rejected as "forbidden".
+    b2b_code = os.environ.get("B2B_CODE", "Biz2026").strip() or "Biz2026"
+    st, body = _request(
+        "POST",
+        f"{base}/api/auth/login",
+        json_body={"role": "b2b", "secret": b2b_code},
+    )
+    if st != 200:
+        _fail("POST /api/auth/login (b2b)", st, body)
+    b2b_access = body["access_token"]
+    b2b_app_access = body.get("app_access_token")
+    if not b2b_app_access:
+        _fail("b2b login missing app_access_token", st, body)
+
+    # Create a B2B booking; backend only requires the `➡️` separator and fare >= 0.
+    b2b_route = "مطار قرطاج ➡️ الحمامات"
+    st, body = _request(
+        "POST",
+        f"{base}/api/b2b/bookings",
+        bearer=b2b_access,
+        json_body={
+            "route": b2b_route,
+            "guest_name": "B2B Guest",
+            "guest_phone": "20123456",
+            "hotel_name": "Hotel X",
+            "flight_eta": "12:30",
+            "room_number": "101",
+            "fare": 100.0,
+            "source_code": b2b_code,
+        },
+    )
+    if st != 201:
+        _fail("POST /api/b2b/bookings", st, body)
+    ride = body.get("ride") or {}
+    ride_id = int(ride["id"])
+
+    # Accept ride as driver so chat becomes available.
+    st, body = _request("POST", f"{base}/api/rides/{ride_id}/accept", bearer=drv_token)
+    if st != 200:
+        _fail("POST /api/rides/.../accept (b2b ride)", st, body)
+
+    # Verify chat endpoints accept both b2b access token and b2b app token.
+    st, body = _request(
+        "GET", f"{base}/api/rides/{ride_id}/conversation", bearer=b2b_access
+    )
+    if st != 200:
+        _fail("GET /api/rides/.../conversation (b2b token)", st, body)
+    conv_id = int(body["conversation_id"])
+
+    st, body = _request(
+        "GET", f"{base}/api/rides/{ride_id}/conversation", bearer=b2b_app_access
+    )
+    if st != 200:
+        _fail("GET /api/rides/.../conversation (b2b app token)", st, body)
+    if int(body["conversation_id"]) != conv_id:
+        _fail("b2b app token conversation id mismatch", st, body)
+
+    st, body = _request(
+        "GET",
+        f"{base}/api/conversations/{conv_id}/messages",
+        bearer=b2b_access,
+    )
+    if st != 200 or "messages" not in body:
+        _fail("GET /api/conversations/.../messages (b2b token)", st, body)
+
     print("smoke_api: OK (auth, rides, chat REST, profile, admin, disabled flow)")
 
 

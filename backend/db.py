@@ -384,8 +384,13 @@ def driver_pin_update(
 
 
 def b2b_tenant_by_code(code: str) -> Optional[Dict[str, Any]]:
+    code_norm = (code or "").strip()
+    if not code_norm:
+        return None
+    # Tenant codes can be seeded with different casing (e.g. "Biz2026" vs "biz2026").
+    # B2B auth extracts a normalized/lowercased code from email, so we do a case-insensitive lookup.
     row = db.session.scalars(
-        select(B2BTenant).where(B2BTenant.code == code.strip())
+        select(B2BTenant).where(func.lower(B2BTenant.code) == code_norm.lower())
     ).first()
     if row is None:
         return None

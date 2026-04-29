@@ -20,7 +20,7 @@ def _guard_enabled(uid: int) -> Tuple[Any, int] | None:
 
 
 @bp.get("/<int:conversation_id>/messages")
-@require_jwt_with_uid("user", "driver")
+@require_jwt_with_uid("user", "driver", "b2b")
 def conversation_messages(conversation_id: int, **kwargs: Any) -> Tuple[Any, int]:
     uid = kwargs["_uid"]
     bad = _guard_enabled(uid)
