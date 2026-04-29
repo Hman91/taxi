@@ -178,15 +178,48 @@ def admin_list_b2b(**kwargs: Any) -> Tuple[Any, int]:
 @require_roles("owner", "operator")
 def admin_patch_b2b(tenant_id: int, **kwargs: Any) -> Tuple[Any, int]:
     body = request.get_json(silent=True) or {}
-    if "is_enabled" not in body:
-        return _json_error("is_enabled_required", 400)
-    if not isinstance(body.get("is_enabled"), bool):
-        return _json_error("invalid_is_enabled", 400)
-    row, err = admin_service.set_b2b_tenant_enabled(tenant_id, bool(body["is_enabled"]))
+    row, err = admin_service.patch_b2b_tenant(
+        tenant_id,
+        code=(body.get("code") if "code" in body else None),
+        label=(body.get("label") if "label" in body else None),
+        contact_name=(body.get("contact_name") if "contact_name" in body else None),
+        pin=(body.get("pin") if "pin" in body else None),
+        phone=(body.get("phone") if "phone" in body else None),
+        hotel=(body.get("hotel") if "hotel" in body else None),
+        is_enabled=(bool(body["is_enabled"]) if "is_enabled" in body else None),
+    )
     if err == "not_found":
         return _json_error("not_found", 404)
+    if err == "code_required":
+        return _json_error("code_required", 400)
+    if err == "code_exists":
+        return _json_error("code_exists", 409)
     assert row is not None
     return jsonify({"b2b_tenant": row}), 200
+
+
+@bp.post("/b2b-tenants")
+@require_roles("owner", "operator")
+def admin_create_b2b(**kwargs: Any) -> Tuple[Any, int]:
+    body = request.get_json(silent=True) or {}
+    code = str(body.get("code") or "").strip()
+    if not code:
+        return _json_error("code_required", 400)
+    row, err = admin_service.create_b2b_tenant(
+        code=code,
+        label=str(body.get("label") or "").strip(),
+        contact_name=str(body.get("contact_name") or "").strip(),
+        pin=str(body.get("pin") or "").strip(),
+        phone=str(body.get("phone") or "").strip(),
+        hotel=str(body.get("hotel") or "").strip(),
+        is_enabled=bool(body.get("is_enabled", True)),
+    )
+    if err == "code_required":
+        return _json_error("code_required", 400)
+    if err == "code_exists":
+        return _json_error("code_exists", 409)
+    assert row is not None
+    return jsonify({"b2b_tenant": row}), 201
 
 
 @bp.get("/b2b-bookings")
@@ -216,7 +249,7 @@ def admin_driver_wallet_breakdown(**kwargs: Any) -> Tuple[Any, int]:
 
 
 @bp.post("/driver-pin-accounts")
-@require_roles("operator")
+@require_roles("owner", "operator")
 def admin_create_driver_pin_account(**kwargs: Any) -> Tuple[Any, int]:
     body = request.get_json(silent=True) or {}
     phone = str(body.get("phone") or "").strip()
@@ -225,7 +258,7 @@ def admin_create_driver_pin_account(**kwargs: Any) -> Tuple[Any, int]:
     car_model = str(body.get("car_model") or "").strip()
     car_color = str(body.get("car_color") or "").strip()
     photo_url = str(body.get("photo_url") or "").strip()
-    if not phone or not pin or not driver_name or not car_model or not car_color or not photo_url:
+    if not phone or not pin or not driver_name or not car_model or not car_color:
         return _json_error("missing_fields", 400)
     row = db_module.driver_pin_create(
         phone=phone,
@@ -241,7 +274,7 @@ def admin_create_driver_pin_account(**kwargs: Any) -> Tuple[Any, int]:
 
 
 @bp.patch("/driver-pin-accounts/<int:account_id>")
-@require_roles("operator")
+@require_roles("owner", "operator")
 def admin_patch_driver_pin_account(account_id: int, **kwargs: Any) -> Tuple[Any, int]:
     body = request.get_json(silent=True) or {}
     payload: dict[str, Any] = {}

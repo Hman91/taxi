@@ -13,4 +13,8 @@ class B2BTenant(db.Model):
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     code = db.Column(db.String(255), unique=True, nullable=False, index=True)
     label = db.Column(Text, nullable=True)
+    contact_name = db.Column(db.String(255), nullable=True)
+    pin = db.Column(db.String(64), nullable=True)
+    phone = db.Column(db.String(32), nullable=True)
+    hotel = db.Column(db.String(255), nullable=True)
     is_enabled = db.Column(Boolean, nullable=False, server_default=true())

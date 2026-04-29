@@ -17,10 +17,125 @@ import '../services/taxi_app_service.dart';
 import '../theme/taxi_app_theme.dart';
 import '../widgets/locale_popup_menu.dart';
 import 'ride_chat_screen.dart';
+import 'unified_login_screen.dart';
+
+class _C {
+  static const yellow = Color(0xFFFFC200);
+  static const yellowLight = Color(0xFFFFD84D);
+  static const yellowSoft = Color(0xFFFFF8E0);
+  static const yellowDeep = Color(0xFFE6A800);
+  static const charcoal = Color(0xFF1A1A1A);
+  static const bgWarm = Color(0xFFFAF8F2);
+  static const surface = Color(0xFFFFFFFF);
+  static const surfaceAlt = Color(0xFFF5F1E8);
+  static const border = Color(0xFFDDD8C8);
+  static const textStrong = Color(0xFF111111);
+  static const textMid = Color(0xFF3F3F3F);
+  static const textSoft = Color(0xFF5C5C5C);
+  static const danger = Color(0xFFB91C1C);
+  static const dangerBg = Color(0xFFFFE4E4);
+}
+
+InputDecoration _fd(String label, {IconData? icon}) => InputDecoration(
+  labelText: label,
+  prefixIcon: icon == null ? null : Icon(icon, color: _C.charcoal, size: 18),
+  filled: true,
+  fillColor: _C.surfaceAlt,
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: const BorderSide(color: _C.border, width: 1.4),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: const BorderSide(color: _C.yellow, width: 2),
+  ),
+);
+
+class _Module extends StatelessWidget {
+  const _Module({required this.child, this.accent = false});
+  final Widget child;
+  final bool accent;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: _C.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: accent ? _C.yellowDeep : _C.border, width: accent ? 2 : 1),
+          boxShadow: [BoxShadow(color: _C.charcoal.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 3))],
+        ),
+        child: Padding(padding: const EdgeInsets.all(12), child: child),
+      );
+}
+
+Widget _rowInfoCard({
+  required IconData icon,
+  required Widget content,
+  Widget? trailing,
+  Color iconBg = _C.surfaceAlt,
+  Color iconColor = _C.charcoal,
+}) =>
+    Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: _C.surfaceAlt,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _C.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(color: _C.border),
+            ),
+            child: Icon(icon, color: iconColor, size: 16),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: content),
+          if (trailing != null) ...[const SizedBox(width: 8), trailing],
+        ],
+      ),
+    );
+
+class _SectionHead extends StatelessWidget {
+  const _SectionHead(this.title, {this.subtitle, this.trailing});
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          children: [
+            Container(width: 4, height: 20, decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(4))),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(color: _C.textStrong, fontWeight: FontWeight.w800, fontSize: 15)),
+                  if (subtitle != null) Text(subtitle!, style: const TextStyle(color: _C.textSoft, fontSize: 12)),
+                ],
+              ),
+            ),
+            if (trailing != null) trailing!,
+          ],
+        ),
+      );
+}
 
 /// Corporate portal: login matches API; booking is UI-only until B2B billing API exists.
 class B2bScreen extends StatefulWidget {
-  const B2bScreen({super.key});
+  const B2bScreen({super.key, this.initialSession});
+  final LoginResponse? initialSession;
 
   @override
   State<B2bScreen> createState() => _B2bScreenState();
@@ -56,6 +171,19 @@ class _B2bScreenState extends State<B2bScreen> {
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
   int _rideUnread(int rideId) => _unreadChatByRideId[rideId] ?? 0;
+  Widget _appBarHomeLogo() => GestureDetector(
+        onTap: () {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+          );
+        },
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(9)),
+          child: const Icon(Icons.local_taxi_rounded, color: _C.charcoal, size: 18),
+        ),
+      );
   String _uiText({
     required String en,
     required String ar,
@@ -482,6 +610,28 @@ class _B2bScreenState extends State<B2bScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       restoreUiRoleLocale(AppUiRole.b2b);
+      final s = widget.initialSession;
+      if (s != null && _appToken == null) {
+        _bootstrapFromSession(s);
+      }
+    });
+  }
+
+  Future<void> _bootstrapFromSession(LoginResponse auth) async {
+    final fares = await _api.getAirportFares();
+    _token = auth.accessToken;
+    _appToken = auth.appAccessToken;
+    _userId = auth.userId;
+    if (_appToken != null) {
+      _connectRealtime(_appToken!);
+      await _refreshRides();
+      _startPolling();
+    }
+    if (!mounted) return;
+    setState(() {
+      _ok = true;
+      _fares = fares;
+      _routeKey = fares.keys.isNotEmpty ? fares.keys.first : null;
     });
   }
 
@@ -501,11 +651,16 @@ class _B2bScreenState extends State<B2bScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final isPhone = MediaQuery.of(context).size.width < 700;
     const activeStatuses = {'pending', 'accepted', 'ongoing'};
     final activeCount = _rides.where((r) => activeStatuses.contains(r.status)).length;
     return Scaffold(
+      backgroundColor: _C.bgWarm,
       appBar: AppBar(
-        title: Text(l.b2bAppBarTitle),
+        centerTitle: true,
+        title: _appBarHomeLogo(),
+        backgroundColor: _C.charcoal,
+        foregroundColor: Colors.white,
         actions: [
           const LocalePopupMenuButton(uiRole: AppUiRole.b2b),
           if (_ok)
@@ -522,12 +677,12 @@ class _B2bScreenState extends State<B2bScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                         decoration: BoxDecoration(
-                          color: Colors.red,
+                          color: _C.yellow,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
                           _unreadCount > 99 ? '99+' : '$_unreadCount',
-                          style: const TextStyle(color: Colors.white, fontSize: 10),
+                          style: const TextStyle(color: Color(0xFF111111), fontSize: 10, fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),
@@ -537,28 +692,34 @@ class _B2bScreenState extends State<B2bScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isPhone ? 12 : 16),
         children: [
-          Card(
+          if (!_ok)
+            _Module(
+            accent: true,
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    l.b2bPortalHeading,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
+                  _SectionHead(l.b2bPortalHeading, subtitle: 'Corporate access'),
                   TextField(
                     controller: _secretController,
                     obscureText: true,
-                    decoration: InputDecoration(labelText: l.companyCode),
+                    decoration: _fd(l.companyCode, icon: Icons.business_rounded),
                   ),
                   const SizedBox(height: 8),
-                  FilledButton(
-                    onPressed: _busy ? null : _login,
-                    child: Text(l.verifyCompanyCode),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _C.yellow,
+                        foregroundColor: _C.charcoal,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                      ),
+                      onPressed: _busy ? null : _login,
+                      child: Text(l.verifyCompanyCode, style: const TextStyle(fontWeight: FontWeight.w800)),
+                    ),
                   ),
                 ],
               ),
@@ -566,45 +727,48 @@ class _B2bScreenState extends State<B2bScreen> {
           ),
           if (_ok)
             Padding(
-              padding: const EdgeInsets.only(top: 16),
+              padding: EdgeInsets.only(top: isPhone ? 12 : 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Card(
-                    color: TaxiAppColors.darkPanel,
-                    child: ListTile(
-                      dense: true,
-                      leading: const Icon(Icons.verified_user, color: TaxiAppColors.gradientEnd),
-                      title: Text(
-                        l.b2bConnectedStub,
-                        style: const TextStyle(
-                          color: TaxiAppColors.gradientEnd,
-                          fontWeight: FontWeight.w700,
+                  _Module(
+                    accent: true,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SectionHead('Portal Status', subtitle: '${l.passengerActiveRidesChip(activeCount)} • ${l.passengerTotalRidesChip(_rides.length)}'),
+                        _rowInfoCard(
+                          icon: Icons.verified_user,
+                          content: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l.b2bConnectedStub,
+                                style: const TextStyle(color: _C.textStrong, fontWeight: FontWeight.w700, fontSize: 13),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                l.b2bConnectedWorkflowSubtitle,
+                                style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      subtitle: Text(
-                        '${l.b2bConnectedWorkflowSubtitle}\n'
-                        '${l.passengerActiveRidesChip(activeCount)} • ${l.passengerTotalRidesChip(_rides.length)}',
-                        style: const TextStyle(color: Colors.white70),
-                      ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Card(
+                  _Module(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            l.b2bBookOnAccountHeading,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 8),
+                          _SectionHead(l.b2bBookOnAccountHeading, subtitle: 'Request a ride for a guest'),
                           TextField(
                             controller: _guestController,
-                            decoration: InputDecoration(
-                              labelText: _uiText(
+                            decoration: _fd(
+                              _uiText(
                                 en: 'Guest name',
                                 ar: 'اسم الضيف',
                                 fr: 'Nom du client',
@@ -618,8 +782,8 @@ class _B2bScreenState extends State<B2bScreen> {
                           ),
                           TextField(
                             controller: _guestPhoneController,
-                            decoration: InputDecoration(
-                              labelText: _uiText(
+                            decoration: _fd(
+                              _uiText(
                                 en: 'Guest phone',
                                 ar: 'هاتف الضيف',
                                 fr: 'Telephone du client',
@@ -633,8 +797,8 @@ class _B2bScreenState extends State<B2bScreen> {
                           ),
                           TextField(
                             controller: _hotelController,
-                            decoration: InputDecoration(
-                              labelText: _uiText(
+                            decoration: _fd(
+                              _uiText(
                                 en: 'Hotel',
                                 ar: 'الفندق',
                                 fr: 'Hotel',
@@ -648,8 +812,8 @@ class _B2bScreenState extends State<B2bScreen> {
                           ),
                           TextField(
                             controller: _flightEtaController,
-                            decoration: InputDecoration(
-                              labelText: _uiText(
+                            decoration: _fd(
+                              _uiText(
                                 en: 'Flight ETA / Stopover',
                                 ar: 'موعد الرحلة / التوقف',
                                 fr: 'ETA vol / Escale',
@@ -663,8 +827,8 @@ class _B2bScreenState extends State<B2bScreen> {
                           ),
                           TextField(
                             controller: _roomController,
-                            decoration: InputDecoration(
-                              labelText: _uiText(
+                            decoration: _fd(
+                              _uiText(
                                 en: 'Room number',
                                 ar: 'رقم الغرفة',
                                 fr: 'Numero de chambre',
@@ -678,7 +842,7 @@ class _B2bScreenState extends State<B2bScreen> {
                           ),
                           const SizedBox(height: 8),
                           InputDecorator(
-                            decoration: InputDecoration(labelText: l.route),
+                            decoration: _fd(l.route, icon: Icons.route_rounded),
                             child: DropdownButton<String>(
                               value: _routeKey,
                               isExpanded: true,
@@ -701,168 +865,179 @@ class _B2bScreenState extends State<B2bScreen> {
                               ),
                             ),
                           const SizedBox(height: 8),
-                          FilledButton(
-                            onPressed: _busy ? null : _bookGuest,
-                            child: Text(l.requestRideButton),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: _C.charcoal,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                              ),
+                              onPressed: _busy ? null : _bookGuest,
+                              child: Text(l.requestRideButton),
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.bar_chart),
-                      title: Text(l.b2bMonthlyUsageTitle),
-                      subtitle: Text(l.b2bMonthlyAmountDue('450.000')),
+                  _Module(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SectionHead(l.b2bMonthlyUsageTitle),
+                        _rowInfoCard(
+                          icon: Icons.bar_chart,
+                          content: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(l.b2bMonthlyUsageTitle, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                              const SizedBox(height: 2),
+                              Text(l.b2bMonthlyAmountDue('450.000'), style: const TextStyle(color: _C.textSoft, fontSize: 11)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Text(l.myRidesHeading,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  if (_rides.isEmpty) Text(l.noRidesYetApp),
-                  ..._rides.map(
-                    (r) => Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(localizedRideRouteRow(l, r.pickup, r.destination)),
-                            const SizedBox(height: 4),
-                            Text(
-                              l.rideStatusFmt(localizedRideStatusLabel(l, r.status)),
-                            ),
-                            if ((r.driverName ?? '').trim().isNotEmpty ||
-                                (r.driverPhone ?? '').trim().isNotEmpty) ...[
-                              const SizedBox(height: 6),
-                              if ((r.driverPhotoUrl ?? '').trim().isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 6),
-                                  child: Builder(
-                                    builder: (context) {
-                                      final provider =
-                                          _imageProviderFromString(r.driverPhotoUrl);
-                                      if (provider == null) return const SizedBox.shrink();
-                                      return CircleAvatar(
-                                        radius: 20,
-                                        backgroundImage: provider,
-                                      );
-                                    },
-                                  ),
-                                ),
-                              Text(l.passengerDriverLine(
-                                  (r.driverName ?? '').trim().isEmpty
-                                      ? l.driverNameFallback
-                                      : r.driverName!)),
-                              if ((r.driverPhone ?? '').trim().isNotEmpty)
-                                Text(l.passengerPhoneLine(r.driverPhone!)),
-                            ],
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [
-                                if (r.status != 'completed' && r.status != 'cancelled')
-                                  TextButton(
-                                    onPressed: _busy ? null : () => _cancelRide(r),
-                                    child: Text(l.cancelRidePassenger),
-                                  ),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: TextButton.icon(
-                                    onPressed: _busy ? null : () => _openChat(r),
-                                    icon: Stack(
-                                      clipBehavior: Clip.none,
+                  _SectionHead(l.myRidesHeading, subtitle: '${_rides.length} rides'),
+                  _Module(
+                    child: _rides.isEmpty
+                        ? Text(l.noRidesYetApp, style: const TextStyle(color: _C.textSoft))
+                        : Column(
+                            children: _rides
+                                .map(
+                                  (r) => Container(
+                                    margin: const EdgeInsets.only(bottom: 10),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        const Icon(Icons.chat_bubble_rounded,
-                                            color: Colors.white, size: 16),
-                                        if (_rideUnread(r.id) > 0)
-                                          Positioned(
-                                            right: -8,
-                                            top: -8,
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                  horizontal: 4, vertical: 1),
-                                              decoration: BoxDecoration(
-                                                color: Colors.red,
-                                                borderRadius: BorderRadius.circular(10),
+                                        _rowInfoCard(
+                                          icon: Icons.local_taxi_outlined,
+                                          content: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(localizedRideRouteRow(l, r.pickup, r.destination), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                l.rideStatusFmt(localizedRideStatusLabel(l, r.status)),
+                                                style: const TextStyle(color: _C.textSoft, fontSize: 11),
                                               ),
-                                              child: Text(
-                                                _rideUnread(r.id) > 99
-                                                    ? '99+'
-                                                    : '${_rideUnread(r.id)}',
-                                                style: const TextStyle(
-                                                    color: Colors.white, fontSize: 10),
+                                              if ((r.driverName ?? '').trim().isNotEmpty ||
+                                                  (r.driverPhone ?? '').trim().isNotEmpty) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  l.passengerDriverLine((r.driverName ?? '').trim().isEmpty ? l.driverNameFallback : r.driverName!),
+                                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                                                ),
+                                                if ((r.driverPhone ?? '').trim().isNotEmpty)
+                                                  Text(l.passengerPhoneLine(r.driverPhone!), style: const TextStyle(fontSize: 11)),
+                                              ],
+                                            ],
+                                          ),
+                                          trailing: (r.driverPhotoUrl ?? '').trim().isNotEmpty
+                                              ? Builder(
+                                                  builder: (context) {
+                                                    final provider = _imageProviderFromString(r.driverPhotoUrl);
+                                                    if (provider == null) return const SizedBox.shrink();
+                                                    return CircleAvatar(radius: 16, backgroundImage: provider);
+                                                  },
+                                                )
+                                              : null,
+                                        ),
+                                        Wrap(
+                                          spacing: 6,
+                                          runSpacing: 6,
+                                          children: [
+                                            if (r.status != 'completed' && r.status != 'cancelled')
+                                              OutlinedButton(
+                                                style: OutlinedButton.styleFrom(
+                                                  foregroundColor: _C.textMid,
+                                                  side: const BorderSide(color: _C.border),
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                                                ),
+                                                onPressed: _busy ? null : () => _cancelRide(r),
+                                                child: Text(l.cancelRidePassenger),
+                                              ),
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color: _C.charcoal,
+                                                borderRadius: BorderRadius.circular(20),
+                                                boxShadow: [BoxShadow(color: _C.charcoal.withOpacity(0.22), blurRadius: 8, offset: const Offset(0, 3))],
+                                              ),
+                                              child: TextButton.icon(
+                                                onPressed: _busy ? null : () => _openChat(r),
+                                                icon: Stack(
+                                                  clipBehavior: Clip.none,
+                                                  children: [
+                                                    const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
+                                                    if (_rideUnread(r.id) > 0)
+                                                      Positioned(
+                                                        right: -8,
+                                                        top: -8,
+                                                        child: Container(
+                                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                                          decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(10)),
+                                                          child: Text(
+                                                            _rideUnread(r.id) > 99 ? '99+' : '${_rideUnread(r.id)}',
+                                                            style: const TextStyle(color: _C.charcoal, fontSize: 10, fontWeight: FontWeight.w700),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                                label: Text(
+                                                  l.openChatButton,
+                                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                                                ),
                                               ),
                                             ),
-                                          ),
+                                            if (r.status == 'completed' &&
+                                                (_pendingRatingRideId == r.id || !_ratedRideIds.contains(r.id)))
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  ...List.generate(5, (i) {
+                                                    final star = i + 1;
+                                                    return IconButton(
+                                                      constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                                                      padding: EdgeInsets.zero,
+                                                      icon: Icon(
+                                                        (_ratingByRideId[r.id] ?? 0) >= star ? Icons.star : Icons.star_border,
+                                                        color: _C.yellowDeep,
+                                                        size: 18,
+                                                      ),
+                                                      onPressed: _busy ? null : () => setState(() => _ratingByRideId[r.id] = star),
+                                                    );
+                                                  }),
+                                                  const SizedBox(width: 4),
+                                                  FilledButton(
+                                                    style: FilledButton.styleFrom(
+                                                      backgroundColor: _C.yellow,
+                                                      foregroundColor: _C.charcoal,
+                                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                                                    ),
+                                                    onPressed: _busy || ((_ratingByRideId[r.id] ?? 0) < 1) ? null : () => _submitRideRating(r.id),
+                                                    child: Text(l.submitRating, style: const TextStyle(fontWeight: FontWeight.w800)),
+                                                  ),
+                                                ],
+                                              ),
+                                          ],
+                                        ),
                                       ],
                                     ),
-                                    label: Text(
-                                      l.openChatButton,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
                                   ),
-                                ),
-                                if (r.status == 'completed' &&
-                                    (_pendingRatingRideId == r.id ||
-                                        !_ratedRideIds.contains(r.id)))
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      ...List.generate(5, (i) {
-                                        final star = i + 1;
-                                        return IconButton(
-                                          constraints: const BoxConstraints(
-                                            minWidth: 26,
-                                            minHeight: 26,
-                                          ),
-                                          padding: EdgeInsets.zero,
-                                          icon: Icon(
-                                            (_ratingByRideId[r.id] ?? 0) >= star
-                                                ? Icons.star
-                                                : Icons.star_border,
-                                            color: Colors.amber,
-                                            size: 18,
-                                          ),
-                                          onPressed: _busy
-                                              ? null
-                                              : () => setState(
-                                                    () => _ratingByRideId[r.id] = star,
-                                                  ),
-                                        );
-                                      }),
-                                      const SizedBox(width: 4),
-                                      FilledButton(
-                                        onPressed: _busy ||
-                                                ((_ratingByRideId[r.id] ?? 0) < 1)
-                                            ? null
-                                            : () => _submitRideRating(r.id),
-                                        child: Text(l.submitRating),
-                                      ),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                                )
+                                .toList(),
+                          ),
                   ),
                 ],
               ),
             ),
           if (_message != null)
-            Text(_message!, style: const TextStyle(color: Colors.red)),
+            Text(_message!, style: const TextStyle(color: _C.danger)),
         ],
       ),
     );

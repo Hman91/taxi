@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class LocalNotificationService {
@@ -10,6 +11,11 @@ class LocalNotificationService {
   int _nextId = 1000;
 
   Future<void> init() async {
+    if (kIsWeb) {
+      // Plugin local notifications is not used on web.
+      _initialized = true;
+      return;
+    }
     if (_initialized) return;
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -26,6 +32,7 @@ class LocalNotificationService {
     required String title,
     required String body,
   }) async {
+    if (kIsWeb) return;
     if (!_initialized) {
       await init();
     }

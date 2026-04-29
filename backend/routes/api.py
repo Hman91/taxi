@@ -43,6 +43,19 @@ def _ensure_b2b_operator_user(source_code: str) -> int:
     return int(uid)
 
 
+def _b2b_source_code_for_uid(uid: int) -> Optional[str]:
+    row = db_module.user_by_id(uid)
+    if row is None:
+        return None
+    email = str(row.get("email") or "").strip().lower()
+    prefix = "b2b_operator_"
+    suffix = "@taxipro.local"
+    if not (email.startswith(prefix) and email.endswith(suffix)):
+        return None
+    code = email[len(prefix) : -len(suffix)].strip()
+    return code or None
+
+
 def _preferred_language_for_uid(uid: int) -> str:
     row = db_module.user_by_id(uid)
     if not row:
@@ -162,7 +175,7 @@ def login() -> Tuple[Any, int]:
         if secret != checks[role]:
             return jsonify({"error": "invalid_credentials"}), 401
 
-    token = issue_token(role)
+    token = issue_token(role, user_id=b2b_uid) if role == "b2b" else issue_token(role)
     out = {"access_token": token, "token_type": "Bearer", "role": role}
     if role == "b2b":
         out["app_access_token"] = app_token
@@ -227,8 +240,9 @@ def login_driver_pin() -> Tuple[Any, int]:
 
 
 @bp.post("/b2b/bookings")
-@require_roles("b2b")
+@require_jwt_with_uid("b2b")
 def create_b2b_booking(**kwargs: Any) -> Tuple[Any, int]:
+    uid = kwargs["_uid"]
     data = request.get_json(silent=True) or {}
     route = (data.get("route") or "").strip()
     guest_name = (data.get("guest_name") or "").strip()
@@ -236,7 +250,8 @@ def create_b2b_booking(**kwargs: Any) -> Tuple[Any, int]:
     hotel_name = (data.get("hotel_name") or "").strip()
     flight_eta = (data.get("flight_eta") or "").strip()
     room_number = (data.get("room_number") or "").strip()
-    source_code = (data.get("source_code") or "").strip()
+    source_code_input = (data.get("source_code") or "").strip()
+    source_code = _b2b_source_code_for_uid(uid) or source_code_input
     try:
         fare = float(data.get("fare", 0.0))
     except (TypeError, ValueError):

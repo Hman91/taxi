@@ -20,6 +20,7 @@ dependencies:
   google_sign_in_web: ^0.12.4
   flutter_local_notifications: ^17.2.2
   image_picker: ^1.1.2
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:

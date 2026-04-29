@@ -50,8 +50,14 @@ Release APK/IPA also needs the same define, or they still point at the emulator/
 
 ```powershell
 cd flutter/taxi_pro
-flutter build apk --release --dart-define=API_BASE_URL=https://your-service.onrender.com
+.\build_apk_production.ps1 -ApiBase "https://your-service.onrender.com"
 ```
+
+Or:
+
+`flutter build apk --release --dart-define=API_BASE_URL=https://your-service.onrender.com`
+
+Use the **https origin only** (no `:443` required; **do not** pass a wrong port like `:0` from a shell or secret — that breaks Socket.IO on Android; the app now strips `:0` if it slips in). The manifest includes **location** permissions for Geolocator; after installing a new APK, accept location on first use.
 
 ---
 

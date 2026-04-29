@@ -133,6 +133,9 @@ def _upsert_google_user(email: str) -> Tuple[Optional[Dict[str, Any]], Optional[
         "id": row["id"],
         "email": row["email"],
         "role": row["role"],
+        "display_name": row.get("display_name"),
+        "phone": row.get("phone"),
+        "photo_url": row.get("photo_url"),
         "preferred_language": row["preferred_language"],
         "is_enabled": row["is_enabled"],
     }, None

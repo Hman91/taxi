@@ -51,8 +51,26 @@ class LocalePopupMenuButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final actionColor = IconTheme.of(context).color;
     return PopupMenuButton<Locale>(
-      icon: const Icon(Icons.language),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.language, size: 18),
+            const SizedBox(width: 4),
+            Text(
+              l.language,
+              style: TextStyle(
+                color: actionColor,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
       tooltip: l.language,
       onSelected: _onSelected,
       itemBuilder: (context) => List<PopupMenuEntry<Locale>>.generate(

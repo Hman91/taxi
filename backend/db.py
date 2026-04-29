@@ -315,7 +315,6 @@ def driver_pin_create(
         or not driver_name.strip()
         or not car_model.strip()
         or not car_color.strip()
-        or not photo_url.strip()
     ):
         return None
     if driver_pin_by_phone(phone) is not None:
@@ -326,7 +325,7 @@ def driver_pin_create(
         driver_name=driver_name.strip(),
         car_model=car_model.strip(),
         car_color=car_color.strip(),
-        photo_url=photo_url.strip(),
+        photo_url=photo_url.strip() or None,
     )
     db.session.add(row)
     db.session.commit()
@@ -394,6 +393,10 @@ def b2b_tenant_by_code(code: str) -> Optional[Dict[str, Any]]:
         "id": int(row.id),
         "code": row.code,
         "label": row.label,
+        "contact_name": row.contact_name,
+        "pin": row.pin,
+        "phone": row.phone,
+        "hotel": row.hotel,
         "is_enabled": bool(row.is_enabled),
     }
 
@@ -408,6 +411,10 @@ def b2b_tenant_seed_defaults(rows: List[Dict[str, Any]]) -> int:
             B2BTenant(
                 code=str(row["code"]).strip(),
                 label=str(row.get("label") or "").strip() or None,
+                contact_name=str(row.get("contact_name") or "").strip() or None,
+                pin=str(row.get("pin") or "").strip() or None,
+                phone=str(row.get("phone") or "").strip() or None,
+                hotel=str(row.get("hotel") or "").strip() or None,
                 is_enabled=bool(row.get("is_enabled", True)),
             )
         )

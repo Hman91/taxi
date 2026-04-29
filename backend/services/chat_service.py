@@ -42,10 +42,28 @@ def _participant_ok(ride: Dict[str, Any], user_id: int) -> bool:
         return True
     if ride["driver_id"] is None:
         return False
-    d = db_module.driver_by_id(int(ride["driver_id"]))
-    if d is None:
-        return False
-    return int(d["user_id"]) == user_id
+    driver_id = int(ride["driver_id"])
+
+    # Primary check: lookup by driver PK attached to the ride.
+    d = db_module.driver_by_id(driver_id)
+    if d is not None and int(d.get("user_id") or 0) == user_id:
+        return True
+
+    # Fallback 1: verify that the current user's driver profile matches ride.driver_id.
+    # This guards against edge cases where relationship resolution by PK is stale.
+    my_driver = db_module.driver_by_user_id(user_id)
+    if my_driver is not None and int(my_driver.get("id") or 0) == driver_id:
+        return True
+
+    # Fallback 2: match PIN account phone against resolved ride driver phone.
+    # Useful when PIN-linked data is available but driver relationship lookup is inconsistent.
+    ride_driver_phone = str(ride.get("driver_phone") or "").strip()
+    if ride_driver_phone:
+        my_pin = db_module.driver_pin_account_by_user_id(user_id)
+        if my_pin is not None and str(my_pin.get("phone") or "").strip() == ride_driver_phone:
+            return True
+
+    return False
 
 
 def ensure_conversation_for_ride(ride_id: int) -> Optional[int]:

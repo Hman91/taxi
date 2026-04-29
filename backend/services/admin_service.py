@@ -181,11 +181,55 @@ def list_b2b_tenants() -> List[Dict[str, Any]]:
                 "id": int(t.id),
                 "code": t.code,
                 "label": t.label,
+                "contact_name": t.contact_name,
+                "pin": t.pin,
+                "phone": t.phone,
+                "hotel": t.hotel,
                 "is_enabled": t.is_enabled,
                 "wallet_balance": round(float(total_fare or 0.0) * 0.05, 3),
             }
         )
     return out
+
+
+def create_b2b_tenant(
+    *,
+    code: str,
+    label: str,
+    contact_name: str,
+    pin: str,
+    phone: str,
+    hotel: str,
+    is_enabled: bool = True,
+) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    c = (code or "").strip()
+    if not c:
+        return None, "code_required"
+    exists = db.session.scalars(select(B2BTenant).where(B2BTenant.code == c)).first()
+    if exists is not None:
+        return None, "code_exists"
+    t = B2BTenant(
+        code=c,
+        label=(label or "").strip() or None,
+        contact_name=(contact_name or "").strip() or None,
+        pin=(pin or "").strip() or None,
+        phone=(phone or "").strip() or None,
+        hotel=(hotel or "").strip() or None,
+        is_enabled=bool(is_enabled),
+    )
+    db.session.add(t)
+    db.session.commit()
+    db.session.refresh(t)
+    return {
+        "id": int(t.id),
+        "code": t.code,
+        "label": t.label,
+        "contact_name": t.contact_name,
+        "pin": t.pin,
+        "phone": t.phone,
+        "hotel": t.hotel,
+        "is_enabled": t.is_enabled,
+    }, None
 
 
 def set_b2b_tenant_enabled(tenant_id: int, enabled: bool) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
@@ -199,6 +243,60 @@ def set_b2b_tenant_enabled(tenant_id: int, enabled: bool) -> Tuple[Optional[Dict
         "id": int(t.id),
         "code": t.code,
         "label": t.label,
+        "contact_name": t.contact_name,
+        "pin": t.pin,
+        "phone": t.phone,
+        "hotel": t.hotel,
+        "is_enabled": t.is_enabled,
+    }, None
+
+
+def patch_b2b_tenant(
+    tenant_id: int,
+    *,
+    code: Optional[str] = None,
+    label: Optional[str] = None,
+    contact_name: Optional[str] = None,
+    pin: Optional[str] = None,
+    phone: Optional[str] = None,
+    hotel: Optional[str] = None,
+    is_enabled: Optional[bool] = None,
+) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    t = db.session.get(B2BTenant, tenant_id)
+    if t is None:
+        return None, "not_found"
+    if code is not None:
+        c = code.strip()
+        if not c:
+            return None, "code_required"
+        clash = db.session.scalars(
+            select(B2BTenant).where(B2BTenant.code == c, B2BTenant.id != tenant_id)
+        ).first()
+        if clash is not None:
+            return None, "code_exists"
+        t.code = c
+    if label is not None:
+        t.label = label.strip() or None
+    if contact_name is not None:
+        t.contact_name = contact_name.strip() or None
+    if pin is not None:
+        t.pin = pin.strip() or None
+    if phone is not None:
+        t.phone = phone.strip() or None
+    if hotel is not None:
+        t.hotel = hotel.strip() or None
+    if is_enabled is not None:
+        t.is_enabled = bool(is_enabled)
+    db.session.commit()
+    db.session.refresh(t)
+    return {
+        "id": int(t.id),
+        "code": t.code,
+        "label": t.label,
+        "contact_name": t.contact_name,
+        "pin": t.pin,
+        "phone": t.phone,
+        "hotel": t.hotel,
         "is_enabled": t.is_enabled,
     }, None
 
