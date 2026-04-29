@@ -116,9 +116,15 @@ class _RideChatScreenState extends State<RideChatScreen> {
           });
         },
         onConnectError: (err) {
+          final msg = err?.toString() ?? '';
+          // Non-fatal on some Android/proxy paths: polling stays connected even when
+          // websocket upgrade returns HTTP 200 instead of 101.
+          if (msg.contains('was not upgraded to websocket')) {
+            return;
+          }
           if (!mounted) return;
           setState(() {
-            _error = err?.toString() ?? 'chat_socket_connect_error';
+            _error = msg.isNotEmpty ? msg : 'chat_socket_connect_error';
           });
         },
       );
