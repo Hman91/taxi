@@ -21,16 +21,43 @@ def _user_display_name(user_id: int) -> str:
     return f"User {user_id}"
 
 
+def _driver_user_id_from_ride(ride: Dict[str, Any]) -> Optional[int]:
+    """Resolve assigned driver user id from ride payload.
+
+    Canonical data stores `rides.driver_id` as `drivers.id` (driver PK). Some legacy/stale rows
+    may carry a user id in that column. Accept both shapes so chat authorization stays stable.
+    """
+    did = ride.get("driver_id")
+    if did is None:
+        return None
+    try:
+        did_int = int(did)
+    except (TypeError, ValueError):
+        return None
+
+    d = db_module.driver_by_id(did_int)
+    if d is not None:
+        uid = d.get("user_id")
+        if uid is not None:
+            return int(uid)
+
+    # Legacy fallback: driver_id may already be a user id.
+    u = db_module.user_by_id(did_int)
+    if u is not None and str(u.get("role") or "").strip().lower() == "driver":
+        return did_int
+    return None
+
+
 def _sender_name_for_ride(ride: Dict[str, Any], sender_user_id: int) -> str:
     if int(ride.get("user_id") or 0) == sender_user_id:
         return _user_display_name(sender_user_id)
-    did = ride.get("driver_id")
-    if did is None:
+    assigned_driver_user_id = _driver_user_id_from_ride(ride)
+    if assigned_driver_user_id is None:
         return _user_display_name(sender_user_id)
-    d = db_module.driver_by_id(int(did))
+    d = db_module.driver_by_user_id(assigned_driver_user_id)
     if d is None:
         return _user_display_name(sender_user_id)
-    if int(d.get("user_id") or 0) == sender_user_id:
+    if assigned_driver_user_id == sender_user_id:
         name = str(d.get("display_name") or "").strip()
         if name:
             return name
@@ -42,6 +69,11 @@ def _participant_ok(ride: Dict[str, Any], user_id: int) -> bool:
         return True
     if ride["driver_id"] is None:
         return False
+
+    assigned_driver_user_id = _driver_user_id_from_ride(ride)
+    if assigned_driver_user_id is not None and assigned_driver_user_id == user_id:
+        return True
+
     driver_id = int(ride["driver_id"])
 
     # Primary check: lookup by driver PK attached to the ride.
@@ -110,13 +142,9 @@ def participant_user_ids_for_conversation(conversation_id: int) -> List[int]:
     if ride is None:
         return []
     out: List[int] = [int(ride["user_id"])]
-    did = ride.get("driver_id")
-    if did is not None:
-        d = db_module.driver_by_id(int(did))
-        if d is not None:
-            du = int(d["user_id"])
-            if du not in out:
-                out.append(du)
+    driver_uid = _driver_user_id_from_ride(ride)
+    if driver_uid is not None and driver_uid not in out:
+        out.append(driver_uid)
     return out
 
 
