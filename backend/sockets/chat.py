@@ -22,9 +22,9 @@ def register_handlers(sio: SocketIO) -> None:
         if not token:
             return False
         uid, role = decode_app_token(token)
-        # B2B login issues an access token with role="b2b" plus app token with role="user".
-        # Allow both so chat doesn't break if the client accidentally uses the "b2b" token.
-        if uid is None or role not in ("user", "driver", "b2b"):
+        # Chat membership is enforced later by conversation/ride participant checks.
+        # Accept any signed token that carries a uid so role-list drift can't break chat.
+        if uid is None or not str(role or "").strip():
             return False
         row = db_module.user_by_id(uid)
         if row is None or not row.get("is_enabled", True):

@@ -60,7 +60,7 @@ def cancel_guest_ride(ride_id: int) -> Tuple[Any, int]:
 
 
 @bp.get("/<int:ride_id>/conversation")
-@require_jwt_with_uid("user", "driver", "b2b")
+@require_jwt_with_uid()
 def ride_conversation(ride_id: int, **kwargs: Any) -> Tuple[Any, int]:
     uid = kwargs["_uid"]
     bad = _guard_enabled(uid)

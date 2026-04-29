@@ -28,7 +28,10 @@ def require_jwt_with_uid(*allowed_roles: str) -> Callable[[F], F]:
             role = verify_token_safe(token)
             if role is None:
                 return jsonify({"error": "invalid_token"}), 401
-            if role not in allowed_roles:
+            # If no roles are specified, accept any signed token that carries a uid.
+            # This is useful for participant-scoped resources like chat, where the real
+            # authorization check happens against ride/conversation membership.
+            if allowed_roles and role not in allowed_roles:
                 return jsonify({"error": "forbidden"}), 403
             uid = current_jwt_user_id()
             if uid is None:
