@@ -52,6 +52,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
   String? _error;
   bool _loading = true;
   bool _sending = false;
+  bool _socketReady = false;
 
   Widget _module({required Widget child}) {
     return Container(
@@ -109,6 +110,20 @@ class _RideChatScreenState extends State<RideChatScreen> {
         widget.token,
         onReceiveMessage: _onIncoming,
         onRideStatus: _onRideStatus,
+        onConnected: () {
+          _repo.socket.joinConversation(widget.conversationId);
+          if (!mounted) return;
+          setState(() {
+            _socketReady = true;
+            if (_error == 'chat_socket_connect_error') {
+              _error = null;
+            }
+          });
+        },
+        onDisconnected: () {
+          if (!mounted) return;
+          setState(() => _socketReady = false);
+        },
         onError: (data) {
           if (!mounted) return;
           setState(() {
@@ -124,11 +139,11 @@ class _RideChatScreenState extends State<RideChatScreen> {
           }
           if (!mounted) return;
           setState(() {
+            _socketReady = false;
             _error = msg.isNotEmpty ? msg : 'chat_socket_connect_error';
           });
         },
       );
-      _repo.socket.joinConversation(widget.conversationId);
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEnd());
     } catch (e) {
       if (!mounted) return;
@@ -171,6 +186,25 @@ class _RideChatScreenState extends State<RideChatScreen> {
     _scroll.jumpTo(_scroll.position.maxScrollExtent);
   }
 
+  String _localizedChatError(BuildContext context, String raw) {
+    final code = raw.trim();
+    final lang = Localizations.localeOf(context).languageCode.toLowerCase();
+    if (code == 'chat_socket_not_connected' || code == 'chat_socket_connect_error') {
+      if (lang.startsWith('ar')) return 'الاتصال غير متاح حاليا. حاول مجددا.';
+      if (lang.startsWith('fr')) return 'Connexion indisponible. Reessayez.';
+      if (lang.startsWith('es')) return 'Conexion no disponible. Intentalo de nuevo.';
+      if (lang.startsWith('de')) return 'Verbindung nicht verfugbar. Bitte erneut versuchen.';
+      if (lang.startsWith('it')) return 'Connessione non disponibile. Riprova.';
+      if (lang.startsWith('ru')) return 'Соединение недоступно. Попробуйте снова.';
+      if (lang.startsWith('zh')) return '连接不可用，请重试。';
+      return 'Connection unavailable. Please try again.';
+    }
+    if (code == 'forbidden' || code == 'unauthorized') {
+      return AppLocalizations.of(context)!.chatUnavailable;
+    }
+    return code;
+  }
+
   Future<void> _syncLanguage(BuildContext context) async {
     final lang = Localizations.localeOf(context).languageCode;
     applyPreferredLanguageToApp(lang);
@@ -189,10 +223,24 @@ class _RideChatScreenState extends State<RideChatScreen> {
   Future<void> _send() async {
     final text = _textCtrl.text.trim();
     if (text.isEmpty || _sending) return;
+    if (!_repo.socket.isConnected || !_socketReady) {
+      setState(() {
+        _error = 'chat_socket_not_connected';
+      });
+      return;
+    }
     setState(() => _sending = true);
     try {
       _repo.socket.sendMessage(conversationId: widget.conversationId, text: text);
       _textCtrl.clear();
+      if (_error != null) {
+        setState(() => _error = null);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+      });
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -264,7 +312,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      _error!,
+                      _localizedChatError(context, _error!),
                       style: const TextStyle(color: _C.danger, fontSize: 12.5),
                     ),
                   ),

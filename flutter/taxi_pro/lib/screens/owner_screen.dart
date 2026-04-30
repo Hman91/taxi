@@ -277,7 +277,6 @@ class _DriverCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = driver['driver_name']?.toString() ?? '';
-    final phone = driver['phone']?.toString() ?? '';
     final wallet = (driver['wallet_balance'] ?? 0);
     final autoDeduct = driver['auto_deduct_enabled'] == true;
 
@@ -295,13 +294,13 @@ class _DriverCard extends StatelessWidget {
             Container(width: 42, height: 42, decoration: BoxDecoration(color: _C.surfaceAlt, borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.border)), child: const Icon(Icons.local_taxi_outlined, color: _C.charcoal, size: 22)),
             const SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('$name ($phone)', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: _C.textStrong)),
+              Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: _C.textStrong)),
               const SizedBox(height: 3),
               Row(children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1.5),
                   decoration: BoxDecoration(color: _C.yellowSoft, borderRadius: BorderRadius.circular(50), border: Border.all(color: _C.yellowDeep)),
-                  child: Text('$wallet DT', style: const TextStyle(color: _C.charcoal, fontSize: 11, fontWeight: FontWeight.w800)),
+                  child: Text('$wallet DT', style: const TextStyle(color: _C.charcoal, fontSize: 10.5, fontWeight: FontWeight.w800)),
                 ),
                 const SizedBox(width: 6),
                 if (autoDeduct) Container(
@@ -905,7 +904,7 @@ class _OwnerScreenState extends State<OwnerScreen> with SingleTickerProviderStat
             value: _topUpAccountId,
             decoration: _fd(l.operatorDriverNameLabel, icon: Icons.person_outline_rounded),
             dropdownColor: _C.surface,
-            items: _driverWalletBreakdown.map((d) => DropdownMenuItem<int>(value: (d['id'] as num?)?.toInt(), child: Text('${d['driver_name'] ?? ''} (${d['phone'] ?? ''})', overflow: TextOverflow.ellipsis))).toList(),
+            items: _driverWalletBreakdown.map((d) => DropdownMenuItem<int>(value: (d['id'] as num?)?.toInt(), child: Text('${d['driver_name'] ?? ''}', overflow: TextOverflow.ellipsis))).toList(),
             onChanged: _busy ? null : (v) => setState(() => _topUpAccountId = v),
           )),
           const SizedBox(width: 8),

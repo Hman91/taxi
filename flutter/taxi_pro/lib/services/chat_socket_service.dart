@@ -23,6 +23,8 @@ class ChatSocketService {
     void Function(JsonMap data)? onDriverWallet,
     void Function(JsonMap data)? onError,
     void Function(dynamic _)? onConnectError,
+    void Function()? onConnected,
+    void Function()? onDisconnected,
     List<String>? transports,
   }) {
     disconnect();
@@ -78,6 +80,8 @@ class ChatSocketService {
     _socket!.on('driver_wallet', (d) => mapEvent(d, onDriverWallet ?? (_) {}));
     _socket!.on('error', (d) => mapEvent(d, onError ?? (_) {}));
     _socket!.on('connect_error', onConnectError ?? (_) {});
+    _socket!.on('connect', (_) => onConnected?.call());
+    _socket!.on('disconnect', (_) => onDisconnected?.call());
     _socket!.connect();
   }
 
