@@ -199,7 +199,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
       if (lang.startsWith('zh')) return '连接不可用，请重试。';
       return 'Connection unavailable. Please try again.';
     }
-    if (code == 'forbidden' || code == 'unauthorized') {
+    if (code == 'forbidden' || code == 'unauthorized' || code == 'chat_not_open') {
       return AppLocalizations.of(context)!.chatUnavailable;
     }
     return code;
@@ -223,21 +223,24 @@ class _RideChatScreenState extends State<RideChatScreen> {
   Future<void> _send() async {
     final text = _textCtrl.text.trim();
     if (text.isEmpty || _sending) return;
-    if (!_repo.socket.isConnected || !_socketReady) {
-      setState(() => _error = 'chat_socket_not_connected');
-      _connectSocket();
-      await Future<void>.delayed(const Duration(milliseconds: 900));
-      if (!_repo.socket.isConnected || !_socketReady) {
-        return;
-      }
-    }
     setState(() => _sending = true);
     try {
-      _repo.socket.sendMessage(conversationId: widget.conversationId, text: text);
+      final sent = await _repo.sendMessage(
+        token: widget.token,
+        conversationId: widget.conversationId,
+        text: text,
+      );
+      if (!_seenIds.contains(sent.id)) {
+        _seenIds.add(sent.id);
+        if (mounted) {
+          setState(() => _messages = [..._messages, sent]);
+        }
+      }
       _textCtrl.clear();
       if (_error != null) {
         setState(() => _error = null);
       }
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEnd());
     } catch (e) {
       if (!mounted) return;
       setState(() {

@@ -25,4 +25,15 @@ class ChatRepository {
         beforeId: beforeId,
         limit: limit,
       );
+
+  Future<ChatMessage> sendMessage({
+    required String token,
+    required int conversationId,
+    required String text,
+  }) =>
+      _api.sendConversationMessage(
+        token: token,
+        conversationId: conversationId,
+        text: text,
+      );
 }

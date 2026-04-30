@@ -50,3 +50,27 @@ def conversation_messages(conversation_id: int, **kwargs: Any) -> Tuple[Any, int
         return json_error("chat_not_open", 400)
     assert data is not None
     return jsonify({"messages": data}), 200
+
+
+@bp.post("/<int:conversation_id>/messages")
+@require_jwt_with_uid()
+def conversation_send_message(conversation_id: int, **kwargs: Any) -> Tuple[Any, int]:
+    uid = kwargs["_uid"]
+    bad = _guard_enabled(uid)
+    if bad:
+        return bad
+    body = request.get_json(silent=True) or {}
+    text = str(body.get("text") or "")
+    msg, err = chat_service.save_chat_message(uid, conversation_id, text)
+    if err == "not_found":
+        return json_error("not_found", 404)
+    if err == "forbidden":
+        return json_error("forbidden", 403)
+    if err == "chat_not_open":
+        return json_error("chat_not_open", 400)
+    if err == "empty_message":
+        return json_error("empty_message", 400)
+    if err == "message_too_long":
+        return json_error("message_too_long", 400)
+    assert msg is not None
+    return jsonify({"message": msg}), 201
