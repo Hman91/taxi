@@ -88,6 +88,48 @@ class _RideChatScreenState extends State<RideChatScreen> {
     _bootstrap();
   }
 
+  void _connectSocket() {
+    _repo.socket.connect(
+      widget.token,
+      onReceiveMessage: _onIncoming,
+      onRideStatus: _onRideStatus,
+      onConnected: () {
+        _repo.socket.joinConversation(widget.conversationId);
+        if (!mounted) return;
+        setState(() {
+          _socketReady = true;
+          if (_error == 'chat_socket_connect_error' ||
+              _error == 'chat_socket_not_connected') {
+            _error = null;
+          }
+        });
+      },
+      onDisconnected: () {
+        if (!mounted) return;
+        setState(() => _socketReady = false);
+      },
+      onError: (data) {
+        if (!mounted) return;
+        setState(() {
+          _error = (data['code'] ?? 'chat_socket_error').toString();
+        });
+      },
+      onConnectError: (err) {
+        final msg = err?.toString() ?? '';
+        // Non-fatal on some Android/proxy paths: polling stays connected even when
+        // websocket upgrade returns HTTP 200 instead of 101.
+        if (msg.contains('was not upgraded to websocket')) {
+          return;
+        }
+        if (!mounted) return;
+        setState(() {
+          _socketReady = false;
+          _error = msg.isNotEmpty ? msg : 'chat_socket_connect_error';
+        });
+      },
+    );
+  }
+
   Future<void> _bootstrap() async {
     setState(() {
       _loading = true;
@@ -106,44 +148,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
         _messages = list;
         _loading = false;
       });
-      _repo.socket.connect(
-        widget.token,
-        onReceiveMessage: _onIncoming,
-        onRideStatus: _onRideStatus,
-        onConnected: () {
-          _repo.socket.joinConversation(widget.conversationId);
-          if (!mounted) return;
-          setState(() {
-            _socketReady = true;
-            if (_error == 'chat_socket_connect_error') {
-              _error = null;
-            }
-          });
-        },
-        onDisconnected: () {
-          if (!mounted) return;
-          setState(() => _socketReady = false);
-        },
-        onError: (data) {
-          if (!mounted) return;
-          setState(() {
-            _error = (data['code'] ?? 'chat_socket_error').toString();
-          });
-        },
-        onConnectError: (err) {
-          final msg = err?.toString() ?? '';
-          // Non-fatal on some Android/proxy paths: polling stays connected even when
-          // websocket upgrade returns HTTP 200 instead of 101.
-          if (msg.contains('was not upgraded to websocket')) {
-            return;
-          }
-          if (!mounted) return;
-          setState(() {
-            _socketReady = false;
-            _error = msg.isNotEmpty ? msg : 'chat_socket_connect_error';
-          });
-        },
-      );
+      _connectSocket();
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToEnd());
     } catch (e) {
       if (!mounted) return;
@@ -224,10 +229,12 @@ class _RideChatScreenState extends State<RideChatScreen> {
     final text = _textCtrl.text.trim();
     if (text.isEmpty || _sending) return;
     if (!_repo.socket.isConnected || !_socketReady) {
-      setState(() {
-        _error = 'chat_socket_not_connected';
-      });
-      return;
+      setState(() => _error = 'chat_socket_not_connected');
+      _connectSocket();
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      if (!_repo.socket.isConnected || !_socketReady) {
+        return;
+      }
     }
     setState(() => _sending = true);
     try {
