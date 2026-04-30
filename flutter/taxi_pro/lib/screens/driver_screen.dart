@@ -239,6 +239,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   String? _photoUrl;
   String? _message;
   List<Ride> _rides = [];
+  List<Map<String, dynamic>> _flightArrivals = [];
   final List<AppNotification> _notifications = [];
   final Set<int> _seenPendingRideIds = <int>{};
   final Set<int> _notifiedClosedRideIds = <int>{};
@@ -268,7 +269,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       restoreUiRoleLocale(AppUiRole.driver);
@@ -299,6 +300,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     });
     await _refreshRides();
     await _refreshGains();
+    await _refreshArrivals(silent: true);
     _socket.connect(r.accessToken, onReceiveMessage: _onChatMessage, onRideStatus: _onRideStatusEvent, onDriverWallet: _onDriverWallet, transports: const ['polling']);
     _startRidesPolling();
     await _pushDriverLocation();
@@ -392,6 +394,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
       });
       await _refreshRides();
       await _refreshGains();
+      await _refreshArrivals(silent: true);
       final host = Uri.tryParse(apiBaseUrl)?.host.toLowerCase() ?? '';
       final isWebLocal = kIsWeb && (host == '127.0.0.1' || host == 'localhost' || host == '0.0.0.0');
       if (!isWebLocal) _socket.connect(r.accessToken, onReceiveMessage: _onChatMessage, onRideStatus: _onRideStatusEvent, onDriverWallet: _onDriverWallet, transports: const ['polling']);
@@ -426,6 +429,77 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
       if (!mounted) return;
       setState(() { _gains = g; _isAvailable = (g['is_available'] == true); });
     } catch (_) {}
+  }
+
+  Future<void> _refreshArrivals({bool silent = false}) async {
+    final t = _token;
+    if (t == null) return;
+    if (!silent) {
+      setState(() {
+        _busy = true;
+        _message = null;
+      });
+    }
+    try {
+      final flights = await _api.listAdminTunisiaFlightArrivals(t);
+      if (!mounted) return;
+      setState(() => _flightArrivals = flights);
+    } catch (e) {
+      if (!silent && mounted) setState(() => _message = e.toString());
+    } finally {
+      if (!silent && mounted) setState(() => _busy = false);
+    }
+  }
+
+  String _arrivalAirportLabel(Map<String, dynamic> row) {
+    final code = Localizations.localeOf(context).languageCode;
+    if (code == 'ar') {
+      return row['arrival_airport_ar']?.toString() ??
+          row['arrival_airport_en']?.toString() ??
+          '';
+    }
+    return row['arrival_airport_en']?.toString() ??
+        row['arrival_airport_ar']?.toString() ??
+        '';
+  }
+
+  String _departureAirportLabel(Map<String, dynamic> row) {
+    final city = (row['departure_city'] ?? '').toString().trim();
+    final country = (row['departure_country'] ?? '').toString().trim();
+    final iata = (row['departure_iata'] ?? '').toString().trim().toUpperCase();
+    if (city.isNotEmpty && country.isNotEmpty && iata.isNotEmpty) {
+      return '$city, $country ($iata)';
+    }
+    return (row['departure_airport'] ?? '').toString();
+  }
+
+  String _prettyDateTime(String raw) {
+    final s = raw.trim();
+    if (s.isEmpty) return '';
+    final normalized = s.replaceFirst(' - ', 'T').replaceFirst(' ', 'T');
+    final dt = DateTime.tryParse(normalized) ?? DateTime.tryParse(s);
+    if (dt == null) return s;
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    final local = dt.toLocal();
+    final day = local.day.toString().padLeft(2, '0');
+    final mon = months[local.month - 1];
+    final year = local.year.toString();
+    final hh = local.hour.toString().padLeft(2, '0');
+    final mm = local.minute.toString().padLeft(2, '0');
+    return '$day $mon $year – $hh:$mm';
   }
 
   Future<void> _syncConversationRideMap(List<Ride> rides) async {
@@ -866,6 +940,166 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     );
   }
 
+  Widget _buildArrivalsTab(AppLocalizations l) {
+    return RefreshIndicator(
+      color: _C.yellow,
+      onRefresh: _refreshArrivals,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+        children: [
+          _DarkButton(
+            label: l.adminLoadRidesBtn,
+            icon: Icons.refresh_rounded,
+            onPressed: _busy ? null : _refreshArrivals,
+          ),
+          const SizedBox(height: 16),
+          _SectionHead(l.operatorTabTodaysArrivals),
+          if (_flightArrivals.isEmpty)
+            _Module(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.flight_land_rounded,
+                        size: 40,
+                        color: _C.textSoft,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l.operatorNoFlightArrivals,
+                        style: const TextStyle(color: _C.textSoft),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else
+            _Module(
+              padding: 0,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  headingRowColor: WidgetStateProperty.all(_C.charcoal),
+                  headingTextStyle: const TextStyle(
+                    color: _C.yellow,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
+                  ),
+                  dataRowColor: WidgetStateProperty.resolveWith(
+                    (s) => s.contains(WidgetState.selected) ? _C.yellowSoft : null,
+                  ),
+                  border: const TableBorder(
+                    horizontalInside: BorderSide(color: _C.border),
+                  ),
+                  columns: [
+                    DataColumn(label: Text(l.operatorColFlightNumber)),
+                    const DataColumn(label: Text('Airline')),
+                    const DataColumn(label: Text('Status')),
+                    const DataColumn(label: Text('Aircraft')),
+                    DataColumn(label: Text(l.operatorColDepartureAirport)),
+                    DataColumn(label: Text(l.operatorColTakeoffTime)),
+                    DataColumn(label: Text(l.operatorColExpectedArrival)),
+                    const DataColumn(label: Text('Last update')),
+                    const DataColumn(label: Text('Speed')),
+                    const DataColumn(label: Text('Altitude')),
+                    DataColumn(label: Text(l.operatorColArrivalAirportTn)),
+                  ],
+                  rows: _flightArrivals.map((r) {
+                    return DataRow(
+                      cells: [
+                        DataCell(
+                          Text(
+                            r['flight_number']?.toString() ?? '',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            (r['airline'] ?? '').toString(),
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            (r['status'] ?? '').toString(),
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            (r['aircraft'] ?? '').toString(),
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            _departureAirportLabel(r),
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            r['takeoff_time']?.toString() ?? '',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            (() {
+                              final raw = _prettyDateTime(
+                                r['expected_arrival']?.toString() ?? '',
+                              );
+                              return raw.trim().isEmpty ? '-' : raw;
+                            })(),
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            _prettyDateTime(r['last_update']?.toString() ?? ''),
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            (r['speed_kmh'] == null) ? '-' : '${r['speed_kmh']} km/h',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            (r['altitude_m'] == null) ? '-' : '${r['altitude_m']} m',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            _arrivalAirportLabel(r),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -1014,6 +1248,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                   tabs: [
                     Tab(text: '🚖 ${l.driverPendingRides}'),
                     Tab(text: '📋 ${l.operatorTabTripHistory}'),
+                    Tab(text: '✈️ ${l.operatorTabTodaysArrivals}'),
                   ],
                 ),
               ),
@@ -1022,6 +1257,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                 children: [
                   _buildPendingTab(l, pendingOffers),
                   _buildHistoryTab(l, historyRides),
+                  _buildArrivalsTab(l),
                 ],
               )),
               if (_message != null)
