@@ -31,6 +31,10 @@ class ChatSocketService {
     final connectUrl = normalizeApiBaseUrl(_base);
     var resolvedTransports =
         List<String>.from(transports ?? (kIsWeb ? ['websocket', 'polling'] : ['polling']));
+    if (!kIsWeb) {
+      // Native Android/iOS path: keep polling-only for stable connectivity.
+      resolvedTransports = ['polling'];
+    }
     if (kIsWeb) {
       // WebSocket-only transport has been flaky in this stack (web client parser crashes like
       // "Cannot read properties of undefined (reading 'payload')" on some hosts/proxies).
@@ -76,6 +80,7 @@ class ChatSocketService {
     }
 
     _socket!.on('receive_message', (d) => mapEvent(d, onReceiveMessage ?? (_) {}));
+    _socket!.on('message', (d) => mapEvent(d, onReceiveMessage ?? (_) {}));
     _socket!.on('ride_status', (d) => mapEvent(d, onRideStatus ?? (_) {}));
     _socket!.on('driver_wallet', (d) => mapEvent(d, onDriverWallet ?? (_) {}));
     _socket!.on('error', (d) => mapEvent(d, onError ?? (_) {}));
