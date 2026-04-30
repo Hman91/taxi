@@ -7,7 +7,7 @@ import json
 import os
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 from sqlalchemy import func, select
 
@@ -371,25 +371,52 @@ def list_tunisia_flight_arrivals_demo() -> List[Dict[str, Any]]:
     return [
         {
             "flight_number": "TB101",
+            "airline": "Nouvelair (BJ)",
+            "status": "scheduled",
+            "aircraft": "A320",
             "departure_airport": "Paris Orly",
+            "departure_iata": "ORY",
+            "departure_city": "Paris",
+            "departure_country": "France",
             "takeoff_time": "05:40",
             "expected_arrival": f"{today} 08:15",
+            "last_update": f"{today} 07:55",
+            "speed_kmh": None,
+            "altitude_m": None,
             "arrival_airport_ar": "مطار النفيضة",
             "arrival_airport_en": "Enfidha Airport (NBE)",
         },
         {
             "flight_number": "TU214",
+            "airline": "Tunisair (TU)",
+            "status": "scheduled",
+            "aircraft": "A320",
             "departure_airport": "Brussels",
+            "departure_iata": "BRU",
+            "departure_city": "Brussels",
+            "departure_country": "Belgium",
             "takeoff_time": "06:10",
             "expected_arrival": f"{today} 09:40",
+            "last_update": f"{today} 09:12",
+            "speed_kmh": None,
+            "altitude_m": None,
             "arrival_airport_ar": "مطار قرطاج",
             "arrival_airport_en": "Tunis–Carthage Airport (TUN)",
         },
         {
             "flight_number": "AF987",
+            "airline": "Air France (AF)",
+            "status": "scheduled",
+            "aircraft": "A320",
             "departure_airport": "Paris CDG",
+            "departure_iata": "CDG",
+            "departure_city": "Paris",
+            "departure_country": "France",
             "takeoff_time": "07:25",
             "expected_arrival": f"{today} 10:50",
+            "last_update": f"{today} 10:20",
+            "speed_kmh": None,
+            "altitude_m": None,
             "arrival_airport_ar": "مطار المنستير",
             "arrival_airport_en": "Monastir Airport (MIR)",
         },
@@ -413,6 +440,35 @@ def _hhmm_from_isoish(raw: str) -> str:
         tail = s.split(" ", 1)[1]
         return tail[:5]
     return s[:5]
+
+
+def _pretty_datetime(raw: str, *, fallback_epoch: Any = None) -> str:
+    s = (raw or "").strip()
+    dt: Optional[datetime] = None
+    if s:
+        sx = s.replace("Z", "+00:00")
+        try:
+            dt = datetime.fromisoformat(sx)
+        except Exception:
+            dt = None
+    if dt is None and isinstance(fallback_epoch, (int, float)):
+        try:
+            dt = datetime.fromtimestamp(float(fallback_epoch))
+        except Exception:
+            dt = None
+    if dt is None:
+        return s
+    return dt.strftime("%d %b %Y").strip() + f" – {dt.strftime('%H:%M')}"
+
+
+_DEP_IATA_FALLBACK: Dict[str, Tuple[str, str]] = {
+    "IST": ("Istanbul", "Turkey"),
+    "BRU": ("Brussels", "Belgium"),
+    "LGW": ("London", "United Kingdom"),
+    "ORY": ("Paris", "France"),
+    "CDG": ("Paris", "France"),
+    "DOH": ("Doha", "Qatar"),
+}
 
 
 def list_tunisia_flight_arrivals_live() -> List[Dict[str, Any]]:
@@ -439,7 +495,14 @@ def list_tunisia_flight_arrivals_live() -> List[Dict[str, Any]]:
                 }
             )
             url = f"https://airlabs.co/api/v9/flights?{query}"
-            with urlopen(url, timeout=8) as resp:
+            req = Request(
+                url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 TaxiPro/1.0",
+                    "Accept": "application/json",
+                },
+            )
+            with urlopen(req, timeout=8) as resp:
                 payload = json.loads(resp.read().decode("utf-8"))
         except Exception:
             continue
@@ -470,8 +533,33 @@ def list_tunisia_flight_arrivals_live() -> List[Dict[str, Any]]:
                 or str(r.get("dep_iata") or "").strip()
                 or "Unknown"
             )
-            takeoff_raw = str(r.get("dep_time") or "").strip()
-            arrival_raw = str(r.get("arr_time") or "").strip()
+            dep_iata = str(r.get("dep_iata") or "").strip().upper()
+            dep_city = str(r.get("dep_city") or "").strip()
+            dep_country = str(r.get("dep_country") or "").strip()
+            if dep_iata and (not dep_city or not dep_country):
+                fallback = _DEP_IATA_FALLBACK.get(dep_iata)
+                if fallback is not None:
+                    dep_city = dep_city or fallback[0]
+                    dep_country = dep_country or fallback[1]
+            takeoff_raw = str(
+                r.get("dep_time")
+                or r.get("dep_estimated")
+                or r.get("dep_actual")
+                or r.get("dep_scheduled")
+                or ""
+            ).strip()
+            arrival_raw = str(
+                r.get("arr_time")
+                or r.get("arr_estimated")
+                or r.get("arr_actual")
+                or r.get("arr_scheduled")
+                or ""
+            ).strip()
+            updated_raw = r.get("updated")
+            airline_iata = str(r.get("airline_iata") or "").strip().upper()
+            airline_icao = str(r.get("airline_icao") or "").strip().upper()
+            aircraft_icao = str(r.get("aircraft_icao") or "").strip().upper()
+            status_raw = str(r.get("status") or "").strip().lower()
 
             arr_en = {
                 "TUN": "Tunis–Carthage Airport (TUN)",
@@ -484,13 +572,31 @@ def list_tunisia_flight_arrivals_live() -> List[Dict[str, Any]]:
                 "MIR": "مطار المنستير",
             }.get(arrival_code, "مطار")
 
-            expected = arrival_raw or f"{today} {_hhmm_from_isoish(takeoff_raw)}"
+            expected = _pretty_datetime(arrival_raw)
+            last_update = _pretty_datetime("", fallback_epoch=updated_raw)
+            speed_val = r.get("speed")
+            alt_val = r.get("alt")
+            speed_kmh = int(float(speed_val)) if isinstance(speed_val, (int, float)) else None
+            altitude_m = int(float(alt_val)) if isinstance(alt_val, (int, float)) else None
             flights.append(
                 {
                     "flight_number": flight_number,
+                    "airline": (
+                        f"{airline_iata} / {airline_icao}"
+                        if airline_iata and airline_icao
+                        else airline_iata or airline_icao
+                    ),
+                    "status": status_raw or "unknown",
+                    "aircraft": aircraft_icao,
                     "departure_airport": dep_airport,
+                    "departure_iata": dep_iata,
+                    "departure_city": dep_city,
+                    "departure_country": dep_country,
                     "takeoff_time": _hhmm_from_isoish(takeoff_raw),
                     "expected_arrival": expected,
+                    "last_update": last_update,
+                    "speed_kmh": speed_kmh,
+                    "altitude_m": altitude_m,
                     "arrival_airport_ar": arr_ar,
                     "arrival_airport_en": arr_en,
                 }

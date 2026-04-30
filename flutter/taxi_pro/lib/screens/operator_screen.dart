@@ -944,6 +944,32 @@ class _OperatorScreenState extends State<OperatorScreen>
         '';
   }
 
+  String _departureAirportLabel(Map<String, dynamic> row) {
+    final city = (row['departure_city'] ?? '').toString().trim();
+    final country = (row['departure_country'] ?? '').toString().trim();
+    final iata = (row['departure_iata'] ?? '').toString().trim().toUpperCase();
+    if (city.isNotEmpty && country.isNotEmpty && iata.isNotEmpty) {
+      return '$city, $country ($iata)';
+    }
+    return (row['departure_airport'] ?? '').toString();
+  }
+
+  String _prettyDateTime(String raw) {
+    final s = raw.trim();
+    if (s.isEmpty) return '';
+    final normalized = s.replaceFirst(' - ', 'T').replaceFirst(' ', 'T');
+    final dt = DateTime.tryParse(normalized) ?? DateTime.tryParse(s);
+    if (dt == null) return s;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final local = dt.toLocal();
+    final day = local.day.toString().padLeft(2, '0');
+    final mon = months[local.month - 1];
+    final year = local.year.toString();
+    final hh = local.hour.toString().padLeft(2, '0');
+    final mm = local.minute.toString().padLeft(2, '0');
+    return '$day $mon $year – $hh:$mm';
+  }
+
   String _uiText({
     required String en,
     required String ar,
@@ -1003,18 +1029,36 @@ class _OperatorScreenState extends State<OperatorScreen>
                 border: TableBorder(horizontalInside: BorderSide(color: _C.border)),
                 columns: [
                   DataColumn(label: Text(l.operatorColFlightNumber)),
+                  const DataColumn(label: Text('Airline')),
+                  const DataColumn(label: Text('Status')),
+                  const DataColumn(label: Text('Aircraft')),
                   DataColumn(label: Text(l.operatorColDepartureAirport)),
                   DataColumn(label: Text(l.operatorColTakeoffTime)),
                   DataColumn(label: Text(l.operatorColExpectedArrival)),
+                  const DataColumn(label: Text('Last update')),
+                  const DataColumn(label: Text('Speed')),
+                  const DataColumn(label: Text('Altitude')),
                   DataColumn(label: Text(l.operatorColArrivalAirportTn)),
                 ],
                 rows: _flightArrivals.map((r) {
                   return DataRow(
                     cells: [
                       DataCell(Text(r['flight_number']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
-                      DataCell(Text(r['departure_airport']?.toString() ?? '', style: const TextStyle(fontSize: 13))),
+                      DataCell(Text((r['airline'] ?? '').toString(), style: const TextStyle(fontSize: 13))),
+                      DataCell(Text((r['status'] ?? '').toString(), style: const TextStyle(fontSize: 13))),
+                      DataCell(Text((r['aircraft'] ?? '').toString(), style: const TextStyle(fontSize: 13))),
+                      DataCell(Text(_departureAirportLabel(r), style: const TextStyle(fontSize: 13))),
                       DataCell(Text(r['takeoff_time']?.toString() ?? '', style: const TextStyle(fontSize: 13))),
-                      DataCell(Text(r['expected_arrival']?.toString() ?? '', style: const TextStyle(fontSize: 13))),
+                      DataCell(Text(
+                        (() {
+                          final raw = _prettyDateTime(r['expected_arrival']?.toString() ?? '');
+                          return raw.trim().isEmpty ? '-' : raw;
+                        })(),
+                        style: const TextStyle(fontSize: 13),
+                      )),
+                      DataCell(Text(_prettyDateTime(r['last_update']?.toString() ?? ''), style: const TextStyle(fontSize: 13))),
+                      DataCell(Text((r['speed_kmh'] == null) ? '-' : '${r['speed_kmh']} km/h', style: const TextStyle(fontSize: 13))),
+                      DataCell(Text((r['altitude_m'] == null) ? '-' : '${r['altitude_m']} m', style: const TextStyle(fontSize: 13))),
                       DataCell(Text(_arrivalAirportLabel(r), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
                     ],
                   );
