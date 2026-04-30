@@ -724,7 +724,7 @@ class _OwnerScreenState extends State<OwnerScreen> with SingleTickerProviderStat
         children: [
           _DarkButton(label: l.adminLoadRidesBtn, icon: Icons.refresh_rounded, onPressed: _busy ? null : _refreshAll),
           const SizedBox(height: 16),
-          _SectionHead(l.operatorArrivalsDemoHeading),
+          _SectionHead(l.operatorTabTodaysArrivals),
           if (_flightArrivals.isEmpty)
             _Module(child: Center(child: Padding(
               padding: const EdgeInsets.all(16),

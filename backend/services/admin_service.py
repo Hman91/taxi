@@ -2,7 +2,12 @@
 from __future__ import annotations
 
 from datetime import date
+from datetime import datetime
+import json
+import os
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
 from sqlalchemy import func, select
 
@@ -389,3 +394,115 @@ def list_tunisia_flight_arrivals_demo() -> List[Dict[str, Any]]:
             "arrival_airport_en": "Monastir Airport (MIR)",
         },
     ]
+
+
+def _hhmm_from_isoish(raw: str) -> str:
+    s = (raw or "").strip()
+    if not s:
+        return ""
+    s = s.replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(s)
+        return dt.strftime("%H:%M")
+    except Exception:
+        pass
+    if "T" in s:
+        tail = s.split("T", 1)[1]
+        return tail[:5]
+    if " " in s:
+        tail = s.split(" ", 1)[1]
+        return tail[:5]
+    return s[:5]
+
+
+def list_tunisia_flight_arrivals_live() -> List[Dict[str, Any]]:
+    """Live arrivals from AirLabs for Tunisian airports.
+
+    Returns an empty list if API key is missing or vendor is unavailable.
+    """
+    api_key = (os.environ.get("AIRLABS_API_KEY") or "").strip()
+    if not api_key:
+        return []
+
+    # Main Tunisian arrival airports used by this app's operations.
+    tunisian_iata = {"TUN", "NBE", "MIR"}
+    today = date.today().isoformat()
+    flights: List[Dict[str, Any]] = []
+
+    for arr_iata in tunisian_iata:
+        try:
+            query = urlencode(
+                {
+                    "api_key": api_key,
+                    "arr_iata": arr_iata,
+                    "limit": "20",
+                }
+            )
+            url = f"https://airlabs.co/api/v9/flights?{query}"
+            with urlopen(url, timeout=8) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
+        except Exception:
+            continue
+
+        rows = payload.get("response") if isinstance(payload, dict) else None
+        if not isinstance(rows, list):
+            continue
+
+        for r in rows:
+            if not isinstance(r, dict):
+                continue
+            arrival_code = str(r.get("arr_iata") or arr_iata or "").upper()
+            if arrival_code not in tunisian_iata:
+                continue
+
+            flight_number = (
+                str(r.get("flight_iata") or "").strip()
+                or str(r.get("flight_number") or "").strip()
+                or str(r.get("flight_icao") or "").strip()
+                or str(r.get("hex") or "").strip()
+            )
+            if not flight_number:
+                continue
+
+            dep_airport = (
+                str(r.get("dep_name") or "").strip()
+                or str(r.get("dep_city") or "").strip()
+                or str(r.get("dep_iata") or "").strip()
+                or "Unknown"
+            )
+            takeoff_raw = str(r.get("dep_time") or "").strip()
+            arrival_raw = str(r.get("arr_time") or "").strip()
+
+            arr_en = {
+                "TUN": "Tunis–Carthage Airport (TUN)",
+                "NBE": "Enfidha Airport (NBE)",
+                "MIR": "Monastir Airport (MIR)",
+            }.get(arrival_code, f"{arrival_code} Airport")
+            arr_ar = {
+                "TUN": "مطار قرطاج",
+                "NBE": "مطار النفيضة",
+                "MIR": "مطار المنستير",
+            }.get(arrival_code, "مطار")
+
+            expected = arrival_raw or f"{today} {_hhmm_from_isoish(takeoff_raw)}"
+            flights.append(
+                {
+                    "flight_number": flight_number,
+                    "departure_airport": dep_airport,
+                    "takeoff_time": _hhmm_from_isoish(takeoff_raw),
+                    "expected_arrival": expected,
+                    "arrival_airport_ar": arr_ar,
+                    "arrival_airport_en": arr_en,
+                }
+            )
+
+    # De-duplicate by flight number + expected arrival and sort by ETA text.
+    seen: set[tuple[str, str]] = set()
+    out: List[Dict[str, Any]] = []
+    for row in sorted(flights, key=lambda x: str(x.get("expected_arrival") or "")):
+        key = (str(row.get("flight_number") or ""), str(row.get("expected_arrival") or ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(row)
+    return out

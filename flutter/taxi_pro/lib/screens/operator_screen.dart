@@ -979,7 +979,7 @@ class _OperatorScreenState extends State<OperatorScreen>
           child: Text(l.adminLoadRidesBtn),
         ),
         const SizedBox(height: 16),
-        _SectionHead(l.operatorArrivalsDemoHeading),
+        _SectionHead(l.operatorTabTodaysArrivals),
         if (_flightArrivals.isEmpty)
           _Module(
             child: Center(
