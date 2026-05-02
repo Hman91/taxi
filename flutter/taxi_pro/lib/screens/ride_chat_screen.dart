@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../app_locale.dart';
 import '../l10n/app_localizations.dart';
-import '../theme/taxi_app_theme.dart';
 import '../l10n/ride_status_localization.dart';
 import '../models/chat_message.dart';
 import '../repositories/chat_repository.dart';
@@ -18,7 +17,6 @@ class _C {
   static const textSoft = Color(0xFF5C5C5C);
   static const danger = Color(0xFFFF6B6B);
   static const yellow = Color(0xFFFFC200);
-  static const yellowSoft = Color(0xFFFFF8E0);
   static const yellowDeep = Color(0xFFE6A800);
   static const charcoal = Color(0xFF1A1A1A);
 }
@@ -52,7 +50,6 @@ class _RideChatScreenState extends State<RideChatScreen> {
   String? _error;
   bool _loading = true;
   bool _sending = false;
-  bool _socketReady = false;
 
   Widget _module({required Widget child}) {
     return Container(
@@ -95,31 +92,19 @@ class _RideChatScreenState extends State<RideChatScreen> {
       onRideStatus: _onRideStatus,
       onConnected: () {
         _repo.socket.joinConversation(widget.conversationId);
-        if (!mounted) return;
-        setState(() {
-          _socketReady = true;
-          if (_error == 'chat_socket_connect_error' ||
-              _error == 'chat_socket_not_connected') {
-            _error = null;
-          }
-        });
-      },
-      onDisconnected: () {
-        if (!mounted) return;
-        setState(() => _socketReady = false);
       },
       onError: (data) {
         if (!mounted) return;
-        setState(() {
-          _error = (data['code'] ?? 'chat_socket_error').toString();
-        });
+        final code = (data['code'] ?? 'chat_socket_error').toString();
+        // Socket transport / auth issues are non-fatal: messages still send via REST.
+        if (code == 'unauthorized') {
+          setState(() => _error = code);
+          return;
+        }
+        debugPrint('Chat socket server error: $data');
       },
-      onConnectError: (err) {
-        if (!mounted) return;
-        setState(() {
-          _socketReady = false;
-          _error = 'chat_socket_connect_error';
-        });
+      onConnectError: (dynamic err) {
+        debugPrint('Chat socket connect_error: $err');
       },
     );
   }

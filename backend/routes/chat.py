@@ -7,6 +7,7 @@ from flask import Blueprint, jsonify, request
 
 from .. import db as db_module
 from ..services import chat_service
+from ..services.realtime_broadcast import emit_chat_message_to_participants
 from .jwt_auth import json_error, require_jwt_with_uid
 
 bp = Blueprint("chat_api", __name__, url_prefix="/api/conversations")
@@ -73,4 +74,5 @@ def conversation_send_message(conversation_id: int, **kwargs: Any) -> Tuple[Any,
     if err == "message_too_long":
         return json_error("message_too_long", 400)
     assert msg is not None
+    emit_chat_message_to_participants(conversation_id, msg)
     return jsonify({"message": msg}), 201

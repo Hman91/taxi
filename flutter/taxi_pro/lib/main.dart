@@ -9,6 +9,7 @@ import 'theme/taxi_app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await LocalNotificationService.instance.init();
   runApp(const TaxiProApp());
 }
 

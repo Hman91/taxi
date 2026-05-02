@@ -1,14 +1,21 @@
-# Run taxi_pro on Android Emulator.
-# API defaults to http://10.0.2.2:5000 — run your backend on the PC on port 5000.
+# Run taxi_pro on Android (emulator or USB phone).
 #
-# Android Studio: open flutter/taxi_pro, Device Manager (phone icon) > start an AVD, green Run.
+# Emulator: API defaults to http://10.0.2.2:5000 (see lib/config.dart). Backend on PC :5000.
+#
+# Physical phone (USB): use -UsbPhone (adb reverse + 127.0.0.1) or -ApiBase with your PC LAN IP:
+#   .\run_android.ps1 -UsbPhone
+#   .\run_android.ps1 -ApiBase "http://192.168.1.42:5000"
+#
+# Android Studio: open flutter/taxi_pro, pick device, Run.
 # Or from this folder after starting an emulator:
 #   flutter run -d android
 # Cold start (launch AVD then app):
 #   .\run_android.ps1 -StartEmulator
 param(
   [switch]$StartEmulator,
-  [string]$EmulatorId = "Pixel_Tablet_API_35"
+  [string]$EmulatorId = "Pixel_Tablet_API_35",
+  [switch]$UsbPhone,
+  [string]$ApiBase = ""
 )
 Set-Location $PSScriptRoot
 $adb = Join-Path $env:LOCALAPPDATA "Android\Sdk\platform-tools\adb.exe"
@@ -26,4 +33,16 @@ if ($StartEmulator) {
   }
 }
 
-flutter run -d android
+$flutterArgs = @("run", "-d", "android")
+if ($UsbPhone) {
+  if (Test-Path $adb) {
+    Write-Host "adb reverse tcp:5000 -> host:5000 (USB phone)" -ForegroundColor Cyan
+    & $adb reverse tcp:5000 tcp:5000
+  } else {
+    Write-Host "adb.exe not found; run: adb reverse tcp:5000 tcp:5000" -ForegroundColor Yellow
+  }
+  $flutterArgs += "--dart-define=API_BASE_URL=http://127.0.0.1:5000"
+} elseif ($ApiBase -ne "") {
+  $flutterArgs += "--dart-define=API_BASE_URL=$ApiBase"
+}
+& flutter @flutterArgs

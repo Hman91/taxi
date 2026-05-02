@@ -5,6 +5,7 @@ from typing import Any, Dict, Iterable, Optional
 
 from .. import db as db_module
 from ..extensions import socketio
+from . import chat_service, translation_service
 
 
 def _localize_event_message(event: str, lang: str, fallback: str) -> str:
@@ -189,6 +190,16 @@ def notify_dispatch_cancelled(
     }
     for uid in driver_user_ids:
         _emit_to_user(int(uid), payload)
+
+
+def emit_chat_message_to_participants(
+    conversation_id: int, msg: Dict[str, Any]
+) -> None:
+    """Push a persisted chat line to Socket.IO user rooms (same as socket send_message handler)."""
+    for uid in chat_service.participant_user_ids_for_conversation(conversation_id):
+        personal = translation_service.enrich_message_for_viewer(msg, uid)
+        socketio.emit("receive_message", personal, room=f"user:{uid}")
+        socketio.emit("message", personal, room=f"user:{uid}")
 
 
 def notify_passenger_driver_near_pickup(ride: Dict[str, Any], *, current_zone: str) -> None:

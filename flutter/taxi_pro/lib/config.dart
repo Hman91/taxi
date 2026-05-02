@@ -15,6 +15,9 @@ const String googleOAuthWebClientId =
 ///
 /// Defaults:
 /// - Android emulator: `http://10.0.2.2:5000`
+/// - Android physical device: **never** use `10.0.2.2` — pass `--dart-define=API_BASE_URL=...`:
+///   your PC LAN IP (`http://192.168.x.x:5000` on same Wi‑Fi), or after
+///   `adb reverse tcp:5000 tcp:5000` use `http://127.0.0.1:5000`.
 /// - Web (Chrome): `http://localhost:5000`
 /// - Other platforms: `http://127.0.0.1:5000`
 final String apiBaseUrl = _computeApiBaseUrl();

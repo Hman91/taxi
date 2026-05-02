@@ -9,7 +9,7 @@ from flask_socketio import SocketIO, join_room, leave_room
 from ..auth_tokens import decode_app_token
 from .. import db as db_module
 from ..services import chat_service
-from ..services import translation_service
+from ..services.realtime_broadcast import emit_chat_message_to_participants
 
 # sid -> user_id for the active Engine.IO session
 _sid_user: Dict[str, int] = {}
@@ -88,10 +88,7 @@ def register_handlers(sio: SocketIO) -> None:
             sio.emit("error", {"code": err}, to=request.sid)
             return
         assert msg is not None
-        for uid in chat_service.participant_user_ids_for_conversation(cid):
-            personal = translation_service.enrich_message_for_viewer(msg, uid)
-            sio.emit("receive_message", personal, room=f"user:{uid}")
-            sio.emit("message", personal, room=f"user:{uid}")
+        emit_chat_message_to_participants(cid, msg)
 
 
 def _extract_token(auth: Any) -> str | None:

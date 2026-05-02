@@ -31,13 +31,19 @@ class ChatSocketService {
     final connectUrl = normalizeApiBaseUrl(_base);
     final isHttpsBackend =
         connectUrl.toLowerCase().startsWith('https://');
+    final origin = Uri.tryParse(connectUrl);
+    final emulatorLoopbackHttp = !kIsWeb &&
+        origin != null &&
+        origin.scheme == 'http' &&
+        origin.host == '10.0.2.2';
 
     // Transport selection:
     // - Web: polling-only (Dart web stack + some proxies are flaky with WS here).
-    // - Native + https:// (e.g. Render): websocket + polling. Polling-only on Android often
-    //   fails behind TLS/proxies while REST still works → red "connection unavailable" in chat.
-    // - Native + http:// (emulator/device → local Flask): polling-only + disable upgrade avoids
-    //   bad intermediaries returning 200 instead of WebSocket upgrade.
+    // - Native + https:// (e.g. Render): websocket + polling.
+    // - Native + http:// to **Android emulator only** (10.0.2.2): polling-only + disable
+    //   upgrade — some proxies return 200 on WS upgrade attempts.
+    // - Native + http:// to **LAN / USB-reverse** IP (physical device → dev PC): WebSocket +
+    //   polling works reliably; polling-only often yields connect_error while REST succeeds.
     final List<String> resolvedTransports;
     final bool suppressEngineUpgrade;
     if (kIsWeb) {
@@ -46,12 +52,15 @@ class ChatSocketService {
     } else if (isHttpsBackend) {
       resolvedTransports = ['websocket', 'polling'];
       suppressEngineUpgrade = false;
-    } else {
+    } else if (emulatorLoopbackHttp) {
       resolvedTransports = List<String>.from(transports ?? const ['polling']);
       if (resolvedTransports.isEmpty) {
         resolvedTransports.add('polling');
       }
       suppressEngineUpgrade = true;
+    } else {
+      resolvedTransports = ['websocket', 'polling'];
+      suppressEngineUpgrade = false;
     }
 
     final opts = socket_io.OptionBuilder()
@@ -65,19 +74,19 @@ class ChatSocketService {
     }
     _socket = socket_io.io(connectUrl, opts);
 
-    JsonMap? _normalizePayload(dynamic raw) {
+    JsonMap? normalizePayload(dynamic raw) {
       if (raw is Map) {
         return Map<String, dynamic>.from(raw);
       }
       if (raw is List && raw.isNotEmpty) {
         // socket_io_client may wrap event data in a single-item list.
-        return _normalizePayload(raw.first);
+        return normalizePayload(raw.first);
       }
       if (raw is String) {
         final text = raw.trim();
         if (text.isEmpty) return null;
         try {
-          return _normalizePayload(jsonDecode(text));
+          return normalizePayload(jsonDecode(text));
         } catch (_) {
           return null;
         }
@@ -86,7 +95,7 @@ class ChatSocketService {
     }
 
     void mapEvent(dynamic raw, void Function(JsonMap) handler) {
-      final payload = _normalizePayload(raw);
+      final payload = normalizePayload(raw);
       if (payload != null) handler(payload);
     }
 
