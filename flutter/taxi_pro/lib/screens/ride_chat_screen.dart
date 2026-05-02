@@ -91,7 +91,6 @@ class _RideChatScreenState extends State<RideChatScreen> {
   void _connectSocket() {
     _repo.socket.connect(
       widget.token,
-      transports: const ['polling'],
       onReceiveMessage: _onIncoming,
       onRideStatus: _onRideStatus,
       onConnected: () {

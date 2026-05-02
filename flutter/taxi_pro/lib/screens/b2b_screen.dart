@@ -304,7 +304,6 @@ class _B2bScreenState extends State<B2bScreen> {
     }
     _socket.connect(
       token,
-      transports: const ['polling'],
       onRideStatus: (data) {
         final rideMap = data['ride'];
         if (rideMap is! Map || !mounted) return;

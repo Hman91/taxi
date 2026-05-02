@@ -352,7 +352,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     // Local Flutter Web + socket_io_client polling can crash with parser RangeError.
     // Keep ride/chat updates via HTTP polling fallback in this environment.
     if (isWebLocal) return;
-    _socket.connect(t, transports: const ['polling'], onReceiveMessage: _onChatMessage, onRideStatus: (data) {
+    _socket.connect(t, onReceiveMessage: _onChatMessage, onRideStatus: (data) {
       if (!mounted) return;
       final rideMap = data['ride'];
       if (rideMap is Map) {

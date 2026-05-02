@@ -301,7 +301,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     await _refreshRides();
     await _refreshGains();
     await _refreshArrivals(silent: true);
-    _socket.connect(r.accessToken, onReceiveMessage: _onChatMessage, onRideStatus: _onRideStatusEvent, onDriverWallet: _onDriverWallet, transports: const ['polling']);
+    _socket.connect(r.accessToken, onReceiveMessage: _onChatMessage, onRideStatus: _onRideStatusEvent, onDriverWallet: _onDriverWallet);
     _startRidesPolling();
     await _pushDriverLocation();
   }
@@ -397,7 +397,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
       await _refreshArrivals(silent: true);
       final host = Uri.tryParse(apiBaseUrl)?.host.toLowerCase() ?? '';
       final isWebLocal = kIsWeb && (host == '127.0.0.1' || host == 'localhost' || host == '0.0.0.0');
-      if (!isWebLocal) _socket.connect(r.accessToken, onReceiveMessage: _onChatMessage, onRideStatus: _onRideStatusEvent, onDriverWallet: _onDriverWallet, transports: const ['polling']);
+      if (!isWebLocal) _socket.connect(r.accessToken, onReceiveMessage: _onChatMessage, onRideStatus: _onRideStatusEvent, onDriverWallet: _onDriverWallet);
       _startRidesPolling();
       await _pushDriverLocation();
     } catch (e) {

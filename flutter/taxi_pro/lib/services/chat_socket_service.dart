@@ -29,27 +29,38 @@ class ChatSocketService {
   }) {
     disconnect();
     final connectUrl = normalizeApiBaseUrl(_base);
-    var resolvedTransports =
-        List<String>.from(transports ?? (kIsWeb ? ['websocket', 'polling'] : ['polling']));
-    if (!kIsWeb) {
-      // Native Android/iOS path: keep polling-only for stable connectivity.
-      resolvedTransports = ['polling'];
-    }
+    final isHttpsBackend =
+        connectUrl.toLowerCase().startsWith('https://');
+
+    // Transport selection:
+    // - Web: polling-only (Dart web stack + some proxies are flaky with WS here).
+    // - Native + https:// (e.g. Render): websocket + polling. Polling-only on Android often
+    //   fails behind TLS/proxies while REST still works → red "connection unavailable" in chat.
+    // - Native + http:// (emulator/device → local Flask): polling-only + disable upgrade avoids
+    //   bad intermediaries returning 200 instead of WebSocket upgrade.
+    final List<String> resolvedTransports;
+    final bool suppressEngineUpgrade;
     if (kIsWeb) {
-      // WebSocket-only transport has been flaky in this stack (web client parser crashes like
-      // "Cannot read properties of undefined (reading 'payload')" on some hosts/proxies).
-      // Polling is more stable with Flask-SocketIO threading mode across all roles.
       resolvedTransports = ['polling'];
+      suppressEngineUpgrade = false;
+    } else if (isHttpsBackend) {
+      resolvedTransports = ['websocket', 'polling'];
+      suppressEngineUpgrade = false;
+    } else {
+      resolvedTransports = List<String>.from(transports ?? const ['polling']);
+      if (resolvedTransports.isEmpty) {
+        resolvedTransports.add('polling');
+      }
+      suppressEngineUpgrade = true;
     }
+
     final opts = socket_io.OptionBuilder()
         .setTransports(resolvedTransports)
         .disableAutoConnect()
         .setAuth({'token': token})
         .setQuery({'token': token})
         .build();
-    // Engine.IO on mobile often probes WebSocket upgrade; some hosts/proxies return 200
-    // without 101. Stay on long-polling only for native (avoids spurious WebSocketException).
-    if (!kIsWeb) {
+    if (!kIsWeb && suppressEngineUpgrade) {
       opts['upgrade'] = false;
     }
     _socket = socket_io.io(connectUrl, opts);
