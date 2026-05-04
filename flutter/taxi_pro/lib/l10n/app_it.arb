@@ -658,8 +658,8 @@
   "ownerSettingsCommissionHint": "Solo visualizzazione — collega agli account autista per tariffe live.",
   "ownerSettingsRouteFaresHeading": "Tariffe base tratte (DT)",
   "ownerSaveRouteFare": "Salva",
-  "driverWalletDepletedTitle": "Portafoglio vuoto",
-  "driverWalletDepletedBody": "Paga {amount} DT al proprietario (tramite l’operatore) per ricaricare.",
+  "driverWalletDepletedTitle": "Paga per tornare online",
+  "driverWalletDepletedBody": "Il portafoglio è a 0 DT. Paga {amount} DT al proprietario (tramite l’operatore) per ricaricare e tornare online.",
   "@driverWalletDepletedBody": {
     "placeholders": {
       "amount": {
@@ -668,5 +668,6 @@
     }
   },
   "ownerDriverPinWalletsHeading": "Portafogli autisti",
-  "ownerDriverPinWalletsEmpty": "Nessun account autista PIN caricato."
+  "ownerDriverPinWalletsEmpty": "Nessun account autista PIN caricato.",
+  "flightArrivalsSampleDataBanner": "Solo voli di esempio: il backend non usa AirLabs. Impostate AIRLABS_API_KEY nel file `.env` nella cartella del progetto Taxi e riavviate l'API."
 }

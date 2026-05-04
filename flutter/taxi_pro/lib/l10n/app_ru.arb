@@ -658,8 +658,8 @@
   "ownerSettingsCommissionHint": "Только отображение — привязка к аккаунтам водителей для актуальных ставок.",
   "ownerSettingsRouteFaresHeading": "Базовые тарифы маршрутов (DT)",
   "ownerSaveRouteFare": "Сохранить",
-  "driverWalletDepletedTitle": "Кошелёк пуст",
-  "driverWalletDepletedBody": "Внесите {amount} DT владельцу (через оператора) для пополнения.",
+  "driverWalletDepletedTitle": "Оплатите, чтобы снова выйти на линию",
+  "driverWalletDepletedBody": "Баланс 0 DT. Внесите {amount} DT владельцу (через оператора), чтобы пополнить и снова выйти на линию.",
   "@driverWalletDepletedBody": {
     "placeholders": {
       "amount": {
@@ -668,5 +668,6 @@
     }
   },
   "ownerDriverPinWalletsHeading": "Кошельки водителей",
-  "ownerDriverPinWalletsEmpty": "Нет загруженных PIN-аккаунтов водителей."
+  "ownerDriverPinWalletsEmpty": "Нет загруженных PIN-аккаунтов водителей.",
+  "flightArrivalsSampleDataBanner": "Только примерные рейсы — бэкенд не использует AirLabs. Добавьте AIRLABS_API_KEY в файл `.env` в папке проекта Taxi и перезапустите API."
 }

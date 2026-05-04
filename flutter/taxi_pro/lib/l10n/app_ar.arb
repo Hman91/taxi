@@ -658,8 +658,8 @@
   "ownerSettingsCommissionHint": "للعرض فقط — تُحدَّث نسب السائقين من حساباتهم.",
   "ownerSettingsRouteFaresHeading": "أجور المسارات الأساسية (د.ت)",
   "ownerSaveRouteFare": "حفظ",
-  "driverWalletDepletedTitle": "المحفظة فارغة",
-  "driverWalletDepletedBody": "ادفع {amount} د.ت للمالك (عبر المشغّل) لإعادة الشحن.",
+  "driverWalletDepletedTitle": "ادفع للعودة متصلاً",
+  "driverWalletDepletedBody": "محفظتك 0 د.ت. ادفع {amount} د.ت للمالك (عبر المشغّل) لإعادة الشحن والعودة للعمل.",
   "@driverWalletDepletedBody": {
     "placeholders": {
       "amount": {
@@ -668,5 +668,6 @@
     }
   },
   "ownerDriverPinWalletsHeading": "محافظ السائقين (PIN)",
-  "ownerDriverPinWalletsEmpty": "لا توجد حسابات سائقين (PIN) محمّلة."
+  "ownerDriverPinWalletsEmpty": "لا توجد حسابات سائقين (PIN) محمّلة.",
+  "flightArrivalsSampleDataBanner": "رحلات تجريبية فقط — الخادم لا يستخدم AirLabs. أضف AIRLABS_API_KEY إلى ملف `.env` في مجلد مشروع Taxi ثم أعد تشغيل الـ API."
 }

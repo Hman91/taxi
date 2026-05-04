@@ -24,6 +24,8 @@ import '../services/chat_socket_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/taxi_app_service.dart';
 import '../widgets/locale_popup_menu.dart';
+import '../utils/chat_unread_poll.dart';
+import '../utils/int_from_json.dart';
 import '../widgets/passenger_google_sign_in_button.dart';
 import 'ride_chat_screen.dart';
 import 'unified_login_screen.dart';
@@ -249,10 +251,18 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
 
   void _startRidesPolling() {
     _ridesPollingTimer?.cancel();
-    _ridesPollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (!mounted || _token == null || _busy) return;
-      _refreshRides(silent: true);
-    });
+    Future<void> tick() async {
+      if (!mounted || _token == null) return;
+      if (!_busy) {
+        await _refreshRides(silent: true);
+      } else {
+        await _pollChatUnreadFallback();
+      }
+    }
+
+    unawaited(tick());
+    _ridesPollingTimer =
+        Timer.periodic(const Duration(seconds: 4), (_) => unawaited(tick()));
   }
 
   Future<void> _detectPassengerLocation() async {
@@ -369,11 +379,11 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   }
 
   Future<int?> _resolveRideIdFromChatPayload(Map<String, dynamic> data) async {
-    final directRideId = (data['ride_id'] as num?)?.toInt(); if (directRideId != null) return directRideId;
-    final conversationId = (data['conversation_id'] as num?)?.toInt(); if (conversationId == null) return null;
+    final directRideId = intFromDynamic(data['ride_id']); if (directRideId != null) return directRideId;
+    final conversationId = intFromDynamic(data['conversation_id']); if (conversationId == null) return null;
     final cached = _rideIdByConversationId[conversationId]; if (cached != null) return cached;
     final t = _token; if (t == null) return null;
-    for (final ride in _rides.where((r) => r.status == 'accepted' || r.status == 'ongoing')) {
+    for (final ride in _rides.where((r) => rideMayHaveConversation(r.status))) {
       try {
         final info = await _api.getRideConversation(token: t, rideId: ride.id);
         if (info == null) continue;
@@ -386,7 +396,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
 
   Future<void> _syncConversationRideMap(List<Ride> rides) async {
     final t = _token; if (t == null) return;
-    for (final ride in rides.where((r) => r.status == 'accepted' || r.status == 'ongoing')) {
+    for (final ride in rides.where((r) => rideMayHaveConversation(r.status))) {
       try {
         final info = await _api.getRideConversation(token: t, rideId: ride.id);
         if (info == null) continue;
@@ -396,49 +406,87 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   }
 
   Future<void> _pollChatUnreadFallback() async {
-    final t = _token; final uid = _userId; if (t == null || uid == null) return;
+    final t = _token;
+    final uid = _userId;
+    if (t == null || uid == null) return;
     final l = AppLocalizations.of(context)!;
-    for (final entry in _conversationIdByRideId.entries.toList()) {
-      final rideId = entry.key; final conversationId = entry.value;
-      if (_activeChatRideId == rideId) continue;
+    for (final ride in _rides.where(
+      (r) => rideMayHaveConversation(r.status) && r.userId == uid,
+    )) {
+      if (_activeChatRideId == ride.id) continue;
       try {
-        final msgs = await _api.listConversationMessages(token: t, conversationId: conversationId, limit: 20);
+        final conversationId = await cachedOrFetchConversationId(
+          api: _api,
+          token: t,
+          rideId: ride.id,
+          conversationIdByRideId: _conversationIdByRideId,
+          rideIdByConversationId: _rideIdByConversationId,
+        );
+        if (conversationId == null) continue;
+        _lastSeenMessageIdByConversationId.putIfAbsent(conversationId, () => 0);
+        final msgs =
+            await _api.listConversationMessages(token: t, conversationId: conversationId, limit: 20);
         if (msgs.isEmpty) continue;
-        final prevSeen = _lastSeenMessageIdByConversationId[conversationId] ?? 0;
-        int maxId = prevSeen; int incomingCount = 0; ChatMessage? latestIncoming;
-        for (final m in msgs) {
-          if (m.id > maxId) maxId = m.id;
-          if (prevSeen > 0 && m.id > prevSeen && m.senderUserId != uid) { incomingCount++; if (latestIncoming == null || m.id > latestIncoming.id) latestIncoming = m; }
-        }
-        if (prevSeen == 0) { _lastSeenMessageIdByConversationId[conversationId] = maxId; continue; }
-        if (incomingCount > 0) {
+        final stored = _lastSeenMessageIdByConversationId[conversationId] ?? 0;
+        final delta =
+            computeUnreadChatDelta(msgs: msgs, myUserId: uid, storedWatermark: stored);
+        _lastSeenMessageIdByConversationId[conversationId] = delta.newWatermark;
+        if (delta.incomingCount > 0) {
           if (!mounted) return;
-          setState(() { _unreadChatByRideId[rideId] = (_unreadChatByRideId[rideId] ?? 0) + incomingCount; });
-          final body = (latestIncoming?.displayText.trim().isNotEmpty ?? false) ? latestIncoming!.displayText : l.openChatButton;
+          final int rid = ride.id;
+          setState(() {
+            _unreadChatByRideId[rid] = (_unreadChatByRideId[rid] ?? 0) + delta.incomingCount;
+          });
+          final latestIncoming = delta.latestIncoming;
+          final body = (latestIncoming?.displayText.trim().isNotEmpty ?? false)
+              ? latestIncoming!.displayText
+              : l.openChatButton;
           final senderName = (latestIncoming?.senderName ?? '').trim();
-          final title = senderName.isEmpty ? l.openChatButton : '${l.openChatButton} • $senderName';
-          _pushNotification(title: title, body: body, event: 'chat_message_fallback', rideId: rideId);
-          LocalNotificationService.instance.show(title: title, body: body);
+          final title =
+              senderName.isEmpty ? l.openChatButton : '${l.openChatButton} • $senderName';
+          _pushNotification(
+              title: title, body: body, event: 'chat_message_fallback', rideId: rid);
+          LocalNotificationService.instance.show(title: title, body: body, isChat: true);
         }
-        _lastSeenMessageIdByConversationId[conversationId] = maxId;
       } catch (_) {}
     }
   }
 
   void _onChatMessage(Map<String, dynamic> data) async {
     if (!mounted) return;
-    final msg = ChatMessage.fromJson(data); if (msg.senderUserId == _userId) return;
-    final rideId = await _resolveRideIdFromChatPayload(data); if (!mounted) return; if (rideId == null) return;
-    if (_activeChatRideId == rideId) return;
-    final conversationId = (data['conversation_id'] as num?)?.toInt();
-    if (conversationId != null) { _lastSeenMessageIdByConversationId[conversationId] = msg.id; _conversationIdByRideId[rideId] = conversationId; _rideIdByConversationId[conversationId] = rideId; }
+    final ChatMessage msg;
+    try {
+      msg = ChatMessage.fromJson(data);
+    } catch (_) {
+      return;
+    }
+    final uid = _userId;
+    if (uid == null || msg.senderUserId == uid) return;
+    var rideId = await _resolveRideIdFromChatPayload(data);
+    if (rideId == null && intFromDynamic(data['conversation_id']) != null) {
+      await _refreshRides(silent: true);
+      if (!mounted) return;
+      rideId = await _resolveRideIdFromChatPayload(data);
+    }
+    if (!mounted || rideId == null) return;
+    final conversationId = intFromDynamic(data['conversation_id']);
+    final int rid = rideId;
+    if (conversationId != null) {
+      final prev = _lastSeenMessageIdByConversationId[conversationId] ?? 0;
+      if (msg.id > prev) _lastSeenMessageIdByConversationId[conversationId] = msg.id;
+      _conversationIdByRideId[rid] = conversationId;
+      _rideIdByConversationId[conversationId] = rid;
+    }
+    if (_activeChatRideId == rid) return;
     final l = AppLocalizations.of(context)!;
     final body = msg.displayText.trim().isEmpty ? l.openChatButton : msg.displayText;
-    setState(() { _unreadChatByRideId[rideId] = (_unreadChatByRideId[rideId] ?? 0) + 1; });
+    setState(() {
+      _unreadChatByRideId[rid] = (_unreadChatByRideId[rid] ?? 0) + 1;
+    });
     final sn = (msg.senderName ?? '').trim();
     final title = sn.isEmpty ? l.openChatButton : '${l.openChatButton} • $sn';
-    _pushNotification(title: title, body: body, event: 'chat_message', rideId: rideId);
-    LocalNotificationService.instance.show(title: title, body: body);
+    _pushNotification(title: title, body: body, event: 'chat_message', rideId: rid);
+    LocalNotificationService.instance.show(title: title, body: body, isChat: true);
   }
 
   Future<void> _loginWithGoogle() async {
@@ -690,6 +738,26 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     } catch (e) { if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()))); }
   }
 
+  Future<void> _primeReadWatermarkAfterChat({
+    required String token,
+    required int conversationId,
+    required int rideId,
+  }) async {
+    try {
+      final msgs = await _api.listConversationMessages(
+        token: token,
+        conversationId: conversationId,
+        limit: 150,
+      );
+      if (!mounted) return;
+      final maxId = maxChatMessageId(msgs);
+      setState(() {
+        _lastSeenMessageIdByConversationId[conversationId] = maxId;
+        _unreadChatByRideId.remove(rideId);
+      });
+    } catch (_) {}
+  }
+
   Future<void> _openChat(Ride ride) async {
     final l = AppLocalizations.of(context)!; final t = _token; final uid = _userId;
     if (t == null || uid == null) return;
@@ -698,10 +766,12 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       final info = await _api.getRideConversation(token: t, rideId: ride.id);
       if (!mounted) return;
       if (info == null) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.chatUnavailable))); return; }
+      final cid = info.conversationId;
       setState(() { _activeChatRideId = ride.id; _unreadChatByRideId.remove(ride.id); });
-      _rideIdByConversationId[info.conversationId] = ride.id; _conversationIdByRideId[ride.id] = info.conversationId;
-      await Navigator.of(context).push<void>(MaterialPageRoute<void>(builder: (_) => RideChatScreen(token: t, myUserId: uid, rideId: ride.id, conversationId: info.conversationId)));
+      _rideIdByConversationId[cid] = ride.id; _conversationIdByRideId[ride.id] = cid;
+      await Navigator.of(context).push<void>(MaterialPageRoute<void>(builder: (_) => RideChatScreen(token: t, myUserId: uid, rideId: ride.id, conversationId: cid)));
       if (mounted && _activeChatRideId == ride.id) setState(() => _activeChatRideId = null);
+      await _primeReadWatermarkAfterChat(token: t, conversationId: cid, rideId: ride.id);
       await _refreshRides();
     } on TaxiApiException catch (e) {
       if (!mounted) return;
@@ -723,20 +793,26 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   Widget _chatActionButton(Ride ride) {
     final l = AppLocalizations.of(context)!;
     final unread = _unreadChatByRideId[ride.id] ?? 0;
-    return GestureDetector(
-      onTap: _busy ? null : () => _openChat(ride),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(color: _C.charcoal, borderRadius: BorderRadius.circular(20)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 14),
-          const SizedBox(width: 5),
-          Text(l.openChatButton, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
-          if (unread > 0) ...[
-            const SizedBox(width: 5),
-            Container(padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1), decoration: BoxDecoration(color: _C.danger, borderRadius: BorderRadius.circular(10)), child: Text(unread > 99 ? '99+' : '$unread', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
-          ],
-        ]),
+    return Badge(
+      label: Text(unread > 99 ? '99+' : '$unread', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800)),
+      padding: EdgeInsets.only(left: unread > 0 ? 5 : 0, right: unread > 0 ? 5 : 0),
+      isLabelVisible: unread > 0,
+      offset: const Offset(10, -6),
+      backgroundColor: _C.danger,
+      child: GestureDetector(
+        onTap: _busy ? null : () => _openChat(ride),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(color: _C.charcoal, borderRadius: BorderRadius.circular(20)),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 14),
+              const SizedBox(width: 5),
+              Text(l.openChatButton, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+            ],
+          ),
+        ),
       ),
     );
   }

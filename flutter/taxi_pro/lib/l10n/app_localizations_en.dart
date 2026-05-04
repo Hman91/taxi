@@ -906,11 +906,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get driverWalletDepletedTitle => 'Wallet empty';
+  String get driverWalletDepletedTitle => 'Pay to go back online';
 
   @override
   String driverWalletDepletedBody(int amount) {
-    return 'Pay $amount DT to the owner (via the operator) to top up.';
+    return 'Your wallet is at 0 DT. Pay $amount DT to the owner (via the operator) to top up and go back online.';
   }
 
   @override
@@ -918,4 +918,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ownerDriverPinWalletsEmpty => 'No PIN driver accounts loaded.';
+
+  @override
+  String get flightArrivalsSampleDataBanner =>
+      'Sample flights only — AirLabs isn’t loading. Put AIRLABS_API_KEY in `taxi/.env` OR `backend/.env`, save, then restart the API server.';
 }

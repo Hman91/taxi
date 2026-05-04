@@ -1668,13 +1668,13 @@ abstract class AppLocalizations {
   /// No description provided for @driverWalletDepletedTitle.
   ///
   /// In en, this message translates to:
-  /// **'Wallet empty'**
+  /// **'Pay to go back online'**
   String get driverWalletDepletedTitle;
 
   /// No description provided for @driverWalletDepletedBody.
   ///
   /// In en, this message translates to:
-  /// **'Pay {amount} DT to the owner (via the operator) to top up.'**
+  /// **'Your wallet is at 0 DT. Pay {amount} DT to the owner (via the operator) to top up and go back online.'**
   String driverWalletDepletedBody(int amount);
 
   /// No description provided for @ownerDriverPinWalletsHeading.
@@ -1688,6 +1688,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No PIN driver accounts loaded.'**
   String get ownerDriverPinWalletsEmpty;
+
+  /// No description provided for @flightArrivalsSampleDataBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Sample flights only — AirLabs isn’t loading. Put AIRLABS_API_KEY in `taxi/.env` OR `backend/.env`, save, then restart the API server.'**
+  String get flightArrivalsSampleDataBanner;
 }
 
 class _AppLocalizationsDelegate

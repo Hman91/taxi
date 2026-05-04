@@ -19,10 +19,8 @@ def _json_error(code: str, status: int) -> Tuple[Any, int]:
 @bp.get("/tunisia-flight-arrivals")
 @require_roles("owner", "operator", "driver")
 def admin_tunisia_flight_arrivals(**kwargs: Any) -> Tuple[Any, int]:
-    data = admin_service.list_tunisia_flight_arrivals_live()
-    if not data:
-        data = admin_service.list_tunisia_flight_arrivals_demo()
-    return jsonify({"flights": data}), 200
+    flights, source = admin_service.resolve_tunisia_flight_arrivals()
+    return jsonify({"flights": flights, "flight_data_source": source}), 200
 
 
 @bp.get("/fare-routes")

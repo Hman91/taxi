@@ -88,14 +88,44 @@ def request_ride(
 
 
 def _localized_wallet_message(lang: str, amount: float) -> str:
+    """Short text pushed on the driver_wallet socket when the wallet hits zero."""
     code = (lang or "en").strip().lower()
+    amt = int(amount)
     if code.startswith("ar"):
-        return f"المحفظة فارغة. ادفع {int(amount)} د.ت للمالك عبر المشغل لإعادة الشحن."
+        return (
+            f"محفظتك 0 د.ت. ادفع {amt} د.ت للمالك عبر المشغّل لإعادة الشحن والعودة للعمل."
+        )
     if code.startswith("fr"):
         return (
-            f"Portefeuille vide. Payez {int(amount)} DT au proprietaire via l'operateur."
+            f"Portefeuille à 0 DT. Payez {amt} DT au propriétaire via l’opérateur "
+            "pour recharger et repasser en ligne."
         )
-    return f"Wallet empty. Pay {int(amount)} DT to the owner via the operator."
+    if code.startswith("de"):
+        return (
+            f"Guthaben 0 DT. Zahlen Sie {amt} DT an den Eigentümer (über den Operator), "
+            "um aufzuladen und wieder online zu gehen."
+        )
+    if code.startswith("es"):
+        return (
+            f"Monedero en 0 DT. Pague {amt} DT al propietario (vía el operador) "
+            "para recargar y volver en línea."
+        )
+    if code.startswith("it"):
+        return (
+            f"Portafoglio a 0 DT. Paga {amt} DT al proprietario (tramite l’operatore) "
+            "per ricaricare e tornare online."
+        )
+    if code.startswith("ru"):
+        return (
+            f"Баланс 0 DT. Внесите {amt} DT владельцу (через оператора), "
+            "чтобы пополнить и снова выйти на линию."
+        )
+    if code.startswith("zh"):
+        return f"钱包余额为 0 DT。请通过运营商向店主支付 {amt} DT 充值后才能恢复在线。"
+    return (
+        f"Your wallet is at 0 DT. Pay {amt} DT to the owner (via the operator) "
+        "to top up and go back online."
+    )
 
 
 def _apply_wallet_on_complete(

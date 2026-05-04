@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../app_locale.dart' show AppUiRole, restoreUiRoleLocale;
@@ -14,6 +14,13 @@ import '../models/chat_message.dart';
 import '../services/chat_socket_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/taxi_app_service.dart';
+import '../utils/chat_unread_poll.dart'
+    show
+        cachedOrFetchConversationId,
+        computeUnreadChatDelta,
+        maxChatMessageId,
+        rideMayHaveConversation;
+import '../utils/int_from_json.dart';
 import '../theme/taxi_app_theme.dart';
 import '../widgets/locale_popup_menu.dart';
 import 'ride_chat_screen.dart';
@@ -159,6 +166,7 @@ class _B2bScreenState extends State<B2bScreen> {
   final List<AppNotification> _notifications = [];
   final Map<int, int> _unreadChatByRideId = {};
   final Map<int, int> _rideIdByConversationId = {};
+  final Map<int, int> _conversationIdByRideId = {};
   final Map<int, int> _lastSeenMessageIdByConversationId = <int, int>{};
   final Set<int> _ratedRideIds = <int>{};
   final Map<int, int> _ratingByRideId = <int, int>{};
@@ -231,6 +239,10 @@ class _B2bScreenState extends State<B2bScreen> {
       _appToken = auth.appAccessToken;
       _userId = auth.userId;
       if (_appToken != null) {
+        _unreadChatByRideId.clear();
+        _rideIdByConversationId.clear();
+        _conversationIdByRideId.clear();
+        _lastSeenMessageIdByConversationId.clear();
         _connectRealtime(_appToken!);
         await _refreshRides();
         _startPolling();
@@ -326,33 +338,93 @@ class _B2bScreenState extends State<B2bScreen> {
           event: (data['event'] ?? '').toString(),
         );
       },
-      onReceiveMessage: (data) {
-        if (!mounted) return;
-        final l = AppLocalizations.of(context)!;
-        final senderId = (data['sender_user_id'] ?? data['sender_id']) as num?;
-        final myUserId = _userId;
-        if (senderId != null && myUserId != null && senderId.toInt() == myUserId) {
-          return;
-        }
-        final rideIdRaw = data['ride_id'] as num?;
-        final convIdRaw = data['conversation_id'] as num?;
-        final rideId = rideIdRaw?.toInt() ??
-            (convIdRaw != null ? _rideIdByConversationId[convIdRaw.toInt()] : null);
-        if (rideId != null && _activeChatRideId != rideId) {
-          setState(() => _unreadChatByRideId[rideId] = (_unreadChatByRideId[rideId] ?? 0) + 1);
-        }
-        final sender = (data['sender_name'] ?? '').toString().trim();
-        final msg = (data['original_text'] ?? '').toString().trim();
-        final title = sender.isEmpty ? l.openChatButton : '${l.openChatButton} • $sender';
-        final body = msg.isEmpty ? l.openChatButton : msg;
-        LocalNotificationService.instance.show(title: title, body: body);
-        _pushNotification(
-          title: title,
-          body: body,
-          event: 'receive_message',
-          rideId: rideId,
+      onReceiveMessage: (dynamic data) {
+        dynamic raw = data;
+        if (data is List && data.isNotEmpty) raw = data.first;
+        if (raw is! Map) return;
+        unawaited(
+          _handleB2bSocketChat(Map<String, dynamic>.from(raw as Map)),
         );
       },
+    );
+  }
+
+  Future<int?> _resolveB2bRideIdForConversation(int conversationId) async {
+    final t = _appToken;
+    if (t == null) return null;
+    final cached = _rideIdByConversationId[conversationId];
+    if (cached != null) return cached;
+    for (final ride in _rides) {
+      if (!rideMayHaveConversation(ride.status)) continue;
+      try {
+        final info = await _api.getRideConversation(token: t, rideId: ride.id);
+        if (info == null) continue;
+        _rideIdByConversationId[info.conversationId] = ride.id;
+        _conversationIdByRideId[ride.id] = info.conversationId;
+        if (info.conversationId == conversationId) return ride.id;
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  Future<void> _handleB2bSocketChat(Map<String, dynamic> data) async {
+    if (!mounted) return;
+    final uid = _userId;
+    if (uid == null) return;
+    late final ChatMessage msg;
+    try {
+      msg = ChatMessage.fromJson(data);
+    } catch (_) {
+      return;
+    }
+    if (msg.senderUserId == uid) return;
+
+    final convId = intFromDynamic(data['conversation_id']);
+    var rideId = intFromDynamic(data['ride_id']);
+    if (rideId == null && convId != null) {
+      rideId = _rideIdByConversationId[convId];
+    }
+    if (rideId == null && convId != null) {
+      rideId = await _resolveB2bRideIdForConversation(convId);
+    }
+    if (rideId == null && convId != null) {
+      await _refreshRides();
+      if (!mounted) return;
+      rideId =
+          _rideIdByConversationId[convId] ?? await _resolveB2bRideIdForConversation(convId);
+    }
+
+    if (!mounted) return;
+    if (rideId == null) return;
+    final int rid = rideId;
+
+    if (convId != null) {
+      final prev = _lastSeenMessageIdByConversationId[convId] ?? 0;
+      if (msg.id > prev) _lastSeenMessageIdByConversationId[convId] = msg.id;
+      _rideIdByConversationId[convId] = rid;
+      _conversationIdByRideId[rid] = convId;
+    }
+
+    if (_activeChatRideId == rid) return;
+
+    final l = AppLocalizations.of(context)!;
+    final body =
+        msg.displayText.trim().isEmpty ? l.openChatButton : msg.displayText;
+    final senderName = (msg.senderName ?? '').trim();
+    final title = senderName.isEmpty
+        ? l.openChatButton
+        : '${l.openChatButton} • $senderName';
+
+    setState(() {
+      _unreadChatByRideId[rid] = (_unreadChatByRideId[rid] ?? 0) + 1;
+    });
+    LocalNotificationService.instance
+        .show(title: title, body: body, isChat: true);
+    _pushNotification(
+      title: title,
+      body: body,
+      event: 'chat_message',
+      rideId: rid,
     );
   }
 
@@ -367,11 +439,12 @@ class _B2bScreenState extends State<B2bScreen> {
         _recomputePendingRatingFromRides();
       });
       for (final r in list) {
-        if (r.status == 'cancelled') continue;
+        if (!rideMayHaveConversation(r.status)) continue;
         try {
           final info = await _api.getRideConversation(token: t, rideId: r.id);
           if (info == null) continue;
           _rideIdByConversationId[info.conversationId] = r.id;
+          _conversationIdByRideId[r.id] = info.conversationId;
           _lastSeenMessageIdByConversationId.putIfAbsent(info.conversationId, () => 0);
         } catch (_) {}
       }
@@ -380,11 +453,15 @@ class _B2bScreenState extends State<B2bScreen> {
 
   void _startPolling() {
     _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
-      if (!mounted || !_ok || _busy || _appToken == null) return;
-      await _refreshRides();
+    Future<void> tick() async {
+      if (!mounted || !_ok || _appToken == null) return;
+      if (!_busy) await _refreshRides();
+      if (!mounted || _appToken == null) return;
       await _pollChatUnreadFallback();
-    });
+    }
+
+    unawaited(tick());
+    _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) => unawaited(tick()));
   }
 
   Future<void> _pollChatUnreadFallback() async {
@@ -392,41 +469,35 @@ class _B2bScreenState extends State<B2bScreen> {
     final uid = _userId;
     if (t == null || uid == null) return;
     final l = AppLocalizations.of(context)!;
-    final pairs = _rideIdByConversationId.entries.toList();
-    for (final entry in pairs) {
-      final conversationId = entry.key;
-      final rideId = entry.value;
-      if (_activeChatRideId == rideId) continue;
+    for (final ride in _rides.where((r) => rideMayHaveConversation(r.status))) {
+      if (_activeChatRideId == ride.id) continue;
       try {
+        final conversationId = await cachedOrFetchConversationId(
+          api: _api,
+          token: t,
+          rideId: ride.id,
+          conversationIdByRideId: _conversationIdByRideId,
+          rideIdByConversationId: _rideIdByConversationId,
+        );
+        if (conversationId == null) continue;
+        _lastSeenMessageIdByConversationId.putIfAbsent(conversationId, () => 0);
         final msgs = await _api.listConversationMessages(
           token: t,
           conversationId: conversationId,
           limit: 20,
         );
         if (msgs.isEmpty) continue;
-        final prevSeen = _lastSeenMessageIdByConversationId[conversationId] ?? 0;
-        int maxId = prevSeen;
-        int incomingCount = 0;
-        ChatMessage? latestIncoming;
-        for (final m in msgs) {
-          if (m.id > maxId) maxId = m.id;
-          if (prevSeen > 0 && m.id > prevSeen && m.senderUserId != uid) {
-            incomingCount++;
-            if (latestIncoming == null || m.id > latestIncoming.id) {
-              latestIncoming = m;
-            }
-          }
-        }
-        if (prevSeen == 0) {
-          _lastSeenMessageIdByConversationId[conversationId] = maxId;
-          continue;
-        }
-        if (incomingCount > 0) {
+        final stored = _lastSeenMessageIdByConversationId[conversationId] ?? 0;
+        final delta = computeUnreadChatDelta(msgs: msgs, myUserId: uid, storedWatermark: stored);
+        _lastSeenMessageIdByConversationId[conversationId] = delta.newWatermark;
+        if (delta.incomingCount > 0) {
           if (!mounted) return;
+          final int rid = ride.id;
           setState(() {
-            _unreadChatByRideId[rideId] =
-                (_unreadChatByRideId[rideId] ?? 0) + incomingCount;
+            _unreadChatByRideId[rid] =
+                (_unreadChatByRideId[rid] ?? 0) + delta.incomingCount;
           });
+          final latestIncoming = delta.latestIncoming;
           final body = (latestIncoming?.displayText.trim().isNotEmpty ?? false)
               ? latestIncoming!.displayText
               : l.openChatButton;
@@ -438,11 +509,10 @@ class _B2bScreenState extends State<B2bScreen> {
             title: title,
             body: body,
             event: 'chat_message_fallback',
-            rideId: rideId,
+            rideId: rid,
           );
-          LocalNotificationService.instance.show(title: title, body: body);
+          LocalNotificationService.instance.show(title: title, body: body, isChat: true);
         }
-        _lastSeenMessageIdByConversationId[conversationId] = maxId;
       } catch (_) {}
     }
   }
@@ -509,6 +579,26 @@ class _B2bScreenState extends State<B2bScreen> {
     }
   }
 
+  Future<void> _primeReadWatermarkAfterChat({
+    required String token,
+    required int conversationId,
+    required int rideId,
+  }) async {
+    try {
+      final msgs = await _api.listConversationMessages(
+        token: token,
+        conversationId: conversationId,
+        limit: 150,
+      );
+      if (!mounted) return;
+      final maxId = maxChatMessageId(msgs);
+      setState(() {
+        _lastSeenMessageIdByConversationId[conversationId] = maxId;
+        _unreadChatByRideId.remove(rideId);
+      });
+    } catch (_) {}
+  }
+
   Future<void> _openChat(Ride ride) async {
     final t = _appToken;
     final uid = _userId;
@@ -522,9 +612,11 @@ class _B2bScreenState extends State<B2bScreen> {
         );
         return;
       }
+      final cid = info.conversationId;
       setState(() {
         _activeChatRideId = ride.id;
-        _rideIdByConversationId[info.conversationId] = ride.id;
+        _rideIdByConversationId[cid] = ride.id;
+        _conversationIdByRideId[ride.id] = cid;
         _unreadChatByRideId.remove(ride.id);
       });
       await Navigator.of(context).push(
@@ -533,7 +625,7 @@ class _B2bScreenState extends State<B2bScreen> {
             token: t,
             myUserId: uid,
             rideId: ride.id,
-            conversationId: info.conversationId,
+            conversationId: cid,
           ),
         ),
       );
@@ -542,6 +634,8 @@ class _B2bScreenState extends State<B2bScreen> {
         _activeChatRideId = null;
         _unreadChatByRideId.remove(ride.id);
       });
+      await _primeReadWatermarkAfterChat(token: t, conversationId: cid, rideId: ride.id);
+      await _pollChatUnreadFallback();
     } catch (e) {
       if (!mounted) return;
       setState(() => _message = e.toString());
@@ -622,6 +716,10 @@ class _B2bScreenState extends State<B2bScreen> {
     _appToken = auth.appAccessToken;
     _userId = auth.userId;
     if (_appToken != null) {
+      _unreadChatByRideId.clear();
+      _rideIdByConversationId.clear();
+      _conversationIdByRideId.clear();
+      _lastSeenMessageIdByConversationId.clear();
       _connectRealtime(_appToken!);
       await _refreshRides();
       _startPolling();
@@ -909,6 +1007,7 @@ class _B2bScreenState extends State<B2bScreen> {
                             children: _rides
                                 .map(
                                   (r) => Container(
+                                    key: ValueKey<String>('b2b-ride-${r.id}-chat-${_rideUnread(r.id)}'),
                                     margin: const EdgeInsets.only(bottom: 10),
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -947,6 +1046,7 @@ class _B2bScreenState extends State<B2bScreen> {
                                               : null,
                                         ),
                                         Wrap(
+                                          clipBehavior: Clip.none,
                                           spacing: 6,
                                           runSpacing: 6,
                                           children: [
@@ -960,38 +1060,35 @@ class _B2bScreenState extends State<B2bScreen> {
                                                 onPressed: _busy ? null : () => _cancelRide(r),
                                                 child: Text(l.cancelRidePassenger),
                                               ),
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                color: _C.charcoal,
-                                                borderRadius: BorderRadius.circular(20),
-                                                boxShadow: [BoxShadow(color: _C.charcoal.withOpacity(0.22), blurRadius: 8, offset: const Offset(0, 3))],
-                                              ),
-                                              child: TextButton.icon(
-                                                onPressed: _busy ? null : () => _openChat(r),
-                                                icon: Stack(
-                                                  clipBehavior: Clip.none,
-                                                  children: [
-                                                    const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
-                                                    if (_rideUnread(r.id) > 0)
-                                                      Positioned(
-                                                        right: -8,
-                                                        top: -8,
-                                                        child: Container(
-                                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                                          decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(10)),
-                                                          child: Text(
-                                                            _rideUnread(r.id) > 99 ? '99+' : '${_rideUnread(r.id)}',
-                                                            style: const TextStyle(color: _C.charcoal, fontSize: 10, fontWeight: FontWeight.w700),
-                                                          ),
-                                                        ),
+                                            Builder(
+                                              builder: (ctx) {
+                                                final uChat = _rideUnread(r.id);
+                                                return Badge(
+                                                  label: Text(
+                                                    uChat > 99 ? '99+' : '$uChat',
+                                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: _C.charcoal),
+                                                  ),
+                                                  padding: EdgeInsets.only(left: uChat > 0 ? 5 : 0, right: uChat > 0 ? 5 : 0),
+                                                  isLabelVisible: uChat > 0,
+                                                  offset: const Offset(8, -6),
+                                                  backgroundColor: _C.yellow,
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      color: _C.charcoal,
+                                                      borderRadius: BorderRadius.circular(20),
+                                                      boxShadow: [BoxShadow(color: _C.charcoal.withOpacity(0.22), blurRadius: 8, offset: const Offset(0, 3))],
+                                                    ),
+                                                    child: TextButton.icon(
+                                                      onPressed: _busy ? null : () => _openChat(r),
+                                                      icon: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
+                                                      label: Text(
+                                                        l.openChatButton,
+                                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
                                                       ),
-                                                  ],
-                                                ),
-                                                label: Text(
-                                                  l.openChatButton,
-                                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                                                ),
-                                              ),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
                                             ),
                                             if (r.status == 'completed' &&
                                                 (_pendingRatingRideId == r.id || !_ratedRideIds.contains(r.id)))

@@ -658,8 +658,8 @@
   "ownerSettingsCommissionHint": "仅显示 — 可连接司机账户以显示实时费率。",
   "ownerSettingsRouteFaresHeading": "路线基础价格 (DT)",
   "ownerSaveRouteFare": "保存",
-  "driverWalletDepletedTitle": "钱包为空",
-  "driverWalletDepletedBody": "请通过运营商向店主支付 {amount} DT 以充值。",
+  "driverWalletDepletedTitle": "付费后恢复在线",
+  "driverWalletDepletedBody": "钱包余额为 0 DT。请通过运营商向店主支付 {amount} DT 充值后才能恢复在线。",
   "@driverWalletDepletedBody": {
     "placeholders": {
       "amount": {
@@ -668,5 +668,6 @@
     }
   },
   "ownerDriverPinWalletsHeading": "司机钱包",
-  "ownerDriverPinWalletsEmpty": "暂无已加载的 PIN 司机账户。"
+  "ownerDriverPinWalletsEmpty": "暂无已加载的 PIN 司机账户。",
+  "flightArrivalsSampleDataBanner": "仅为示例航班 — 后端未接入 AirLabs。请在 Taxi 项目目录的 `.env` 中设置 AIRLABS_API_KEY 并重启 API 服务。"
 }

@@ -252,7 +252,8 @@ def save_chat_message(
         return None, "not_found"
     if not _participant_ok(ride, user_id):
         return None, "forbidden"
-    if ride["status"] not in ("accepted", "ongoing"):
+    # Match list_messages / get_conversation: allow chat after completion or cancel.
+    if ride["status"] not in ("accepted", "ongoing", "completed", "cancelled"):
         return None, "chat_not_open"
 
     lang = (urow.get("preferred_language") or "en").strip() or "en"

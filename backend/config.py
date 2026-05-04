@@ -1,8 +1,18 @@
 import os
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_BACKEND_DIR = Path(__file__).resolve().parent
 
 try:
     from dotenv import load_dotenv
 
+    # Load env files regardless of Flask cwd:
+    # 1) `taxi/.env` at repo root (documented in `.env.example`)
+    # 2) `backend/.env` alongside this file (many local setups keep it here)
+    # Later loads do not overwrite vars already set (python-dotenv default).
+    load_dotenv(_REPO_ROOT / ".env")
+    load_dotenv(_BACKEND_DIR / ".env")
     load_dotenv()
 except ImportError:
     pass

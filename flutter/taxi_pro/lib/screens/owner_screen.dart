@@ -366,6 +366,7 @@ class _OwnerScreenState extends State<OwnerScreen> with SingleTickerProviderStat
   List<Map<String, dynamic>> _adminB2b = [];
   List<Map<String, dynamic>> _adminB2bBookings = [];
   List<Map<String, dynamic>> _flightArrivals = [];
+  String? _flightDataSource;
   List<Map<String, dynamic>> _fareRoutes = [];
   List<Map<String, dynamic>> _driverWalletBreakdown = [];
   List<Map<String, dynamic>> _driverRatings = [];
@@ -435,14 +436,17 @@ class _OwnerScreenState extends State<OwnerScreen> with SingleTickerProviderStat
       final m = await _api.ownerMetrics(t); final trips = await _api.listTrips(t);
       final adminRides = await _api.listAdminRides(t); final adminB2b = await _api.listAdminB2bTenants(t);
       final adminB2bBookings = await _api.listAdminB2bBookings(t); final adminMetrics = await _api.adminOwnerMetrics(t);
-      final flights = await _api.listAdminTunisiaFlightArrivals(t); final fareRoutes = await _api.listAdminFareRoutes(t);
+      final fr = await _api.listAdminTunisiaFlightArrivals(t);
+      final fareRoutes = await _api.listAdminFareRoutes(t);
       final driverWallets = await _api.listAdminDriverWalletBreakdown(t); final ratings = await _api.listAdminDriverRatings(t);
       if (!mounted) return;
       setState(() {
         _metrics = m; _adminMetrics = adminMetrics;
         _trips = trips.map((e) => {'id': e.id, 'date': e.date, 'route': e.route, 'fare': e.fare, 'commission': e.commission, 'type': e.type}).toList();
         _adminRides = adminRides; _adminB2b = adminB2b; _adminB2bBookings = adminB2bBookings;
-        _flightArrivals = flights; _fareRoutes = fareRoutes; _driverWalletBreakdown = driverWallets; _driverRatings = ratings;
+        _flightArrivals = fr.flights;
+        _flightDataSource = fr.source;
+        _fareRoutes = fareRoutes; _driverWalletBreakdown = driverWallets; _driverRatings = ratings;
         final ids = driverWallets.map((e) => (e['id'] as num?)?.toInt()).whereType<int>().toList();
         if (_topUpAccountId != null && !ids.contains(_topUpAccountId)) _topUpAccountId = null;
         _topUpAccountId ??= ids.isEmpty ? null : ids.first;
@@ -751,6 +755,32 @@ class _OwnerScreenState extends State<OwnerScreen> with SingleTickerProviderStat
           _DarkButton(label: l.adminLoadRidesBtn, icon: Icons.refresh_rounded, onPressed: _busy ? null : _refreshAll),
           const SizedBox(height: 16),
           _SectionHead(l.operatorTabTodaysArrivals),
+          if ((_flightDataSource ?? '').startsWith('demo'))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _C.yellowSoft,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _C.yellowDeep.withOpacity(0.35)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline_rounded, color: _C.charcoal, size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        l.flightArrivalsSampleDataBanner,
+                        style: const TextStyle(color: _C.textStrong, fontSize: 13, height: 1.35),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           if (_flightArrivals.isEmpty)
             _Module(child: Center(child: Padding(
               padding: const EdgeInsets.all(16),

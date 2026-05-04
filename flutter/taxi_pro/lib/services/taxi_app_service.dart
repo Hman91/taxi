@@ -189,9 +189,9 @@ class TaxiAppService {
         baseFare: baseFare,
       );
 
-  Future<List<Map<String, dynamic>>> listAdminTunisiaFlightArrivals(
-          String token) =>
-      _client.listAdminTunisiaFlightArrivals(token);
+  Future<({List<Map<String, dynamic>> flights, String? source})>
+      listAdminTunisiaFlightArrivals(String token) =>
+          _client.listAdminTunisiaFlightArrivals(token);
 
   Future<List<Map<String, dynamic>>> listAdminRides(
     String token, {

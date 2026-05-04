@@ -658,8 +658,8 @@
   "ownerSettingsCommissionHint": "Affichage uniquement — lier aux comptes chauffeurs pour des taux en direct.",
   "ownerSettingsRouteFaresHeading": "Tarifs de base des trajets (DT)",
   "ownerSaveRouteFare": "Enregistrer",
-  "driverWalletDepletedTitle": "Portefeuille vide",
-  "driverWalletDepletedBody": "Payez {amount} DT au propriétaire (via l’opérateur) pour recharger.",
+  "driverWalletDepletedTitle": "Payez pour repasser en ligne",
+  "driverWalletDepletedBody": "Votre portefeuille est à 0 DT. Payez {amount} DT au propriétaire (via l’opérateur) pour recharger et repasser en ligne.",
   "@driverWalletDepletedBody": {
     "placeholders": {
       "amount": {
@@ -668,5 +668,6 @@
     }
   },
   "ownerDriverPinWalletsHeading": "Portefeuilles conducteurs",
-  "ownerDriverPinWalletsEmpty": "Aucun compte conducteur PIN chargé."
+  "ownerDriverPinWalletsEmpty": "Aucun compte conducteur PIN chargé.",
+  "flightArrivalsSampleDataBanner": "Vols d'exemple uniquement — le serveur n'utilise pas AirLabs. Ajoutez AIRLABS_API_KEY dans un fichier `.env` à la racine du projet Taxi, puis redémarrez l'API."
 }

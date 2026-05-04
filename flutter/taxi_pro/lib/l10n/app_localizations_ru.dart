@@ -910,11 +910,12 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get driverWalletDepletedTitle => 'Кошелёк пуст';
+  String get driverWalletDepletedTitle =>
+      'Оплатите, чтобы снова выйти на линию';
 
   @override
   String driverWalletDepletedBody(int amount) {
-    return 'Внесите $amount DT владельцу (через оператора) для пополнения.';
+    return 'Баланс 0 DT. Внесите $amount DT владельцу (через оператора), чтобы пополнить и снова выйти на линию.';
   }
 
   @override
@@ -923,4 +924,8 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get ownerDriverPinWalletsEmpty =>
       'Нет загруженных PIN-аккаунтов водителей.';
+
+  @override
+  String get flightArrivalsSampleDataBanner =>
+      'Только примерные рейсы — бэкенд не использует AirLabs. Добавьте AIRLABS_API_KEY в файл `.env` в папке проекта Taxi и перезапустите API.';
 }

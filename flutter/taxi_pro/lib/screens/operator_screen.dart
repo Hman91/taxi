@@ -238,6 +238,7 @@ class _OperatorScreenState extends State<OperatorScreen>
   List<Map<String, dynamic>> _adminB2b = [];
   List<Map<String, dynamic>> _adminB2bBookings = [];
   List<Map<String, dynamic>> _flightArrivals = [];
+  String? _flightDataSource;
   List<Map<String, dynamic>> _driverRatings = [];
   int? _topUpAccountId;
   bool _busy = false;
@@ -292,7 +293,7 @@ class _OperatorScreenState extends State<OperatorScreen>
       final driverPins = await _api.listAdminDriverPinAccounts(t);
       final b2bTenants = await _api.listAdminB2bTenants(t);
       final b2bBookings = await _api.listAdminB2bBookings(t);
-      final flights = await _api.listAdminTunisiaFlightArrivals(t);
+      final fr = await _api.listAdminTunisiaFlightArrivals(t);
       final ratings = await _api.listAdminDriverRatings(t);
       setState(() {
         _trips = trips
@@ -310,7 +311,8 @@ class _OperatorScreenState extends State<OperatorScreen>
         _driverPinAccounts = driverPins;
         _adminB2b = b2bTenants;
         _adminB2bBookings = b2bBookings;
-        _flightArrivals = flights;
+        _flightArrivals = fr.flights;
+        _flightDataSource = fr.source;
         _driverRatings = ratings;
         final ids = driverPins
             .map((e) => (e['id'] as num?)?.toInt())
@@ -1006,6 +1008,32 @@ class _OperatorScreenState extends State<OperatorScreen>
         ),
         const SizedBox(height: 16),
         _SectionHead(l.operatorTabTodaysArrivals),
+        if ((_flightDataSource ?? '').startsWith('demo'))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _C.yellowSoft,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _C.yellowDeep.withOpacity(0.35)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline_rounded, color: _C.charcoal, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      l.flightArrivalsSampleDataBanner,
+                      style: const TextStyle(color: _C.textStrong, fontSize: 13, height: 1.35),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         if (_flightArrivals.isEmpty)
           _Module(
             child: Center(

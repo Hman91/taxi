@@ -897,11 +897,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get driverWalletDepletedTitle => '钱包为空';
+  String get driverWalletDepletedTitle => '付费后恢复在线';
 
   @override
   String driverWalletDepletedBody(int amount) {
-    return '请通过运营商向店主支付 $amount DT 以充值。';
+    return '钱包余额为 0 DT。请通过运营商向店主支付 $amount DT 充值后才能恢复在线。';
   }
 
   @override
@@ -909,4 +909,8 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ownerDriverPinWalletsEmpty => '暂无已加载的 PIN 司机账户。';
+
+  @override
+  String get flightArrivalsSampleDataBanner =>
+      '仅为示例航班 — 后端未接入 AirLabs。请在 Taxi 项目目录的 `.env` 中设置 AIRLABS_API_KEY 并重启 API 服务。';
 }

@@ -658,8 +658,8 @@
   "ownerSettingsCommissionHint": "Nur Anzeige — mit Fahrerkonten für Live-Sätze verknüpfen.",
   "ownerSettingsRouteFaresHeading": "Basispreise pro Route (DT)",
   "ownerSaveRouteFare": "Speichern",
-  "driverWalletDepletedTitle": "Wallet leer",
-  "driverWalletDepletedBody": "Zahlen Sie {amount} DT an den Eigentümer (über den Operator) zum Aufladen.",
+  "driverWalletDepletedTitle": "Zahlen, um wieder online zu gehen",
+  "driverWalletDepletedBody": "Ihr Guthaben ist 0 DT. Zahlen Sie {amount} DT an den Eigentümer (über den Operator), um aufzuladen und wieder online zu gehen.",
   "@driverWalletDepletedBody": {
     "placeholders": {
       "amount": {
@@ -668,5 +668,6 @@
     }
   },
   "ownerDriverPinWalletsHeading": "Fahrer-Wallets",
-  "ownerDriverPinWalletsEmpty": "Keine PIN-Fahrerkonten geladen."
+  "ownerDriverPinWalletsEmpty": "Keine PIN-Fahrerkonten geladen.",
+  "flightArrivalsSampleDataBanner": "Nur Beispiel-Flüge — das Backend nutzt AirLabs nicht. Legen Sie AIRLABS_API_KEY in einer `.env` im Taxi-Projektordner ab und starten Sie die API neu."
 }

@@ -897,11 +897,11 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get driverWalletDepletedTitle => 'المحفظة فارغة';
+  String get driverWalletDepletedTitle => 'ادفع للعودة متصلاً';
 
   @override
   String driverWalletDepletedBody(int amount) {
-    return 'ادفع $amount د.ت للمالك (عبر المشغّل) لإعادة الشحن.';
+    return 'محفظتك 0 د.ت. ادفع $amount د.ت للمالك (عبر المشغّل) لإعادة الشحن والعودة للعمل.';
   }
 
   @override
@@ -910,4 +910,8 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get ownerDriverPinWalletsEmpty =>
       'لا توجد حسابات سائقين (PIN) محمّلة.';
+
+  @override
+  String get flightArrivalsSampleDataBanner =>
+      'رحلات تجريبية فقط — الخادم لا يستخدم AirLabs. أضف AIRLABS_API_KEY إلى ملف `.env` في مجلد مشروع Taxi ثم أعد تشغيل الـ API.';
 }

@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
+import 'dart:async' show Timer, unawaited;
 import 'dart:convert';
+
+import 'package:flutter/material.dart';
 
 import '../api/client.dart';
 import '../api/models.dart';
@@ -18,6 +20,13 @@ import '../models/chat_message.dart';
 import '../services/chat_socket_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/taxi_app_service.dart';
+import '../utils/chat_unread_poll.dart'
+    show
+        cachedOrFetchConversationId,
+        computeUnreadChatDelta,
+        maxChatMessageId,
+        rideMayHaveConversation;
+import '../utils/int_from_json.dart';
 import '../widgets/locale_popup_menu.dart';
 import '../widgets/driver_ride_offer_card.dart';
 import 'ride_chat_screen.dart';
@@ -51,6 +60,11 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   int? _activeChatRideId;
   String? _message;
   bool _busy = false;
+  double? _lastWalletSample;
+  DateTime? _lastWalletDepletedNotifAt;
+  /// Dedupes alerts when gains first load while wallet is already 0 (no prev > 0 → 0 transition).
+  bool _walletDepletedNotifiedForZero = false;
+  Timer? _periodicRideTimer;
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
 
@@ -164,10 +178,23 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     if (!mounted) return;
     final event = (data['event'] ?? '').toString();
     if (event != 'wallet_depleted') return;
+    final wbRaw = data['wallet_balance'];
+    if (wbRaw is num) {
+      _lastWalletSample = wbRaw.toDouble();
+    }
+    final now = DateTime.now();
+    if (_lastWalletDepletedNotifAt != null &&
+        now.difference(_lastWalletDepletedNotifAt!) < const Duration(seconds: 10)) {
+      return;
+    }
+    _lastWalletDepletedNotifAt = now;
+    _walletDepletedNotifiedForZero = true;
     final loc = AppLocalizations.of(context)!;
     final amount =
         (data['required_topup_dt'] as num?)?.round() ?? 100;
-    final body = loc.driverWalletDepletedBody(amount);
+    final body = ((data['message'] ?? '').toString().trim().isNotEmpty)
+        ? (data['message'] as String).trim()
+        : loc.driverWalletDepletedBody(amount);
     _pushNotification(
       title: loc.driverWalletDepletedTitle,
       body: body,
@@ -180,6 +207,33 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
       title: loc.driverWalletDepletedTitle,
       body: body,
     );
+  }
+
+  Future<void> _pollWalletDepletionFromApi() async {
+    final t = _token;
+    if (t == null) return;
+    try {
+      final g = await _api.driverGains(t);
+      if (!mounted) return;
+      final wb = (g['wallet_balance'] as num?)?.toDouble() ?? 0.0;
+      final prev = _lastWalletSample;
+      _lastWalletSample = wb;
+      if (wb > 0) {
+        _walletDepletedNotifiedForZero = false;
+      } else if (wb <= 0) {
+        final crossedZero = prev != null && prev > 0;
+        final openedFreshAtZero =
+            prev == null && !_walletDepletedNotifiedForZero;
+        if (crossedZero || openedFreshAtZero) {
+          _onDriverWallet({
+            'event': 'wallet_depleted',
+            'wallet_balance': wb,
+            'required_topup_dt': 100,
+            'message': '',
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   void _connectRealtime() {
@@ -253,17 +307,16 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   }
 
   Future<int?> _resolveRideIdFromChatPayload(Map<String, dynamic> data) async {
-    final directRideId = (data['ride_id'] as num?)?.toInt();
+    final directRideId = intFromDynamic(data['ride_id']);
     if (directRideId != null) return directRideId;
-    final conversationId = (data['conversation_id'] as num?)?.toInt();
+    final conversationId = intFromDynamic(data['conversation_id']);
     if (conversationId == null) return null;
     final cached = _rideIdByConversationId[conversationId];
     if (cached != null) return cached;
     final t = _token;
     if (t == null) return null;
-    final candidates = _rides
-        .where((r) => r.status == 'accepted' || r.status == 'ongoing')
-        .toList();
+    final candidates =
+        _rides.where((r) => rideMayHaveConversation(r.status)).toList();
     for (final ride in candidates) {
       try {
         final info = await _api.getRideConversation(token: t, rideId: ride.id);
@@ -280,21 +333,42 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
 
   void _onChatMessage(Map<String, dynamic> data) async {
     if (!mounted) return;
-    final msg = ChatMessage.fromJson(data);
-    if (msg.senderUserId == _userId) return;
-    final rideId = await _resolveRideIdFromChatPayload(data);
-    if (!mounted) return;
-    if (rideId == null || _activeChatRideId == rideId) return;
-    final conversationId = (data['conversation_id'] as num?)?.toInt();
-    if (conversationId != null) {
-      _lastSeenMessageIdByConversationId[conversationId] = msg.id;
-      _conversationIdByRideId[rideId] = conversationId;
-      _rideIdByConversationId[conversationId] = rideId;
+    final ChatMessage msg;
+    try {
+      msg = ChatMessage.fromJson(data);
+    } catch (_) {
+      return;
     }
+    final uid = _userId;
+    if (uid == null || msg.senderUserId == uid) return;
+    var rideId = await _resolveRideIdFromChatPayload(data);
+    if (rideId == null && intFromDynamic(data['conversation_id']) != null) {
+      final tok = _token;
+      if (tok != null) {
+        try {
+          final list = await _api.listRides(tok);
+          if (!mounted) return;
+          setState(() => _rides = list);
+          await _syncConversationRideMap(list);
+        } catch (_) {}
+      }
+      if (!mounted) return;
+      rideId = await _resolveRideIdFromChatPayload(data);
+    }
+    if (!mounted || rideId == null) return;
+    final conversationId = intFromDynamic(data['conversation_id']);
+    final int rid = rideId;
+    if (conversationId != null) {
+      final prev = _lastSeenMessageIdByConversationId[conversationId] ?? 0;
+      if (msg.id > prev) _lastSeenMessageIdByConversationId[conversationId] = msg.id;
+      _conversationIdByRideId[rid] = conversationId;
+      _rideIdByConversationId[conversationId] = rid;
+    }
+    if (_activeChatRideId == rid) return;
     final loc = AppLocalizations.of(context)!;
     final body = msg.displayText.trim().isEmpty ? loc.openChatButton : msg.displayText;
     setState(() {
-      _unreadChatByRideId[rideId] = (_unreadChatByRideId[rideId] ?? 0) + 1;
+      _unreadChatByRideId[rid] = (_unreadChatByRideId[rid] ?? 0) + 1;
     });
     final senderName = (msg.senderName ?? '').trim();
     final title = senderName.isEmpty
@@ -304,17 +378,16 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
       title: title,
       body: body,
       event: 'chat_message',
-      rideId: rideId,
+      rideId: rid,
     );
-    LocalNotificationService.instance.show(title: title, body: body);
+    LocalNotificationService.instance.show(title: title, body: body, isChat: true);
   }
 
   Future<void> _syncConversationRideMap(List<Ride> rides) async {
     final t = _token;
     if (t == null) return;
-    final candidates = rides
-        .where((r) => r.status == 'accepted' || r.status == 'ongoing')
-        .toList();
+    final candidates =
+        rides.where((r) => rideMayHaveConversation(r.status)).toList();
     for (final ride in candidates) {
       try {
         final info = await _api.getRideConversation(token: t, rideId: ride.id);
@@ -330,41 +403,36 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     final uid = _userId;
     if (t == null || uid == null) return;
     final l = AppLocalizations.of(context)!;
-    final pairs = _conversationIdByRideId.entries.toList();
-    for (final entry in pairs) {
-      final rideId = entry.key;
-      final conversationId = entry.value;
-      if (_activeChatRideId == rideId) continue;
+    for (final ride
+        in _rides.where((r) => rideMayHaveConversation(r.status) && _isMine(r))) {
+      if (_activeChatRideId == ride.id) continue;
       try {
+        final conversationId = await cachedOrFetchConversationId(
+          api: _api,
+          token: t,
+          rideId: ride.id,
+          conversationIdByRideId: _conversationIdByRideId,
+          rideIdByConversationId: _rideIdByConversationId,
+        );
+        if (conversationId == null) continue;
+        _lastSeenMessageIdByConversationId.putIfAbsent(conversationId, () => 0);
         final msgs = await _api.listConversationMessages(
           token: t,
           conversationId: conversationId,
           limit: 20,
         );
         if (msgs.isEmpty) continue;
-        final prevSeen = _lastSeenMessageIdByConversationId[conversationId] ?? 0;
-        int maxId = prevSeen;
-        int incomingCount = 0;
-        ChatMessage? latestIncoming;
-        for (final m in msgs) {
-          if (m.id > maxId) maxId = m.id;
-          if (prevSeen > 0 && m.id > prevSeen && m.senderUserId != uid) {
-            incomingCount++;
-            if (latestIncoming == null || m.id > latestIncoming.id) {
-              latestIncoming = m;
-            }
-          }
-        }
-        if (prevSeen == 0) {
-          _lastSeenMessageIdByConversationId[conversationId] = maxId;
-          continue;
-        }
-        if (incomingCount > 0) {
+        final stored = _lastSeenMessageIdByConversationId[conversationId] ?? 0;
+        final delta = computeUnreadChatDelta(msgs: msgs, myUserId: uid, storedWatermark: stored);
+        _lastSeenMessageIdByConversationId[conversationId] = delta.newWatermark;
+        if (delta.incomingCount > 0) {
           if (!mounted) return;
+          final int rid = ride.id;
           setState(() {
-            _unreadChatByRideId[rideId] =
-                (_unreadChatByRideId[rideId] ?? 0) + incomingCount;
+            _unreadChatByRideId[rid] =
+                (_unreadChatByRideId[rid] ?? 0) + delta.incomingCount;
           });
+          final latestIncoming = delta.latestIncoming;
           final body = (latestIncoming?.displayText.trim().isNotEmpty ?? false)
               ? latestIncoming!.displayText
               : l.openChatButton;
@@ -376,13 +444,28 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
             title: title,
             body: body,
             event: 'chat_message_fallback',
-            rideId: rideId,
+            rideId: rid,
           );
-          LocalNotificationService.instance.show(title: title, body: body);
+          LocalNotificationService.instance.show(title: title, body: body, isChat: true);
         }
-        _lastSeenMessageIdByConversationId[conversationId] = maxId;
       } catch (_) {}
     }
+  }
+
+  void _startPeriodicRideSync() {
+    _periodicRideTimer?.cancel();
+    Future<void> tick() async {
+      if (!mounted || _token == null || _userId == null) return;
+      if (_busy) {
+        await _pollChatUnreadFallback();
+      } else {
+        await _refreshRides(quiet: true);
+      }
+    }
+
+    unawaited(tick());
+    _periodicRideTimer =
+        Timer.periodic(const Duration(seconds: 4), (_) => unawaited(tick()));
   }
 
   Future<void> _login() async {
@@ -422,6 +505,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
         _selectedLocation = _locations.isNotEmpty ? _locations.first : '';
       }
       await _refreshRides();
+      _startPeriodicRideSync();
     } on TaxiAccountDisabledException {
       if (!mounted) return;
       final l = AppLocalizations.of(context)!;
@@ -452,10 +536,12 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     }
   }
 
-  Future<void> _refreshRides() async {
+  Future<void> _refreshRides({bool quiet = false}) async {
     final t = _token;
     if (t == null) return;
-    setState(() => _busy = true);
+    if (!quiet) {
+      setState(() => _busy = true);
+    }
     try {
       final list = await _api.listRides(t);
       final mine = list.where((r) => _isMine(r)).toList();
@@ -474,10 +560,13 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
       });
       await _syncConversationRideMap(list);
       await _pollChatUnreadFallback();
+      await _pollWalletDepletionFromApi();
     } catch (e) {
-      setState(() => _message = e.toString());
+      if (!quiet) {
+        setState(() => _message = e.toString());
+      }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && !quiet) setState(() => _busy = false);
     }
   }
 
@@ -537,6 +626,26 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     }
   }
 
+  Future<void> _primeReadWatermarkAfterChat({
+    required String token,
+    required int conversationId,
+    required int rideId,
+  }) async {
+    try {
+      final msgs = await _api.listConversationMessages(
+        token: token,
+        conversationId: conversationId,
+        limit: 150,
+      );
+      if (!mounted) return;
+      final maxId = maxChatMessageId(msgs);
+      setState(() {
+        _lastSeenMessageIdByConversationId[conversationId] = maxId;
+        _unreadChatByRideId.remove(rideId);
+      });
+    } catch (_) {}
+  }
+
   Future<void> _openChat(Ride ride) async {
     final l = AppLocalizations.of(context)!;
     final t = _token;
@@ -551,25 +660,27 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
             .showSnackBar(SnackBar(content: Text(l.chatUnavailable)));
         return;
       }
+      final cid = info.conversationId;
       setState(() {
         _activeChatRideId = ride.id;
         _unreadChatByRideId.remove(ride.id);
       });
-      _rideIdByConversationId[info.conversationId] = ride.id;
-      _conversationIdByRideId[ride.id] = info.conversationId;
+      _rideIdByConversationId[cid] = ride.id;
+      _conversationIdByRideId[ride.id] = cid;
       await Navigator.of(context).push<void>(
         MaterialPageRoute<void>(
           builder: (_) => RideChatScreen(
             token: t,
             myUserId: uid,
             rideId: ride.id,
-            conversationId: info.conversationId,
+            conversationId: cid,
           ),
         ),
       );
       if (mounted && _activeChatRideId == ride.id) {
         setState(() => _activeChatRideId = null);
       }
+      await _primeReadWatermarkAfterChat(token: t, conversationId: cid, rideId: ride.id);
       await _refreshRides();
     } catch (e) {
       if (mounted) {
@@ -585,6 +696,8 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   }
 
   void _logout() {
+    _periodicRideTimer?.cancel();
+    _periodicRideTimer = null;
     _socket.disconnect();
     setState(() {
       _token = null;
@@ -595,6 +708,8 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
       _rides = [];
       _unreadChatByRideId.clear();
       _rideIdByConversationId.clear();
+      _conversationIdByRideId.clear();
+      _lastSeenMessageIdByConversationId.clear();
       _activeChatRideId = null;
       _dismissedPendingRideIds.clear();
       _notifications.clear();
@@ -625,56 +740,45 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
           onPressed: _busy ? null : () => _complete(r),
           child: Text(l10n.completeRide)));
     }
-    w.add(_chatActionButton(r, l10n));
+    if (rideMayHaveConversation(r.status)) {
+      w.add(_chatActionButton(r, l10n));
+    }
     return w;
   }
 
   Widget _chatActionButton(Ride ride, AppLocalizations l10n) {
     final unread = _unreadChatByRideId[ride.id] ?? 0;
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
-        ),
-        borderRadius: BorderRadius.circular(20),
+    return Badge(
+      label: Text(
+        unread > 99 ? '99+' : '$unread',
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
       ),
-      child: TextButton.icon(
-        onPressed: _busy ? null : () => _openChat(ride),
-        icon: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
-        label: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.openChatButton,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            if (unread > 0) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: Colors.redAccent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  unread > 99 ? '99+' : '$unread',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ],
+      padding: EdgeInsets.only(left: unread > 0 ? 6 : 0, right: unread > 0 ? 6 : 0),
+      isLabelVisible: unread > 0,
+      offset: const Offset(8, -6),
+      backgroundColor: Colors.redAccent,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+          ),
+          borderRadius: BorderRadius.circular(20),
         ),
-        style: TextButton.styleFrom(
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: TextButton.icon(
+          onPressed: _busy ? null : () => _openChat(ride),
+          icon: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
+          label: Text(
+            l10n.openChatButton,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
         ),
       ),
     );
@@ -712,6 +816,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
 
   @override
   void dispose() {
+    _periodicRideTimer?.cancel();
     _socket.disconnect();
     _email.dispose();
     _password.dispose();

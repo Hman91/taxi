@@ -367,8 +367,8 @@ class TaxiApiClient {
     return Map<String, dynamic>.from(body['route'] as Map);
   }
 
-  Future<List<Map<String, dynamic>>> listAdminTunisiaFlightArrivals(
-      String token) async {
+  Future<({List<Map<String, dynamic>> flights, String? source})>
+      listAdminTunisiaFlightArrivals(String token) async {
     final r = await _http.get(
       _u('/api/admin/tunisia-flight-arrivals'),
       headers: _jsonHeaders(bearer: token),
@@ -379,7 +379,10 @@ class TaxiApiClient {
     }
     final body = jsonDecode(r.body) as Map<String, dynamic>;
     final list = body['flights'] as List<dynamic>;
-    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    final flights =
+        list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    final source = body['flight_data_source'] as String?;
+    return (flights: flights, source: source);
   }
 
   Future<List<Map<String, dynamic>>> listAdminRides(
