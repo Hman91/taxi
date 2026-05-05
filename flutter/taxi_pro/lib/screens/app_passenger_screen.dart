@@ -22,6 +22,7 @@ import '../models/app_notification.dart';
 import '../models/chat_message.dart';
 import '../services/chat_socket_service.dart';
 import '../services/local_notification_service.dart';
+import '../services/session_store.dart';
 import '../services/taxi_app_service.dart';
 import '../widgets/locale_popup_menu.dart';
 import '../utils/chat_unread_poll.dart';
@@ -231,6 +232,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   }
 
   Future<void> _bootstrapFromSession(AppLoginResponse r) async {
+    await SessionStore.saveAppPassenger(r);
     if (!userChoseLocaleThisSession.value) applyPreferredLanguageToApp(r.preferredLanguage);
     else { try { await _api.patchPreferredLanguage(token: r.accessToken, preferredLanguage: appLocale.value.languageCode); } catch (_) {} }
     rememberCurrentLocaleForRole(AppUiRole.passenger);
@@ -519,6 +521,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       else { try { await _api.patchPreferredLanguage(token: r.accessToken, preferredLanguage: appLocale.value.languageCode); } catch (_) {} }
       rememberCurrentLocaleForRole(AppUiRole.passenger);
       _token = r.accessToken; _userId = r.userId;
+      await SessionStore.saveAppPassenger(r);
       _connectRealtime(); _startRidesPolling();
       _fares = await _api.getAirportFares(); await _detectPassengerLocation(); await _refreshRides();
       if (!mounted) return;
@@ -555,6 +558,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       else { try { await _api.patchPreferredLanguage(token: r.accessToken, preferredLanguage: appLocale.value.languageCode); } catch (_) {} }
       rememberCurrentLocaleForRole(AppUiRole.passenger);
       _token = r.accessToken; _userId = r.userId;
+      await SessionStore.saveAppPassenger(r);
       _connectRealtime(); _startRidesPolling();
       _fares = await _api.getAirportFares(); await _detectPassengerLocation(); await _refreshRides();
     } on TaxiAccountDisabledException { if (!mounted) return; setState(() => _message = l.accountDisabledContactAdmin); }
@@ -786,6 +790,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
 
   void _logout() {
     if (kIsWeb) unawaited(_googleSignIn.signOut());
+    unawaited(SessionStore.clear());
     _ridesPollingTimer?.cancel(); _socket.disconnect();
     setState(() { _token = null; _userId = null; _rides = []; _notifications.clear(); _unreadChatByRideId.clear(); _rideIdByConversationId.clear(); _conversationIdByRideId.clear(); _lastSeenMessageIdByConversationId.clear(); _activeChatRideId = null; _message = null; });
   }

@@ -11,6 +11,7 @@ import '../api/models.dart';
 import '../app_locale.dart';
 import '../config.dart';
 import '../l10n/app_localizations.dart';
+import '../services/session_store.dart';
 import '../services/taxi_app_service.dart';
 import '../theme/taxi_app_theme.dart';
 import '../widgets/locale_popup_menu.dart';
@@ -225,6 +226,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
   Future<void> _loginPassengerEmail() async {
     final r = await _api.loginApp(email: _emailCtrl.text.trim(), password: _passwordCtrl.text);
+    await SessionStore.saveAppPassenger(r);
     await _go(AppPassengerScreen(initialSession: r));
   }
 
@@ -246,17 +248,20 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       if (phone == null || phone.trim().isEmpty) return;
       r = await _api.loginGoogle(idToken: hasIdToken ? idToken : null, accessToken: hasAccessToken ? accessToken : null, phone: phone.trim());
     }
+    await SessionStore.saveAppPassenger(r);
     await _go(AppPassengerScreen(initialSession: r));
   }
 
   Future<void> _registerPassenger() async {
     await _api.registerAppUser(email: _regEmailCtrl.text.trim(), password: _regPassCtrl.text, role: 'user', displayName: _regNameCtrl.text.trim(), phone: _regPhoneCtrl.text.trim());
     final r = await _api.loginApp(email: _regEmailCtrl.text.trim(), password: _regPassCtrl.text);
+    await SessionStore.saveAppPassenger(r);
     await _go(AppPassengerScreen(initialSession: r));
   }
 
   Future<void> _loginDriver() async {
     final r = await _api.loginDriverPin(phone: _driverPhoneCtrl.text.trim(), pin: _driverPinCtrl.text.trim());
+    await SessionStore.saveDriverPin(r);
     await _go(DriverScreen(initialSession: r));
   }
 
@@ -269,9 +274,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     }
     if (picked == null) throw TaxiApiException('invalid_credentials', 401);
     final r = picked;
-    if (r.role == 'owner') { await _go(OwnerScreen(initialToken: r.accessToken)); return; }
-    if (r.role == 'operator') { await _go(OperatorScreen(initialToken: r.accessToken)); return; }
-    if (r.role == 'b2b') { await _go(B2bScreen(initialSession: r)); return; }
+    if (r.role == 'owner') { await SessionStore.saveOwnerToken(r.accessToken); await _go(OwnerScreen(initialToken: r.accessToken)); return; }
+    if (r.role == 'operator') { await SessionStore.saveOperatorToken(r.accessToken); await _go(OperatorScreen(initialToken: r.accessToken)); return; }
+    if (r.role == 'b2b') { await SessionStore.saveB2b(r); await _go(B2bScreen(initialSession: r)); return; }
     throw TaxiApiException('invalid_role', 400);
   }
 

@@ -19,6 +19,7 @@ import '../models/app_notification.dart';
 import '../models/chat_message.dart';
 import '../services/chat_socket_service.dart';
 import '../services/local_notification_service.dart';
+import '../services/session_store.dart';
 import '../services/taxi_app_service.dart';
 import '../utils/chat_unread_poll.dart'
     show
@@ -32,7 +33,8 @@ import '../widgets/driver_ride_offer_card.dart';
 import 'ride_chat_screen.dart';
 
 class AppDriverScreen extends StatefulWidget {
-  const AppDriverScreen({super.key});
+  const AppDriverScreen({super.key, this.initialSession});
+  final AppLoginResponse? initialSession;
 
   @override
   State<AppDriverScreen> createState() => _AppDriverScreenState();
@@ -74,7 +76,34 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       restoreUiRoleLocale(AppUiRole.driver);
+      final s = widget.initialSession;
+      if (s != null && _token == null) unawaited(_bootstrapFromSession(s));
     });
+  }
+
+  Future<void> _bootstrapFromSession(AppLoginResponse r) async {
+    if (!userChoseLocaleThisSession.value) {
+      applyPreferredLanguageToApp(r.preferredLanguage);
+    }
+    rememberCurrentLocaleForRole(AppUiRole.driver);
+    _token = r.accessToken;
+    _userId = r.userId;
+    await SessionStore.saveAppDriver(r);
+    _unreadChatByRideId.clear();
+    _rideIdByConversationId.clear();
+    _conversationIdByRideId.clear();
+    _lastSeenMessageIdByConversationId.clear();
+    _activeChatRideId = null;
+    _connectRealtime();
+    final fares = await _api.getAirportFares();
+    final loc = AppLocalizations.of(context)!;
+    _locations = _startsFromRouteKeys(fares.keys, loc);
+    if (_selectedLocation.isEmpty || !_locations.contains(_selectedLocation)) {
+      _selectedLocation = _locations.isNotEmpty ? _locations.first : '';
+    }
+    await _refreshRides();
+    _startPeriodicRideSync();
+    if (mounted) setState(() {});
   }
 
   void _pushNotification({
@@ -469,7 +498,6 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   }
 
   Future<void> _login() async {
-    final loc = AppLocalizations.of(context)!;
     setState(() {
       _busy = true;
       _message = null;
@@ -489,23 +517,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
           );
         } catch (_) {}
       }
-      rememberCurrentLocaleForRole(AppUiRole.driver);
-      _token = r.accessToken;
-      _userId = r.userId;
-      _unreadChatByRideId.clear();
-      _rideIdByConversationId.clear();
-      _conversationIdByRideId.clear();
-      _lastSeenMessageIdByConversationId.clear();
-      _activeChatRideId = null;
-      _connectRealtime();
-      final fares = await _api.getAirportFares();
-      _locations = _startsFromRouteKeys(fares.keys, loc);
-      if (_selectedLocation.isEmpty ||
-          !_locations.contains(_selectedLocation)) {
-        _selectedLocation = _locations.isNotEmpty ? _locations.first : '';
-      }
-      await _refreshRides();
-      _startPeriodicRideSync();
+      await _bootstrapFromSession(r);
     } on TaxiAccountDisabledException {
       if (!mounted) return;
       final l = AppLocalizations.of(context)!;
@@ -696,6 +708,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   }
 
   void _logout() {
+    unawaited(SessionStore.clear());
     _periodicRideTimer?.cancel();
     _periodicRideTimer = null;
     _socket.disconnect();

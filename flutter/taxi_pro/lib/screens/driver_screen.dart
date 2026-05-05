@@ -19,6 +19,7 @@ import '../models/chat_message.dart';
 import '../services/chat_socket_service.dart';
 import '../config.dart';
 import '../services/local_notification_service.dart';
+import '../services/session_store.dart';
 import '../services/taxi_app_service.dart';
 import '../theme/taxi_app_theme.dart';
 import '../widgets/locale_popup_menu.dart';
@@ -269,8 +270,23 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
 
+  Future<void> _goToHome() async {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+    );
+  }
+
+  Future<void> _logout() async {
+    await SessionStore.clear();
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+    );
+  }
+
   Widget _appBarHomeLogo() => GestureDetector(
-    onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const UnifiedLoginScreen())),
+    onTap: () => unawaited(_goToHome()),
     child: Container(
       width: 32, height: 32,
       decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(9)),
@@ -291,6 +307,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   }
 
   Future<void> _bootstrapFromSession(DriverPinLoginResponse r) async {
+    await SessionStore.saveDriverPin(r);
     final l = AppLocalizations.of(context)!;
     if (!userChoseLocaleThisSession.value) applyPreferredLanguageToApp(r.preferredLanguage);
     rememberCurrentLocaleForRole(AppUiRole.driver);
@@ -386,6 +403,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     setState(() { _busy = true; _message = null; });
     try {
       final r = await _api.loginDriverPin(phone: _phoneController.text.trim(), pin: _pinController.text.trim());
+      await SessionStore.saveDriverPin(r);
       if (!userChoseLocaleThisSession.value) { applyPreferredLanguageToApp(r.preferredLanguage); }
       else { try { await _api.patchPreferredLanguage(token: r.accessToken, preferredLanguage: appLocale.value.languageCode); } catch (_) {} }
       rememberCurrentLocaleForRole(AppUiRole.driver);
@@ -1272,6 +1290,12 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
         title: _appBarHomeLogo(),
         actions: [
           LocalePopupMenuButton(authToken: _token, uiRole: AppUiRole.driver),
+          if (_token != null)
+            IconButton(
+              onPressed: () => unawaited(_logout()),
+              tooltip: l.logoutApp,
+              icon: const Icon(Icons.logout_rounded, color: _C.yellow),
+            ),
           if (_token != null)
             IconButton(
               onPressed: _showNotifications,

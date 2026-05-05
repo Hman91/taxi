@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import '../app_locale.dart' show AppUiRole, restoreUiRoleLocale;
 import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
 import '../l10n/ride_status_localization.dart';
+import '../services/session_store.dart';
 import '../services/taxi_app_service.dart';
 import '../theme/taxi_app_theme.dart';
 import '../widgets/locale_popup_menu.dart';
@@ -242,12 +244,23 @@ class _OperatorScreenState extends State<OperatorScreen>
   List<Map<String, dynamic>> _driverRatings = [];
   int? _topUpAccountId;
   bool _busy = false;
+  Future<void> _goToHome() async {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+    );
+  }
+
+  Future<void> _logout() async {
+    await SessionStore.clear();
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+    );
+  }
+
   Widget _appBarHomeLogo() => GestureDetector(
-        onTap: () {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
-          );
-        },
+        onTap: () => unawaited(_goToHome()),
         child: Container(
           width: 32,
           height: 32,
@@ -272,6 +285,7 @@ class _OperatorScreenState extends State<OperatorScreen>
       final r = await _api.login(
           role: 'operator', secret: _secretController.text.trim());
       _token = r.accessToken;
+      await SessionStore.saveOperatorToken(r.accessToken);
       await _refreshAll();
     } catch (e) {
       setState(() => _message = e.toString());
@@ -548,6 +562,7 @@ class _OperatorScreenState extends State<OperatorScreen>
       final t = widget.initialToken;
       if (t != null && t.isNotEmpty && _token == null) {
         _token = t;
+        unawaited(SessionStore.saveOperatorToken(t));
         _refreshAll();
       }
     });
@@ -1772,8 +1787,14 @@ class _OperatorScreenState extends State<OperatorScreen>
         title: _appBarHomeLogo(),
         backgroundColor: _C.charcoal,
         foregroundColor: Colors.white,
-        actions: const [
-          LocalePopupMenuButton(uiRole: AppUiRole.operator),
+        actions: [
+          const LocalePopupMenuButton(uiRole: AppUiRole.operator),
+          if (_token != null)
+            IconButton(
+              onPressed: () => unawaited(_logout()),
+              tooltip: l.logoutApp,
+              icon: const Icon(Icons.logout_rounded),
+            ),
         ],
       ),
       body: _token == null

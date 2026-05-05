@@ -13,6 +13,7 @@ import '../models/app_notification.dart';
 import '../models/chat_message.dart';
 import '../services/chat_socket_service.dart';
 import '../services/local_notification_service.dart';
+import '../services/session_store.dart';
 import '../services/taxi_app_service.dart';
 import '../utils/chat_unread_poll.dart'
     show
@@ -179,12 +180,23 @@ class _B2bScreenState extends State<B2bScreen> {
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
   int _rideUnread(int rideId) => _unreadChatByRideId[rideId] ?? 0;
+  Future<void> _goToHome() async {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+    );
+  }
+
+  Future<void> _logout() async {
+    await SessionStore.clear();
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+    );
+  }
+
   Widget _appBarHomeLogo() => GestureDetector(
-        onTap: () {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
-          );
-        },
+        onTap: () => unawaited(_goToHome()),
         child: Container(
           width: 32,
           height: 32,
@@ -234,6 +246,7 @@ class _B2bScreenState extends State<B2bScreen> {
     try {
       final auth =
           await _api.login(role: 'b2b', secret: _secretController.text.trim());
+      await SessionStore.saveB2b(auth);
       final fares = await _api.getAirportFares();
       _token = auth.accessToken;
       _appToken = auth.appAccessToken;
@@ -711,6 +724,7 @@ class _B2bScreenState extends State<B2bScreen> {
   }
 
   Future<void> _bootstrapFromSession(LoginResponse auth) async {
+    await SessionStore.saveB2b(auth);
     final fares = await _api.getAirportFares();
     _token = auth.accessToken;
     _appToken = auth.appAccessToken;
@@ -760,6 +774,12 @@ class _B2bScreenState extends State<B2bScreen> {
         foregroundColor: Colors.white,
         actions: [
           const LocalePopupMenuButton(uiRole: AppUiRole.b2b),
+          if (_ok)
+            IconButton(
+              onPressed: () => unawaited(_logout()),
+              tooltip: l.logoutApp,
+              icon: const Icon(Icons.logout_rounded),
+            ),
           if (_ok)
             IconButton(
               onPressed: _showNotifications,

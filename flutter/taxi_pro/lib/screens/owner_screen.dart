@@ -4,6 +4,7 @@
 // All original logic preserved — only UI/structure improved
 // ═══════════════════════════════════════════════════════════════
 
+import 'dart:async' show unawaited;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
@@ -13,6 +14,7 @@ import '../app_locale.dart' show AppUiRole, restoreUiRoleLocale;
 import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
 import '../l10n/ride_status_localization.dart';
+import '../services/session_store.dart';
 import '../services/taxi_app_service.dart';
 import '../theme/taxi_app_theme.dart';
 import '../widgets/locale_popup_menu.dart';
@@ -372,12 +374,23 @@ class _OwnerScreenState extends State<OwnerScreen> with SingleTickerProviderStat
   List<Map<String, dynamic>> _driverRatings = [];
   final Map<int, TextEditingController> _fareCtrls = {};
   double _commissionDemoPercent = 10.0;
+  Future<void> _goToHome() async {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+    );
+  }
+
+  Future<void> _logout() async {
+    await SessionStore.clear();
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+    );
+  }
+
   Widget _appBarHomeLogo() => GestureDetector(
-    onTap: () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
-      );
-    },
+    onTap: () => unawaited(_goToHome()),
     child: Container(
       width: 32,
       height: 32,
@@ -424,7 +437,9 @@ class _OwnerScreenState extends State<OwnerScreen> with SingleTickerProviderStat
     setState(() { _busy = true; _message = null; });
     try {
       final r = await _api.login(role: 'owner', secret: _secretController.text.trim());
-      _token = r.accessToken; await _refreshAll();
+      _token = r.accessToken;
+      await SessionStore.saveOwnerToken(r.accessToken);
+      await _refreshAll();
     } catch (e) { setState(() => _message = e.toString()); }
     finally { setState(() => _busy = false); }
   }
@@ -1231,6 +1246,7 @@ class _OwnerScreenState extends State<OwnerScreen> with SingleTickerProviderStat
     final t = widget.initialToken;
     if (t != null && t.isNotEmpty) {
       _token = t;
+      unawaited(SessionStore.saveOwnerToken(t));
       WidgetsBinding.instance.addPostFrameCallback((_) { if (!mounted) return; _refreshAll(); });
     }
     WidgetsBinding.instance.addPostFrameCallback((_) { if (!mounted) return; restoreUiRoleLocale(AppUiRole.owner); });
@@ -1258,6 +1274,12 @@ class _OwnerScreenState extends State<OwnerScreen> with SingleTickerProviderStat
         title: _appBarHomeLogo(),
         actions: [
           const LocalePopupMenuButton(uiRole: AppUiRole.owner),
+          if (_token != null)
+            IconButton(
+              onPressed: () => unawaited(_logout()),
+              tooltip: l.logoutApp,
+              icon: const Icon(Icons.logout_rounded, color: _C.yellow),
+            ),
           if (_token != null)
             IconButton(onPressed: _busy ? null : _refreshAll, icon: const Icon(Icons.refresh_rounded, color: _C.yellow)),
         ],
