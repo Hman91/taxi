@@ -225,7 +225,9 @@ def _send_password_reset_email(email: str, token: str) -> bool:
         return False
     port = int(current_app.config.get("SMTP_PORT") or 587)
     username = (current_app.config.get("SMTP_USERNAME") or "").strip()
-    password = str(current_app.config.get("SMTP_PASSWORD") or "")
+    password = str(current_app.config.get("SMTP_PASSWORD") or "").strip()
+    # Gmail app passwords are often copied with spaces every 4 chars.
+    password_compact = password.replace(" ", "")
     use_tls = bool(current_app.config.get("SMTP_USE_TLS", True))
 
     msg = EmailMessage()
@@ -247,7 +249,7 @@ def _send_password_reset_email(email: str, token: str) -> bool:
             if use_tls:
                 server.starttls()
             if username:
-                server.login(username, password)
+                server.login(username, password_compact)
             server.send_message(msg)
         return True
     except Exception:

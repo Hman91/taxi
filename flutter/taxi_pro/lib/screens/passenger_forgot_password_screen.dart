@@ -33,6 +33,37 @@ class _PassengerForgotPasswordScreenState
   bool _requested = false;
   bool _obscureNewPassword = true;
 
+  String _t({
+    required String en,
+    String? ar,
+    String? fr,
+    String? de,
+    String? es,
+    String? it,
+    String? ru,
+    String? zh,
+  }) {
+    final code = Localizations.localeOf(context).languageCode.toLowerCase();
+    switch (code) {
+      case 'ar':
+        return ar ?? en;
+      case 'fr':
+        return fr ?? en;
+      case 'de':
+        return de ?? en;
+      case 'es':
+        return es ?? en;
+      case 'it':
+        return it ?? en;
+      case 'ru':
+        return ru ?? en;
+      case 'zh':
+        return zh ?? en;
+      default:
+        return en;
+    }
+  }
+
   InputDecoration _fd(String label, {IconData? icon, Widget? suffixIcon}) =>
       InputDecoration(
         labelText: label,
@@ -74,8 +105,26 @@ class _PassengerForgotPasswordScreenState
         SnackBar(
           content: Text(
             emailSent
-                ? 'Reset code sent to your email.'
-                : 'Reset email could not be sent. Check SMTP settings.',
+                ? _t(
+                    en: 'Reset code sent to your email.',
+                    ar: 'تم إرسال رمز إعادة التعيين إلى بريدك الإلكتروني.',
+                    fr: 'Le code de réinitialisation a été envoyé à votre e-mail.',
+                    de: 'Der Zurücksetzungscode wurde an Ihre E-Mail gesendet.',
+                    es: 'El código de restablecimiento fue enviado a tu correo.',
+                    it: 'Il codice di reimpostazione è stato inviato alla tua email.',
+                    ru: 'Код сброса отправлен на вашу электронную почту.',
+                    zh: '重置验证码已发送到您的邮箱。',
+                  )
+                : _t(
+                    en: 'Reset email could not be sent. Check SMTP settings.',
+                    ar: 'تعذّر إرسال رسالة إعادة التعيين. تحقق من إعدادات SMTP.',
+                    fr: 'Impossible d’envoyer l’e-mail de réinitialisation. Vérifiez les paramètres SMTP.',
+                    de: 'Die Reset-E-Mail konnte nicht gesendet werden. Prüfen Sie die SMTP-Einstellungen.',
+                    es: 'No se pudo enviar el correo de restablecimiento. Revisa la configuración SMTP.',
+                    it: 'Impossibile inviare l’email di reimpostazione. Controlla le impostazioni SMTP.',
+                    ru: 'Не удалось отправить письмо для сброса. Проверьте настройки SMTP.',
+                    zh: '无法发送重置邮件。请检查 SMTP 设置。',
+                  ),
           ),
         ),
       );
@@ -108,7 +157,20 @@ class _PassengerForgotPasswordScreenState
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password updated. Please sign in.')),
+        SnackBar(
+          content: Text(
+            _t(
+              en: 'Password updated. Please sign in.',
+              ar: 'تم تحديث كلمة المرور. يرجى تسجيل الدخول.',
+              fr: 'Mot de passe mis à jour. Veuillez vous connecter.',
+              de: 'Passwort aktualisiert. Bitte melden Sie sich an.',
+              es: 'Contraseña actualizada. Inicia sesión, por favor.',
+              it: 'Password aggiornata. Accedi di nuovo.',
+              ru: 'Пароль обновлён. Пожалуйста, войдите.',
+              zh: '密码已更新。请登录。',
+            ),
+          ),
+        ),
       );
       Navigator.of(context).pop();
     } on TaxiApiException catch (e) {
@@ -133,9 +195,18 @@ class _PassengerForgotPasswordScreenState
       appBar: AppBar(
         backgroundColor: _C.yellow,
         centerTitle: true,
-        title: const Text(
-          'Forgot Password',
-          style: TextStyle(color: _C.charcoal, fontWeight: FontWeight.w800),
+        title: Text(
+          _t(
+            en: 'Forgot Password',
+            ar: 'نسيت كلمة المرور',
+            fr: 'Mot de passe oublié',
+            de: 'Passwort vergessen',
+            es: 'Olvidé mi contraseña',
+            it: 'Password dimenticata',
+            ru: 'Забыли пароль',
+            zh: '忘记密码',
+          ),
+          style: const TextStyle(color: _C.charcoal, fontWeight: FontWeight.w800),
         ),
         iconTheme: const IconThemeData(color: _C.charcoal),
         actions: const [LocalePopupMenuButton(uiRole: AppUiRole.passenger)],
@@ -153,9 +224,18 @@ class _PassengerForgotPasswordScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Reset your passenger password',
-                  style: TextStyle(
+                Text(
+                  _t(
+                    en: 'Reset your passenger password',
+                    ar: 'إعادة تعيين كلمة مرور الراكب',
+                    fr: 'Réinitialisez votre mot de passe passager',
+                    de: 'Setzen Sie Ihr Fahrgast-Passwort zurück',
+                    es: 'Restablece tu contraseña de pasajero',
+                    it: 'Reimposta la password passeggero',
+                    ru: 'Сбросьте пароль пассажира',
+                    zh: '重置乘客密码',
+                  ),
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                     color: _C.charcoal,
@@ -165,7 +245,19 @@ class _PassengerForgotPasswordScreenState
                 TextField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: _fd('E-mail', icon: Icons.alternate_email_rounded),
+                  decoration: _fd(
+                    _t(
+                      en: 'E-mail',
+                      ar: 'البريد الإلكتروني',
+                      fr: 'E-mail',
+                      de: 'E-Mail',
+                      es: 'Correo electrónico',
+                      it: 'E-mail',
+                      ru: 'Эл. почта',
+                      zh: '电子邮箱',
+                    ),
+                    icon: Icons.alternate_email_rounded,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
@@ -181,9 +273,18 @@ class _PassengerForgotPasswordScreenState
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
-                    label: const Text(
-                      'Send reset code',
-                      style: TextStyle(fontWeight: FontWeight.w800),
+                    label: Text(
+                      _t(
+                        en: 'Send reset code',
+                        ar: 'إرسال رمز إعادة التعيين',
+                        fr: 'Envoyer le code',
+                        de: 'Reset-Code senden',
+                        es: 'Enviar código de restablecimiento',
+                        it: 'Invia codice di reimpostazione',
+                        ru: 'Отправить код сброса',
+                        zh: '发送重置验证码',
+                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
                 ),
@@ -203,14 +304,35 @@ class _PassengerForgotPasswordScreenState
                 children: [
                   TextField(
                     controller: _codeCtrl,
-                    decoration: _fd('Reset code', icon: Icons.vpn_key_outlined),
+                    decoration: _fd(
+                      _t(
+                        en: 'Reset code',
+                        ar: 'رمز إعادة التعيين',
+                        fr: 'Code de réinitialisation',
+                        de: 'Reset-Code',
+                        es: 'Código de restablecimiento',
+                        it: 'Codice di reimpostazione',
+                        ru: 'Код сброса',
+                        zh: '重置验证码',
+                      ),
+                      icon: Icons.vpn_key_outlined,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: _passwordCtrl,
                     obscureText: _obscureNewPassword,
                     decoration: _fd(
-                      'New password',
+                      _t(
+                        en: 'New password',
+                        ar: 'كلمة المرور الجديدة',
+                        fr: 'Nouveau mot de passe',
+                        de: 'Neues Passwort',
+                        es: 'Nueva contraseña',
+                        it: 'Nuova password',
+                        ru: 'Новый пароль',
+                        zh: '新密码',
+                      ),
                       icon: Icons.lock_outline_rounded,
                       suffixIcon: IconButton(
                         onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
@@ -235,9 +357,18 @@ class _PassengerForgotPasswordScreenState
                           borderRadius: BorderRadius.circular(999),
                         ),
                       ),
-                      label: const Text(
-                        'Update password',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                      label: Text(
+                        _t(
+                          en: 'Update password',
+                          ar: 'تحديث كلمة المرور',
+                          fr: 'Mettre à jour le mot de passe',
+                          de: 'Passwort aktualisieren',
+                          es: 'Actualizar contraseña',
+                          it: 'Aggiorna password',
+                          ru: 'Обновить пароль',
+                          zh: '更新密码',
+                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
                   ),

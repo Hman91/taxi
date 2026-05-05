@@ -354,7 +354,7 @@ class _B2bScreenState extends State<B2bScreen> {
   List<String> _filteredRouteKeys([_B2bTripOption? option]) {
     final selected = option ?? _tripOption;
     final all = _fares.keys.toList();
-    return all.where((k) {
+    final filtered = all.where((k) {
       final parts = k.split(airportRouteKeySeparator);
       if (parts.length < 2) return false;
       final start = parts.first.trim();
@@ -367,8 +367,21 @@ class _B2bScreenState extends State<B2bScreen> {
         case _B2bTripOption.currentToAirport:
           return !_isAirport(start) && _isAirport(dest);
       }
-    }).toList()
-      ..sort((a, b) => a.compareTo(b));
+    }).toList();
+    final preferredStart = (_nearestZoneName ?? '').trim();
+    if (preferredStart.isNotEmpty) {
+      filtered.sort((a, b) {
+        final aStart = a.split(airportRouteKeySeparator).first.trim();
+        final bStart = b.split(airportRouteKeySeparator).first.trim();
+        final aPref = aStart == preferredStart ? 0 : 1;
+        final bPref = bStart == preferredStart ? 0 : 1;
+        if (aPref != bPref) return aPref.compareTo(bPref);
+        return a.compareTo(b);
+      });
+      return filtered;
+    }
+    filtered.sort((a, b) => a.compareTo(b));
+    return filtered;
   }
 
   List<_B2bTripOption> _availableTripOptions() {

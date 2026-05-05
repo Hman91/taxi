@@ -656,7 +656,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     const airportZones = <String>{'مطار قرطاج', 'مطار النفيضة', 'مطار المنستير'};
     bool isAirport(String s) => airportZones.contains(s.trim());
     List<String> filterByOption(_TripOptionType option) {
-      return allRouteKeys.where((key) {
+      final filtered = allRouteKeys.where((key) {
         final parts = key.split(airportRouteKeySeparator);
         if (parts.length < 2) return false;
         final start = parts.first.trim();
@@ -670,6 +670,18 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
             return !isAirport(start) && isAirport(dest);
         }
       }).toList();
+      final preferredStart = (_locationPlaceName ?? '').trim();
+      if (preferredStart.isEmpty) return filtered;
+      filtered.sort((a, b) {
+        final aStart = a.split(airportRouteKeySeparator).first.trim();
+        final bStart = b.split(airportRouteKeySeparator).first.trim();
+        final aPref = aStart == preferredStart ? 0 : 1;
+        final bPref = bStart == preferredStart ? 0 : 1;
+        if (aPref != bPref) return aPref.compareTo(bPref);
+        return localizedRouteKeyForDisplay(l, a)
+            .compareTo(localizedRouteKeyForDisplay(l, b));
+      });
+      return filtered;
     }
 
     final availableOptions = _TripOptionType.values
