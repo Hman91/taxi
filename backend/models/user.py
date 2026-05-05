@@ -17,4 +17,6 @@ class User(db.Model):
     photo_url = db.Column(db.Text, nullable=True)
     preferred_language = db.Column(String(10), nullable=False, server_default="en")
     is_enabled = db.Column(Boolean, nullable=False, server_default=true())
+    password_reset_token_hash = db.Column(db.String(64), nullable=True)
+    password_reset_expires_at = db.Column(DateTime(timezone=True), nullable=True)
     created_at = db.Column(DateTime(timezone=True), server_default=func.now())

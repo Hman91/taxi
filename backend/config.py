@@ -64,3 +64,14 @@ class Config:
         "GOOGLE_OAUTH_CLIENT_ID",
         "962065998165-o2v10060s3l65ve7n8leee7hn28ddh6d.apps.googleusercontent.com",
     )
+    PASSWORD_RESET_DEV_MODE = os.environ.get("PASSWORD_RESET_DEV_MODE", "0")
+    SMTP_HOST = os.environ.get("SMTP_HOST", "").strip()
+    SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+    SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "").strip()
+    SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+    SMTP_FROM_EMAIL = os.environ.get("SMTP_FROM_EMAIL", "").strip()
+    SMTP_USE_TLS = str(os.environ.get("SMTP_USE_TLS", "1")).strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )

@@ -47,15 +47,21 @@ def _select_top5_driver_user_ids_for_pickup(pickup_zone: str) -> List[int]:
             # Depleted wallet drivers must not receive new dispatch offers.
             continue
         current_zone = (db_module.driver_current_zone_by_user_id(uid) or "").strip()
-        # Hard business rule: offer only to drivers currently in the same pickup zone.
-        if current_zone != pickup_norm:
-            continue
         lat = d.get("last_lat")
         lng = d.get("last_lng")
-        if target is not None and lat is not None and lng is not None:
-            score = _distance_km(float(lat), float(lng), target[0], target[1])
+        if current_zone == pickup_norm:
+            # Strongly prefer drivers already in the pickup zone.
+            score = 0.0
+        elif target is not None and lat is not None and lng is not None:
+            # Next best: nearest by recent GPS point.
+            score = 1.0 + _distance_km(float(lat), float(lng), target[0], target[1])
+        elif target is not None and current_zone in _ZONE_COORDS:
+            # Fallback: zone-to-zone proximity when GPS point is missing.
+            cz = _ZONE_COORDS[current_zone]
+            score = 2.0 + _distance_km(cz[0], cz[1], target[0], target[1])
         else:
-            score = 0.05 + (float(uid) / 1_000_000.0)
+            # Last fallback: deterministic stable ordering.
+            score = 3.0 + (float(uid) / 1_000_000.0)
         scored.append((score, uid))
     scored.sort(key=lambda x: x[0])
     return [uid for _, uid in scored[:5]]

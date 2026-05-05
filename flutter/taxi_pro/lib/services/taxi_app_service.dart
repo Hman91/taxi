@@ -44,6 +44,22 @@ class TaxiAppService {
         phone: phone,
       );
 
+  Future<bool> requestPasswordReset({
+    required String email,
+  }) =>
+      _client.requestPasswordReset(email: email);
+
+  Future<void> confirmPasswordReset({
+    required String email,
+    required String resetCode,
+    required String newPassword,
+  }) =>
+      _client.confirmPasswordReset(
+        email: email,
+        resetCode: resetCode,
+        newPassword: newPassword,
+      );
+
   Future<Map<String, dynamic>> registerAppUser({
     required String email,
     required String password,

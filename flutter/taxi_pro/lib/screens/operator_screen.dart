@@ -232,6 +232,7 @@ class _OperatorScreenState extends State<OperatorScreen>
   final _topUpAmountController = TextEditingController(text: '10');
   TabController? _tabController;
   bool _obscureOperatorPassword = true;
+  bool _obscureNewDriverPin = true;
   String? _token;
   String? _message;
   List<Map<String, dynamic>> _trips = [];
@@ -1510,7 +1511,7 @@ class _OperatorScreenState extends State<OperatorScreen>
                   const SizedBox(height: 8),
                   TextField(
                     controller: _newDriverPin,
-                    obscureText: true,
+                    obscureText: _obscureNewDriverPin,
                     decoration: _fd(
                       _uiText(
                         en: 'PIN',
@@ -1522,7 +1523,17 @@ class _OperatorScreenState extends State<OperatorScreen>
                         ru: 'PIN',
                         zh: 'PIN',
                       ),
-                      suffixIcon: const Icon(Icons.pin_outlined, size: 18),
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(
+                          () => _obscureNewDriverPin = !_obscureNewDriverPin,
+                        ),
+                        icon: Icon(
+                          _obscureNewDriverPin
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          size: 18,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),

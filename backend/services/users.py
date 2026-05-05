@@ -2,12 +2,18 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import secrets
+import smtplib
+from datetime import datetime, timedelta, timezone
+from email.message import EmailMessage
 from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import urlopen
 from typing import Any, Dict, Optional, Tuple
 
 from flask import current_app
+from sqlalchemy import select
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from .. import db as db_module
@@ -206,3 +212,94 @@ def authenticate_google_access_token(access_token: str) -> Tuple[Optional[Dict[s
     if not email or not email_verified:
         return None, "google_email_not_verified"
     return _upsert_google_user(email)
+
+
+def _reset_token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _send_password_reset_email(email: str, token: str) -> bool:
+    host = (current_app.config.get("SMTP_HOST") or "").strip()
+    from_email = (current_app.config.get("SMTP_FROM_EMAIL") or "").strip()
+    if not host or not from_email:
+        return False
+    port = int(current_app.config.get("SMTP_PORT") or 587)
+    username = (current_app.config.get("SMTP_USERNAME") or "").strip()
+    password = str(current_app.config.get("SMTP_PASSWORD") or "")
+    use_tls = bool(current_app.config.get("SMTP_USE_TLS", True))
+
+    msg = EmailMessage()
+    msg["Subject"] = "Taxi App password reset code"
+    msg["From"] = from_email
+    msg["To"] = email
+    msg.set_content(
+        "\n".join(
+            [
+                "You requested a password reset.",
+                f"Your reset code is: {token}",
+                "This code expires in 20 minutes.",
+                "If you did not request this, ignore this email.",
+            ]
+        )
+    )
+    try:
+        with smtplib.SMTP(host, port, timeout=10) as server:
+            if use_tls:
+                server.starttls()
+            if username:
+                server.login(username, password)
+            server.send_message(msg)
+        return True
+    except Exception:
+        current_app.logger.exception("password_reset_email_failed email=%s", email)
+        return False
+
+
+def request_password_reset(email: str) -> Tuple[Dict[str, Any], Optional[str]]:
+    """Generate a reset token for user/driver accounts.
+
+    Response is intentionally generic to avoid user enumeration.
+    """
+    email_n = (email or "").strip().lower()
+    generic = {"ok": True}
+    if not email_n:
+        return generic, None
+    u = db.session.scalars(select(User).where(User.email == email_n)).first()
+    if u is None or u.role not in ("user", "driver"):
+        return generic, None
+    token = secrets.token_urlsafe(8)[:8].upper()
+    u.password_reset_token_hash = _reset_token_hash(token)
+    u.password_reset_expires_at = datetime.now(timezone.utc) + timedelta(minutes=20)
+    db.session.commit()
+    out: Dict[str, Any] = {"ok": True}
+    sent_email = _send_password_reset_email(email_n, token)
+    out["email_sent"] = sent_email
+    # Always log once for local testing/support.
+    current_app.logger.info("password_reset_code email=%s code=%s", email_n, token)
+    return out, None
+
+
+def confirm_password_reset(
+    email: str, reset_code: str, new_password: str
+) -> Tuple[Dict[str, Any], Optional[str]]:
+    email_n = (email or "").strip().lower()
+    token = (reset_code or "").strip().upper()
+    password = new_password or ""
+    if not email_n or not token or not password:
+        return {}, "missing_fields"
+    if len(password) < 6:
+        return {}, "weak_password"
+    u = db.session.scalars(select(User).where(User.email == email_n)).first()
+    if u is None:
+        return {}, "invalid_reset_code"
+    if not u.password_reset_token_hash or not u.password_reset_expires_at:
+        return {}, "invalid_reset_code"
+    if datetime.now(timezone.utc) > u.password_reset_expires_at:
+        return {}, "reset_code_expired"
+    if _reset_token_hash(token) != u.password_reset_token_hash:
+        return {}, "invalid_reset_code"
+    u.password_hash = generate_password_hash(password)
+    u.password_reset_token_hash = None
+    u.password_reset_expires_at = None
+    db.session.commit()
+    return {"ok": True}, None

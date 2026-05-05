@@ -358,6 +358,7 @@ class _OwnerScreenState extends State<OwnerScreen> with SingleTickerProviderStat
   int? _topUpAccountId;
   TabController? _tabController;
   bool _obscurePassword = true;
+  bool _obscureNewDriverPin = true;
   String? _token;
   String? _message;
   bool _busy = false;
@@ -969,7 +970,19 @@ class _OwnerScreenState extends State<OwnerScreen> with SingleTickerProviderStat
             const SizedBox(height: 8),
             TextField(controller: _newDriverName, decoration: _fd(l.operatorDriverNameLabel, icon: Icons.badge_outlined)),
             const SizedBox(height: 8),
-            TextField(controller: _newDriverPin, obscureText: true, decoration: _fd('PIN', icon: Icons.pin_outlined)),
+            TextField(
+              controller: _newDriverPin,
+              obscureText: _obscureNewDriverPin,
+              decoration: _fd('PIN', icon: Icons.pin_outlined).copyWith(
+                suffixIcon: IconButton(
+                  onPressed: () => setState(() => _obscureNewDriverPin = !_obscureNewDriverPin),
+                  icon: Icon(
+                    _obscureNewDriverPin ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    color: _C.textSoft,
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 8),
             TextField(controller: _newDriverCarModel, decoration: _fd(l.operatorCarModelLabel, icon: Icons.directions_car_outlined)),
             const SizedBox(height: 8),

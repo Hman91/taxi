@@ -245,6 +245,33 @@ def fare_routes_seed_defaults(rows: List[Dict[str, Any]]) -> int:
     return created
 
 
+def fare_routes_upsert_defaults(rows: List[Dict[str, Any]]) -> int:
+    """Insert missing default fare routes without touching existing configured rows."""
+    existing_rows = db.session.execute(select(FareRoute.start, FareRoute.destination)).all()
+    existing = {(str(s).strip(), str(d).strip()) for s, d in existing_rows}
+    created = 0
+    for i, row in enumerate(rows, start=1):
+        start = str(row["start"]).strip()
+        destination = str(row["destination"]).strip()
+        if (start, destination) in existing:
+            continue
+        db.session.add(
+            FareRoute(
+                start=start,
+                destination=destination,
+                distance_km=float(row.get("distance_km", 0.0) or 0.0),
+                base_fare=float(row["base_fare"]),
+                is_enabled=bool(row.get("is_enabled", True)),
+                sort_order=int(row.get("sort_order", i * 10)),
+            )
+        )
+        existing.add((start, destination))
+        created += 1
+    if created > 0:
+        db.session.commit()
+    return created
+
+
 def driver_pin_by_phone(phone: str) -> Optional[Dict[str, Any]]:
     row = db.session.scalars(
         select(DriverPinAccount).where(DriverPinAccount.phone == phone.strip())

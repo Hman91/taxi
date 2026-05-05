@@ -28,6 +28,7 @@ import '../widgets/locale_popup_menu.dart';
 import '../utils/chat_unread_poll.dart';
 import '../utils/int_from_json.dart';
 import '../widgets/passenger_google_sign_in_button.dart';
+import 'passenger_forgot_password_screen.dart';
 import 'ride_chat_screen.dart';
 import 'unified_login_screen.dart';
 
@@ -63,8 +64,8 @@ InputDecoration _fd(String label, {IconData? icon}) => InputDecoration(
 );
 
 class _YellowButton extends StatelessWidget {
-  const _YellowButton({required this.label, required this.onPressed, this.icon, this.small = false});
-  final String label; final VoidCallback? onPressed; final IconData? icon; final bool small;
+  const _YellowButton({required this.label, required this.onPressed, this.icon, this.small = false, this.fontSize});
+  final String label; final VoidCallback? onPressed; final IconData? icon; final bool small; final double? fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +82,7 @@ class _YellowButton extends StatelessWidget {
           ),
           child: Center(child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (icon != null) ...[Icon(icon, color: _C.charcoal, size: small ? 14 : 18), const SizedBox(width: 6)],
-            Text(label, style: TextStyle(color: _C.charcoal, fontWeight: FontWeight.w900, fontSize: small ? 12 : 14, letterSpacing: 0.3)),
+            Text(label, style: TextStyle(color: _C.charcoal, fontWeight: FontWeight.w900, fontSize: fontSize ?? (small ? 12 : 14), letterSpacing: 0.3)),
           ])),
         ),
       ),
@@ -144,6 +145,12 @@ class _SectionLabel extends StatelessWidget {
   ]);
 }
 
+enum _TripOptionType {
+  airportToTourist,
+  currentToTourist,
+  currentToAirport,
+}
+
 // ─────────────────────────────────────────────────────────────
 class AppPassengerScreen extends StatefulWidget {
   const AppPassengerScreen({super.key, this.initialSession});
@@ -168,6 +175,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   Map<String, double> _fares = {};
   String? _locationText;
   String? _locationPlaceName;
+  double? _nearestZoneDistanceKm;
   String? _locationError;
   bool _locating = false;
   String? _token;
@@ -183,6 +191,8 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   int? _activeChatRideId;
   String? _message;
   bool _busy = false;
+  bool _obscurePassword = true;
+  bool _obscureSignupPassword = true;
   bool _backendLoginInFlight = false;
   StreamSubscription<GoogleSignInAccount?>? _googleUserSub;
   Timer? _ridesPollingTimer;
@@ -277,20 +287,34 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) { setState(() => _locationError = l10n.passengerLocationPermissionDenied); return; }
       final position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
-      final nearestZone = _nearestZoneFor(position.latitude, position.longitude);
+      final nearest = _nearestZoneFor(position.latitude, position.longitude);
       if (!mounted) return;
-      setState(() { _locationText = '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}'; _locationPlaceName = nearestZone; });
+      setState(() {
+        _locationText =
+            '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
+        _locationPlaceName = nearest.zone;
+        _nearestZoneDistanceKm = nearest.distanceMeters == null
+            ? null
+            : nearest.distanceMeters! / 1000.0;
+      });
     } catch (e) { if (!mounted) return; setState(() => _locationError = e.toString()); }
     finally { if (mounted) setState(() => _locating = false); }
   }
 
-  String? _nearestZoneFor(double lat, double lng) {
-    String? bestZone; double? bestDist;
+  ({String? zone, double? distanceMeters}) _nearestZoneFor(double lat, double lng) {
+    String? bestZone;
+    double? bestDist;
     for (final e in _zoneCoords.entries) {
       final d = Geolocator.distanceBetween(lat, lng, e.value.lat, e.value.lng);
       if (bestDist == null || d < bestDist) { bestDist = d; bestZone = e.key; }
     }
-    return bestZone;
+    return (zone: bestZone, distanceMeters: bestDist);
+  }
+
+  Color _distanceColor(double km) {
+    if (km < 3.0) return _C.success;
+    if (km <= 10.0) return _C.yellowDeep;
+    return _C.danger;
   }
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
@@ -625,12 +649,58 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   Future<void> _requestRide() async {
     final l = AppLocalizations.of(context)!;
     if (_fares.isEmpty) { setState(() => _message = l.adminNoRidesLoaded); return; }
-    final routeKeys = _fares.keys.toList()..sort((a, b) => localizedRouteKeyForDisplay(l, a).compareTo(localizedRouteKeyForDisplay(l, b)));
-    if (routeKeys.isEmpty) { setState(() => _message = l.noRidesYetApp); return; }
-    String selectedRouteKey = routeKeys.first;
-    if ((_locationPlaceName ?? '').trim().isNotEmpty) {
-      for (final key in routeKeys) { final parts = key.split(airportRouteKeySeparator); if (parts.isNotEmpty && parts.first.trim() == _locationPlaceName!.trim()) { selectedRouteKey = key; break; } }
+    final allRouteKeys = _fares.keys.toList()
+      ..sort((a, b) =>
+          localizedRouteKeyForDisplay(l, a).compareTo(localizedRouteKeyForDisplay(l, b)));
+    if (allRouteKeys.isEmpty) { setState(() => _message = l.noRidesYetApp); return; }
+    const airportZones = <String>{'مطار قرطاج', 'مطار النفيضة', 'مطار المنستير'};
+    bool isAirport(String s) => airportZones.contains(s.trim());
+    List<String> filterByOption(_TripOptionType option) {
+      return allRouteKeys.where((key) {
+        final parts = key.split(airportRouteKeySeparator);
+        if (parts.length < 2) return false;
+        final start = parts.first.trim();
+        final dest = parts[1].trim();
+        switch (option) {
+          case _TripOptionType.airportToTourist:
+            return isAirport(start) && !isAirport(dest);
+          case _TripOptionType.currentToTourist:
+            return !isAirport(start) && !isAirport(dest);
+          case _TripOptionType.currentToAirport:
+            return !isAirport(start) && isAirport(dest);
+        }
+      }).toList();
     }
+
+    final availableOptions = _TripOptionType.values
+        .where((o) => filterByOption(o).isNotEmpty)
+        .toList();
+    if (availableOptions.isEmpty) {
+      setState(() => _message = l.noRidesYetApp);
+      return;
+    }
+
+    String optionLabel(_TripOptionType option) {
+      switch (option) {
+        case _TripOptionType.airportToTourist:
+          return 'Airport → Tourist zone';
+        case _TripOptionType.currentToTourist:
+          return 'Current location → Tourist zone';
+        case _TripOptionType.currentToAirport:
+          return 'Current location → Airport';
+      }
+    }
+
+    _TripOptionType selectedTripOption = availableOptions.first;
+    final preferredCurrentTourist = availableOptions.contains(_TripOptionType.currentToTourist);
+    final preferredCurrentAirport = availableOptions.contains(_TripOptionType.currentToAirport);
+    if (preferredCurrentTourist) {
+      selectedTripOption = _TripOptionType.currentToTourist;
+    } else if (preferredCurrentAirport) {
+      selectedTripOption = _TripOptionType.currentToAirport;
+    }
+    List<String> routeKeys = filterByOption(selectedTripOption);
+    String selectedRouteKey = routeKeys.first;
     String promoCode = ''; Map<String, dynamic>? quote; bool? ok;
     final promoCtrl = TextEditingController();
     Future<void> recalcQuote(StateSetter ss) async {
@@ -654,6 +724,37 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const _SectionLabel('Book a Ride'),
               const SizedBox(height: 18),
+              if (availableOptions.length > 1) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _C.surfaceAlt,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _C.border),
+                  ),
+                  child: DropdownButton<_TripOptionType>(
+                    value: selectedTripOption,
+                    isExpanded: true,
+                    underline: const SizedBox.shrink(),
+                    items: availableOptions
+                        .map((o) => DropdownMenuItem<_TripOptionType>(
+                              value: o,
+                              child: Text(optionLabel(o),
+                                  style: const TextStyle(fontSize: 13)),
+                            ))
+                        .toList(),
+                    onChanged: (v) async {
+                      if (v == null) return;
+                      selectedTripOption = v;
+                      routeKeys = filterByOption(v);
+                      if (routeKeys.isEmpty) return;
+                      selectedRouteKey = routeKeys.first;
+                      await recalcQuote(ss);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                 decoration: BoxDecoration(color: _C.surfaceAlt, borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.border)),
@@ -681,7 +782,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
               Row(children: [
                 Expanded(child: GestureDetector(onTap: () => Navigator.pop(ctx, false), child: Container(height: 46, decoration: BoxDecoration(color: _C.surfaceAlt, borderRadius: BorderRadius.circular(50), border: Border.all(color: _C.border)), child: Center(child: Text(l.genericCancel, style: const TextStyle(color: _C.textMid, fontWeight: FontWeight.w700)))))),
                 const SizedBox(width: 10),
-                Expanded(child: _YellowButton(label: l.requestRideButton, onPressed: quote == null ? null : () { promoCode = promoCtrl.text.trim(); Navigator.pop(ctx, true); })),
+                Expanded(child: _YellowButton(label: l.requestRideButton, fontSize: 11, onPressed: quote == null ? null : () { promoCode = promoCtrl.text.trim(); Navigator.pop(ctx, true); })),
               ]),
             ]),
           ),
@@ -880,7 +981,34 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
               const SizedBox(height: 14),
               TextField(controller: _emailCtrl, decoration: _fd(l.emailLabel, icon: Icons.alternate_email_rounded)),
               const SizedBox(height: 10),
-              TextField(controller: _passwordCtrl, obscureText: true, decoration: _fd(l.passwordLabel, icon: Icons.lock_outline_rounded)),
+              TextField(
+                controller: _passwordCtrl,
+                obscureText: _obscurePassword,
+                decoration: _fd(l.passwordLabel, icon: Icons.lock_outline_rounded).copyWith(
+                  suffixIcon: IconButton(
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      color: _C.charcoal,
+                    ),
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _busy
+                      ? null
+                      : () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const PassengerForgotPasswordScreen(),
+                            ),
+                          );
+                        },
+                  child: const Text('Forgot password?'),
+                ),
+              ),
               const SizedBox(height: 16),
               _YellowButton(label: l.signInApp, icon: Icons.login_rounded, onPressed: _busy ? null : _loginWithEmailPassword),
             ])),
@@ -910,7 +1038,19 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
               const SizedBox(height: 10),
               TextField(controller: _signupPhoneCtrl, decoration: _fd(l.operatorPhoneLabel, icon: Icons.phone_outlined)),
               const SizedBox(height: 10),
-              TextField(controller: _signupPasswordCtrl, obscureText: true, decoration: _fd(l.passwordLabel, icon: Icons.lock_outline_rounded)),
+              TextField(
+                controller: _signupPasswordCtrl,
+                obscureText: _obscureSignupPassword,
+                decoration: _fd(l.passwordLabel, icon: Icons.lock_outline_rounded).copyWith(
+                  suffixIcon: IconButton(
+                    onPressed: () => setState(() => _obscureSignupPassword = !_obscureSignupPassword),
+                    icon: Icon(
+                      _obscureSignupPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      color: _C.charcoal,
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 onPressed: _busy ? null : _pickPassengerSignupImage,
@@ -950,7 +1090,31 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               leading: Container(width: 36, height: 36, decoration: BoxDecoration(color: _C.yellowSoft, borderRadius: BorderRadius.circular(10), border: Border.all(color: _C.yellowDeep)), child: const Icon(Icons.my_location_rounded, color: _C.charcoal, size: 18)),
               title: Text(_locationPlaceName != null ? localizedPlaceName(l, _locationPlaceName) : l.passengerLocationCurrent, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-              subtitle: Text(_locationPlaceName != null ? '($_locationText)' : (_locationText ?? (_locating ? l.passengerLocationDetecting : (_locationError ?? l.passengerLocationUnavailable))), style: const TextStyle(color: _C.textSoft, fontSize: 11)),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _locationPlaceName != null
+                        ? '($_locationText)'
+                        : (_locationText ??
+                            (_locating
+                                ? l.passengerLocationDetecting
+                                : (_locationError ??
+                                    l.passengerLocationUnavailable))),
+                    style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                  ),
+                  if (_nearestZoneDistanceKm != null &&
+                      (_locationPlaceName ?? '').trim().isNotEmpty)
+                    Text(
+                      'Nearest zone: ${localizedPlaceName(l, _locationPlaceName)} (${_nearestZoneDistanceKm!.toStringAsFixed(1)} km)',
+                      style: TextStyle(
+                        color: _distanceColor(_nearestZoneDistanceKm!),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                ],
+              ),
               trailing: IconButton(onPressed: _locating ? null : _detectPassengerLocation, icon: const Icon(Icons.refresh_rounded, color: _C.textMid, size: 18)),
             )),
             // Book

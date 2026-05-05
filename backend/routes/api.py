@@ -357,6 +357,33 @@ def login_app() -> Tuple[Any, int]:
     )
 
 
+@bp.post("/auth/forgot-password-request")
+def forgot_password_request() -> Tuple[Any, int]:
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip()
+    out, err = users_service.request_password_reset(email)
+    if err:
+        return jsonify({"error": err}), 400
+    return jsonify(out), 200
+
+
+@bp.post("/auth/forgot-password-confirm")
+def forgot_password_confirm() -> Tuple[Any, int]:
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip()
+    reset_code = (data.get("reset_code") or "").strip()
+    new_password = data.get("new_password") or ""
+    out, err = users_service.confirm_password_reset(
+        email=email,
+        reset_code=reset_code,
+        new_password=new_password,
+    )
+    if err:
+        code = 410 if err == "reset_code_expired" else 400
+        return jsonify({"error": err}), code
+    return jsonify(out), 200
+
+
 @bp.post("/auth/login-google")
 def login_google() -> Tuple[Any, int]:
     """Passenger Google sign-in using Google ID token or access token."""

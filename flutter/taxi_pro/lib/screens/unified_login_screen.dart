@@ -177,6 +177,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   final _driverPinCtrl = TextEditingController();
   final _codeCtrl = TextEditingController();
   bool _busy = false;
+  bool _obscureDriverPin = true;
+  bool _obscureAccessCode = true;
   String? _message;
 
   late final GoogleSignIn _googleSignIn = GoogleSignIn(
@@ -398,7 +400,19 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                         const SizedBox(height: 10),
                         TextField(controller: _driverPhoneCtrl, decoration: _fd('Phone', icon: Icons.phone_outlined)),
                         const SizedBox(height: 10),
-                        TextField(controller: _driverPinCtrl, obscureText: true, decoration: _fd('PIN', icon: Icons.pin_outlined)),
+                        TextField(
+                          controller: _driverPinCtrl,
+                          obscureText: _obscureDriverPin,
+                          decoration: _fd('PIN', icon: Icons.pin_outlined).copyWith(
+                            suffixIcon: IconButton(
+                              onPressed: () => setState(() => _obscureDriverPin = !_obscureDriverPin),
+                              icon: Icon(
+                                _obscureDriverPin ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                color: _C.textSoft,
+                              ),
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 14),
                         _DarkButton(label: 'Driver Sign In', icon: Icons.local_taxi_rounded, onPressed: _busy ? null : () => _run(_loginDriver)),
                         const SizedBox(height: 20),
@@ -407,7 +421,19 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                         const SizedBox(height: 16),
                         const _SectionLabel('Owner / Operator / B2B'),
                         const SizedBox(height: 10),
-                        TextField(controller: _codeCtrl, obscureText: true, decoration: _fd('Access Code', icon: Icons.vpn_key_outlined)),
+                        TextField(
+                          controller: _codeCtrl,
+                          obscureText: _obscureAccessCode,
+                          decoration: _fd('Access Code', icon: Icons.vpn_key_outlined).copyWith(
+                            suffixIcon: IconButton(
+                              onPressed: () => setState(() => _obscureAccessCode = !_obscureAccessCode),
+                              icon: Icon(
+                                _obscureAccessCode ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                color: _C.textSoft,
+                              ),
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 14),
                         _DarkButton(label: 'Sign In with Code', icon: Icons.shield_outlined, onPressed: _busy ? null : () => _run(_loginByCodeAutoDetect)),
                       ],

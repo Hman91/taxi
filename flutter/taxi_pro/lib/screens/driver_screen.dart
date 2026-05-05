@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../api/models.dart';
 import '../app_locale.dart' show
@@ -234,6 +235,10 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   final _pinController = TextEditingController(text: '1234');
   List<String> _locations = [];
   String _location = '';
+  String? _locationText;
+  String? _locationError;
+  bool _locating = false;
+  double? _nearestZoneDistanceKm;
   String? _token;
   int? _userId;
   int? _driverId;
@@ -265,10 +270,109 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   DateTime? _lastWalletDepletedNotifAt;
   /// Dedupes alerts when gains first load while wallet is already 0 (no prev > 0 → 0 transition).
   bool _walletDepletedNotifiedForZero = false;
+  bool _obscurePin = true;
   Timer? _ridesPollingTimer;
   TabController? _tabController;
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
+
+  static const Map<String, _ZoneCoord> _zoneCoords = {
+    'مطار قرطاج': _ZoneCoord(36.8508, 10.2272),
+    'مطار النفيضة': _ZoneCoord(36.0758, 10.4386),
+    'مطار المنستير': _ZoneCoord(35.7581, 10.7547),
+    'وسط سوسة': _ZoneCoord(35.8256, 10.63699),
+    'الحمامات': _ZoneCoord(36.4000, 10.6167),
+    'نابل': _ZoneCoord(36.4561, 10.7376),
+    'القنطاوي': _ZoneCoord(35.8920, 10.5950),
+    'Sidi Bou Saïd': _ZoneCoord(36.8710, 10.3470),
+    'La Marsa': _ZoneCoord(36.8780, 10.3240),
+    'Gammarth': _ZoneCoord(36.9170, 10.2870),
+    'Carthage': _ZoneCoord(36.8520, 10.3230),
+    'Musée du Bardo': _ZoneCoord(36.8100, 10.1400),
+    'Médina de Tunis': _ZoneCoord(36.8000, 10.1700),
+    'Byrsa Hill': _ZoneCoord(36.8527, 10.3295),
+    'Lac de Tunis': _ZoneCoord(36.8400, 10.2400),
+    'Geant': _ZoneCoord(36.8420, 10.2860),
+    'Azur city': _ZoneCoord(36.7410, 10.2150),
+    'tunisia mall': _ZoneCoord(36.8430, 10.2810),
+    'Nabeul': _ZoneCoord(36.4510, 10.7360),
+    'Hammamet': _ZoneCoord(36.4000, 10.6160),
+    'Yasmine Hammamet': _ZoneCoord(36.3650, 10.5360),
+    'Friguia Park': _ZoneCoord(36.1240, 10.4410),
+    'Hergla park': _ZoneCoord(36.0270, 10.5090),
+    'mall of sousse': _ZoneCoord(35.8290, 10.6350),
+    'Skanes': _ZoneCoord(35.7650, 10.8100),
+    'Marina de Monastir': _ZoneCoord(35.7770, 10.8260),
+    'mahdia': _ZoneCoord(35.5050, 11.0630),
+    'Skifa el Kahla': _ZoneCoord(35.5057, 11.0620),
+    'Borj el Kebir': _ZoneCoord(35.5030, 11.0610),
+  };
+
+  ({String? zone, double? distanceMeters}) _nearestZoneFor(double lat, double lng) {
+    String? bestZone;
+    double? bestDist;
+    for (final zone in _locations) {
+      final z = _zoneCoords[zone];
+      if (z == null) continue;
+      final d = Geolocator.distanceBetween(lat, lng, z.lat, z.lng);
+      if (bestDist == null || d < bestDist) {
+        bestDist = d;
+        bestZone = zone;
+      }
+    }
+    return (zone: bestZone, distanceMeters: bestDist);
+  }
+
+  Future<void> _detectDriverLocation({bool push = true}) async {
+    final l10n = AppLocalizations.of(context)!;
+    setState(() {
+      _locating = true;
+      _locationError = null;
+    });
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _locationError = l10n.passengerLocationServiceDisabled);
+        return;
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        setState(() => _locationError = l10n.passengerLocationPermissionDenied);
+        return;
+      }
+      final p = await Geolocator.getCurrentPosition(
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      final nearest = _nearestZoneFor(p.latitude, p.longitude);
+      final zone = nearest.zone;
+      if (!mounted) return;
+      setState(() {
+        _locationText =
+            '${p.latitude.toStringAsFixed(6)}, ${p.longitude.toStringAsFixed(6)}';
+        _nearestZoneDistanceKm = nearest.distanceMeters == null
+            ? null
+            : nearest.distanceMeters! / 1000.0;
+        if (zone != null && zone.isNotEmpty) _location = zone;
+      });
+      if (push && zone != null && zone.isNotEmpty) await _pushDriverLocation();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _locationError = e.toString());
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  Color _distanceColor(double km) {
+    if (km < 3.0) return _C.success;
+    if (km <= 10.0) return _C.yellowDeep;
+    return _C.danger;
+  }
 
   Future<void> _goToHome() async {
     if (!mounted) return;
@@ -327,6 +431,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
         _location = _locations.isNotEmpty ? _locations.first : '';
       }
     });
+    await _detectDriverLocation(push: false);
     await _refreshRides();
     await _refreshArrivals(silent: true);
     _socket.connect(r.accessToken, onReceiveMessage: _onChatMessage, onRideStatus: _onRideStatusEvent, onDriverWallet: _onDriverWallet);
@@ -421,6 +526,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
         _locations = locations;
         if (_location.isEmpty || !_locations.contains(_location)) _location = _locations.isNotEmpty ? _locations.first : '';
       });
+      await _detectDriverLocation(push: false);
       await _refreshRides();
       await _refreshArrivals(silent: true);
       final host = Uri.tryParse(apiBaseUrl)?.host.toLowerCase() ?? '';
@@ -969,6 +1075,41 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _locationText != null
+                              ? 'GPS: $_locationText'
+                              : (_locationError ??
+                                  (_locating
+                                      ? l.passengerLocationDetecting
+                                      : l.passengerLocationUnavailable)),
+                          style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                        ),
+                        if (_nearestZoneDistanceKm != null &&
+                            _location.trim().isNotEmpty)
+                          Text(
+                            'Nearest zone: ${localizedPlaceName(l, _location)} (${_nearestZoneDistanceKm!.toStringAsFixed(1)} km)',
+                            style: TextStyle(
+                              color: _distanceColor(_nearestZoneDistanceKm!),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _locating ? null : () => unawaited(_detectDriverLocation()),
+                    icon: const Icon(Icons.my_location_rounded, size: 18),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               Row(children: [
                 Expanded(child: _DarkButton(label: l.adminLoadRidesBtn, icon: Icons.refresh_rounded, onPressed: _busy ? null : _refreshRides, small: true)),
@@ -1337,7 +1478,19 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                     child: Column(children: [
                       TextField(controller: _phoneController, keyboardType: TextInputType.phone, decoration: _fd(l.emailLabel, icon: Icons.phone_rounded)),
                       const SizedBox(height: 12),
-                      TextField(controller: _pinController, obscureText: true, decoration: _fd(l.passwordLabel, icon: Icons.lock_outline_rounded)),
+                      TextField(
+                        controller: _pinController,
+                        obscureText: _obscurePin,
+                        decoration: _fd(l.passwordLabel, icon: Icons.lock_outline_rounded).copyWith(
+                          suffixIcon: IconButton(
+                            onPressed: () => setState(() => _obscurePin = !_obscurePin),
+                            icon: Icon(
+                              _obscurePin ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              color: _C.charcoal,
+                            ),
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 16),
                       _YellowButton(label: l.login, icon: Icons.login_rounded, onPressed: _busy ? null : _login),
                     ]),
@@ -1499,4 +1652,10 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     }
     return NetworkImage(raw);
   }
+}
+
+class _ZoneCoord {
+  const _ZoneCoord(this.lat, this.lng);
+  final double lat;
+  final double lng;
 }

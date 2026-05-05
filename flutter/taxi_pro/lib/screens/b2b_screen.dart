@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:geolocator/geolocator.dart';
 
 import '../app_locale.dart' show AppUiRole, restoreUiRoleLocale;
 import '../config.dart';
@@ -140,6 +141,12 @@ class _SectionHead extends StatelessWidget {
       );
 }
 
+enum _B2bTripOption {
+  airportToTourist,
+  currentToTourist,
+  currentToAirport,
+}
+
 /// Corporate portal: login matches API; booking is UI-only until B2B billing API exists.
 class B2bScreen extends StatefulWidget {
   const B2bScreen({super.key, this.initialSession});
@@ -160,6 +167,12 @@ class _B2bScreenState extends State<B2bScreen> {
   final _roomController = TextEditingController();
   Map<String, double> _fares = {};
   String? _routeKey;
+  _B2bTripOption _tripOption = _B2bTripOption.currentToAirport;
+  String? _locationText;
+  String? _locationError;
+  bool _locating = false;
+  String? _nearestZoneName;
+  double? _nearestZoneDistanceKm;
   String? _token;
   String? _appToken;
   int? _userId;
@@ -176,6 +189,7 @@ class _B2bScreenState extends State<B2bScreen> {
   Timer? _pollingTimer;
   String? _message;
   bool _busy = false;
+  bool _obscureSecret = true;
   bool _ok = false;
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
@@ -225,6 +239,155 @@ class _B2bScreenState extends State<B2bScreen> {
     return en;
   }
 
+  static const Set<String> _airportZones = {
+    'مطار قرطاج',
+    'مطار النفيضة',
+    'مطار المنستير',
+  };
+
+  bool _isAirport(String zone) => _airportZones.contains(zone.trim());
+
+  static const Map<String, _ZoneCoord> _zoneCoords = {
+    'مطار قرطاج': _ZoneCoord(36.8508, 10.2272),
+    'مطار النفيضة': _ZoneCoord(36.0758, 10.4386),
+    'مطار المنستير': _ZoneCoord(35.7581, 10.7547),
+    'وسط سوسة': _ZoneCoord(35.8256, 10.63699),
+    'الحمامات': _ZoneCoord(36.4000, 10.6167),
+    'نابل': _ZoneCoord(36.4561, 10.7376),
+    'القنطاوي': _ZoneCoord(35.8920, 10.5950),
+    'Sidi Bou Saïd': _ZoneCoord(36.8710, 10.3470),
+    'La Marsa': _ZoneCoord(36.8780, 10.3240),
+    'Gammarth': _ZoneCoord(36.9170, 10.2870),
+    'Carthage': _ZoneCoord(36.8520, 10.3230),
+    'Musée du Bardo': _ZoneCoord(36.8100, 10.1400),
+    'Médina de Tunis': _ZoneCoord(36.8000, 10.1700),
+    'Byrsa Hill': _ZoneCoord(36.8527, 10.3295),
+    'Lac de Tunis': _ZoneCoord(36.8400, 10.2400),
+    'Geant': _ZoneCoord(36.8420, 10.2860),
+    'Azur city': _ZoneCoord(36.7410, 10.2150),
+    'tunisia mall': _ZoneCoord(36.8430, 10.2810),
+    'Nabeul': _ZoneCoord(36.4510, 10.7360),
+    'Hammamet': _ZoneCoord(36.4000, 10.6160),
+    'Yasmine Hammamet': _ZoneCoord(36.3650, 10.5360),
+    'Friguia Park': _ZoneCoord(36.1240, 10.4410),
+    'Hergla park': _ZoneCoord(36.0270, 10.5090),
+    'mall of sousse': _ZoneCoord(35.8290, 10.6350),
+    'Skanes': _ZoneCoord(35.7650, 10.8100),
+    'Marina de Monastir': _ZoneCoord(35.7770, 10.8260),
+    'mahdia': _ZoneCoord(35.5050, 11.0630),
+    'Skifa el Kahla': _ZoneCoord(35.5057, 11.0620),
+    'Borj el Kebir': _ZoneCoord(35.5030, 11.0610),
+  };
+
+  ({String? zone, double? distanceMeters}) _nearestZoneFor(double lat, double lng) {
+    String? bestZone;
+    double? bestDist;
+    for (final e in _zoneCoords.entries) {
+      final d = Geolocator.distanceBetween(lat, lng, e.value.lat, e.value.lng);
+      if (bestDist == null || d < bestDist) {
+        bestDist = d;
+        bestZone = e.key;
+      }
+    }
+    return (zone: bestZone, distanceMeters: bestDist);
+  }
+
+  Color _distanceColor(double km) {
+    if (km < 3.0) return Colors.green;
+    if (km <= 10.0) return Colors.orange;
+    return Colors.red;
+  }
+
+  Future<void> _detectB2bLocation() async {
+    final l10n = AppLocalizations.of(context)!;
+    setState(() {
+      _locating = true;
+      _locationError = null;
+    });
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _locationError = l10n.passengerLocationServiceDisabled);
+        return;
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        setState(() => _locationError = l10n.passengerLocationPermissionDenied);
+        return;
+      }
+      final p = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      final nearest = _nearestZoneFor(p.latitude, p.longitude);
+      if (!mounted) return;
+      setState(() {
+        _locationText =
+            '${p.latitude.toStringAsFixed(6)}, ${p.longitude.toStringAsFixed(6)}';
+        _nearestZoneDistanceKm = nearest.distanceMeters == null
+            ? null
+            : nearest.distanceMeters! / 1000.0;
+        _nearestZoneName = nearest.zone;
+        if ((nearest.zone ?? '').trim().isNotEmpty) {
+          final starts = _fares.keys
+              .map((k) => k.split(airportRouteKeySeparator).first.trim())
+              .toSet();
+          if (starts.contains(nearest.zone!.trim())) {
+            final keys = _filteredRouteKeys()
+                .where((k) => k.split(airportRouteKeySeparator).first.trim() == nearest.zone!.trim())
+                .toList();
+            if (keys.isNotEmpty) _routeKey = keys.first;
+          }
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _locationError = e.toString());
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  List<String> _filteredRouteKeys([_B2bTripOption? option]) {
+    final selected = option ?? _tripOption;
+    final all = _fares.keys.toList();
+    return all.where((k) {
+      final parts = k.split(airportRouteKeySeparator);
+      if (parts.length < 2) return false;
+      final start = parts.first.trim();
+      final dest = parts[1].trim();
+      switch (selected) {
+        case _B2bTripOption.airportToTourist:
+          return _isAirport(start) && !_isAirport(dest);
+        case _B2bTripOption.currentToTourist:
+          return !_isAirport(start) && !_isAirport(dest);
+        case _B2bTripOption.currentToAirport:
+          return !_isAirport(start) && _isAirport(dest);
+      }
+    }).toList()
+      ..sort((a, b) => a.compareTo(b));
+  }
+
+  List<_B2bTripOption> _availableTripOptions() {
+    return _B2bTripOption.values
+        .where((o) => _filteredRouteKeys(o).isNotEmpty)
+        .toList();
+  }
+
+  void _syncRouteSelectionForCurrentOption() {
+    final keys = _filteredRouteKeys();
+    if (keys.isEmpty) {
+      _routeKey = null;
+      return;
+    }
+    if (_routeKey == null || !keys.contains(_routeKey)) {
+      _routeKey = keys.first;
+    }
+  }
+
   void _recomputePendingRatingFromRides() {
     int? nextRatingRideId;
     for (final r in _rides) {
@@ -263,8 +426,9 @@ class _B2bScreenState extends State<B2bScreen> {
       setState(() {
         _ok = true;
         _fares = fares;
-        _routeKey = fares.keys.isNotEmpty ? fares.keys.first : null;
+        _syncRouteSelectionForCurrentOption();
       });
+      await _detectB2bLocation();
     } catch (e) {
       setState(() {
         _ok = false;
@@ -742,8 +906,9 @@ class _B2bScreenState extends State<B2bScreen> {
     setState(() {
       _ok = true;
       _fares = fares;
-      _routeKey = fares.keys.isNotEmpty ? fares.keys.first : null;
+      _syncRouteSelectionForCurrentOption();
     });
+    await _detectB2bLocation();
   }
 
   @override
@@ -765,6 +930,21 @@ class _B2bScreenState extends State<B2bScreen> {
     final isPhone = MediaQuery.of(context).size.width < 700;
     const activeStatuses = {'pending', 'accepted', 'ongoing'};
     final activeCount = _rides.where((r) => activeStatuses.contains(r.status)).length;
+    final availableTripOptions = _availableTripOptions();
+    final routeKeys = _filteredRouteKeys();
+    if (_routeKey != null && !routeKeys.contains(_routeKey)) {
+      _routeKey = routeKeys.isNotEmpty ? routeKeys.first : null;
+    }
+    String tripOptionLabel(_B2bTripOption option) {
+      switch (option) {
+        case _B2bTripOption.airportToTourist:
+          return 'Airport → Tourist zone';
+        case _B2bTripOption.currentToTourist:
+          return 'Current location → Tourist zone';
+        case _B2bTripOption.currentToAirport:
+          return 'Current location → Airport';
+      }
+    }
     return Scaffold(
       backgroundColor: _C.bgWarm,
       appBar: AppBar(
@@ -822,8 +1002,16 @@ class _B2bScreenState extends State<B2bScreen> {
                   _SectionHead(l.b2bPortalHeading, subtitle: 'Corporate access'),
                   TextField(
                     controller: _secretController,
-                    obscureText: true,
-                    decoration: _fd(l.companyCode, icon: Icons.business_rounded),
+                    obscureText: _obscureSecret,
+                    decoration: _fd(l.companyCode, icon: Icons.business_rounded).copyWith(
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(() => _obscureSecret = !_obscureSecret),
+                        icon: Icon(
+                          _obscureSecret ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          color: _C.charcoal,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   SizedBox(
@@ -959,12 +1147,72 @@ class _B2bScreenState extends State<B2bScreen> {
                           ),
                           const SizedBox(height: 8),
                           InputDecorator(
+                            decoration: _fd('Trip option', icon: Icons.alt_route_rounded),
+                            child: DropdownButton<_B2bTripOption>(
+                              value: _tripOption,
+                              isExpanded: true,
+                              underline: const SizedBox.shrink(),
+                              items: availableTripOptions
+                                  .map(
+                                    (o) => DropdownMenuItem<_B2bTripOption>(
+                                      value: o,
+                                      child: Text(tripOptionLabel(o)),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) {
+                                if (v == null) return;
+                                setState(() {
+                                  _tripOption = v;
+                                  _syncRouteSelectionForCurrentOption();
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _locationText != null
+                                          ? 'GPS: $_locationText'
+                                          : (_locationError ??
+                                              (_locating
+                                                  ? l.passengerLocationDetecting
+                                                  : l.passengerLocationUnavailable)),
+                                      style: const TextStyle(
+                                          color: _C.textSoft, fontSize: 11),
+                                    ),
+                                    if (_nearestZoneDistanceKm != null &&
+                                        (_nearestZoneName ?? '').trim().isNotEmpty)
+                                      Text(
+                                        'Nearest zone: ${localizedPlaceName(l, _nearestZoneName)} (${_nearestZoneDistanceKm!.toStringAsFixed(1)} km)',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: _distanceColor(_nearestZoneDistanceKm!),
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: _locating ? null : () => unawaited(_detectB2bLocation()),
+                                icon: const Icon(Icons.my_location_rounded, size: 18),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          InputDecorator(
                             decoration: _fd(l.route, icon: Icons.route_rounded),
                             child: DropdownButton<String>(
                               value: _routeKey,
                               isExpanded: true,
                               underline: const SizedBox.shrink(),
-                              items: _fares.keys
+                              items: routeKeys
                                   .map((k) => DropdownMenuItem(
                                         value: k,
                                         child: Text(
@@ -1158,4 +1406,10 @@ class _B2bScreenState extends State<B2bScreen> {
       ),
     );
   }
+}
+
+class _ZoneCoord {
+  const _ZoneCoord(this.lat, this.lng);
+  final double lat;
+  final double lng;
 }

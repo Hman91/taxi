@@ -230,6 +230,42 @@ class TaxiApiClient {
         jsonDecode(r.body) as Map<String, dynamic>);
   }
 
+  Future<bool> requestPasswordReset({
+    required String email,
+  }) async {
+    final r = await _http.post(
+      _u('/api/auth/forgot-password-request'),
+      headers: _jsonHeaders(),
+      body: jsonEncode({'email': email}),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(_errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return (body['email_sent'] as bool?) ?? false;
+  }
+
+  Future<void> confirmPasswordReset({
+    required String email,
+    required String resetCode,
+    required String newPassword,
+  }) async {
+    final r = await _http.post(
+      _u('/api/auth/forgot-password-confirm'),
+      headers: _jsonHeaders(),
+      body: jsonEncode(
+        {
+          'email': email,
+          'reset_code': resetCode,
+          'new_password': newPassword,
+        },
+      ),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(_errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+  }
+
   Future<AppLoginResponse> loginGoogle({
     String? idToken,
     String? accessToken,

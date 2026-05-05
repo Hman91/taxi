@@ -2,6 +2,7 @@ import 'dart:async' show Timer, unawaited;
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../api/client.dart';
 import '../api/models.dart';
@@ -49,6 +50,10 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   String? _token;
   int? _userId;
   String _selectedLocation = '';
+  String? _locationText;
+  String? _locationError;
+  bool _locating = false;
+  double? _nearestZoneDistanceKm;
   String? _driverPhotoUrl;
   String? _driverCarModel;
   String? _driverCarColor;
@@ -62,6 +67,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   int? _activeChatRideId;
   String? _message;
   bool _busy = false;
+  bool _obscurePassword = true;
   double? _lastWalletSample;
   DateTime? _lastWalletDepletedNotifAt;
   /// Dedupes alerts when gains first load while wallet is already 0 (no prev > 0 → 0 transition).
@@ -69,6 +75,103 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   Timer? _periodicRideTimer;
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
+
+  static const Map<String, _ZoneCoord> _zoneCoords = {
+    'مطار قرطاج': _ZoneCoord(36.8508, 10.2272),
+    'مطار النفيضة': _ZoneCoord(36.0758, 10.4386),
+    'مطار المنستير': _ZoneCoord(35.7581, 10.7547),
+    'وسط سوسة': _ZoneCoord(35.8256, 10.63699),
+    'الحمامات': _ZoneCoord(36.4000, 10.6167),
+    'نابل': _ZoneCoord(36.4561, 10.7376),
+    'القنطاوي': _ZoneCoord(35.8920, 10.5950),
+    'Sidi Bou Saïd': _ZoneCoord(36.8710, 10.3470),
+    'La Marsa': _ZoneCoord(36.8780, 10.3240),
+    'Gammarth': _ZoneCoord(36.9170, 10.2870),
+    'Carthage': _ZoneCoord(36.8520, 10.3230),
+    'Musée du Bardo': _ZoneCoord(36.8100, 10.1400),
+    'Médina de Tunis': _ZoneCoord(36.8000, 10.1700),
+    'Byrsa Hill': _ZoneCoord(36.8527, 10.3295),
+    'Lac de Tunis': _ZoneCoord(36.8400, 10.2400),
+    'Geant': _ZoneCoord(36.8420, 10.2860),
+    'Azur city': _ZoneCoord(36.7410, 10.2150),
+    'tunisia mall': _ZoneCoord(36.8430, 10.2810),
+    'Nabeul': _ZoneCoord(36.4510, 10.7360),
+    'Hammamet': _ZoneCoord(36.4000, 10.6160),
+    'Yasmine Hammamet': _ZoneCoord(36.3650, 10.5360),
+    'Friguia Park': _ZoneCoord(36.1240, 10.4410),
+    'Hergla park': _ZoneCoord(36.0270, 10.5090),
+    'mall of sousse': _ZoneCoord(35.8290, 10.6350),
+    'Skanes': _ZoneCoord(35.7650, 10.8100),
+    'Marina de Monastir': _ZoneCoord(35.7770, 10.8260),
+    'mahdia': _ZoneCoord(35.5050, 11.0630),
+    'Skifa el Kahla': _ZoneCoord(35.5057, 11.0620),
+    'Borj el Kebir': _ZoneCoord(35.5030, 11.0610),
+  };
+
+  ({String? zone, double? distanceMeters}) _nearestZoneFor(double lat, double lng) {
+    String? bestZone;
+    double? bestDist;
+    for (final zone in _locations) {
+      final z = _zoneCoords[zone];
+      if (z == null) continue;
+      final d = Geolocator.distanceBetween(lat, lng, z.lat, z.lng);
+      if (bestDist == null || d < bestDist) {
+        bestDist = d;
+        bestZone = zone;
+      }
+    }
+    return (zone: bestZone, distanceMeters: bestDist);
+  }
+
+  Future<void> _detectDriverLocation() async {
+    final l10n = AppLocalizations.of(context)!;
+    setState(() {
+      _locating = true;
+      _locationError = null;
+    });
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _locationError = l10n.passengerLocationServiceDisabled);
+        return;
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        setState(() => _locationError = l10n.passengerLocationPermissionDenied);
+        return;
+      }
+      final p = await Geolocator.getCurrentPosition(
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      final nearest = _nearestZoneFor(p.latitude, p.longitude);
+      final zone = nearest.zone;
+      if (!mounted) return;
+      setState(() {
+        _locationText =
+            '${p.latitude.toStringAsFixed(6)}, ${p.longitude.toStringAsFixed(6)}';
+        _nearestZoneDistanceKm = nearest.distanceMeters == null
+            ? null
+            : nearest.distanceMeters! / 1000.0;
+        if (zone != null && zone.isNotEmpty) _selectedLocation = zone;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _locationError = e.toString());
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  Color _distanceColor(double km) {
+    if (km < 3.0) return Colors.green;
+    if (km <= 10.0) return Colors.orange;
+    return Colors.red;
+  }
 
   @override
   void initState() {
@@ -101,6 +204,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     if (_selectedLocation.isEmpty || !_locations.contains(_selectedLocation)) {
       _selectedLocation = _locations.isNotEmpty ? _locations.first : '';
     }
+    await _detectDriverLocation();
     await _refreshRides();
     _startPeriodicRideSync();
     if (mounted) setState(() {});
@@ -893,8 +997,16 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
             ),
             TextField(
               controller: _password,
-              obscureText: true,
-              decoration: InputDecoration(labelText: l.passwordLabel),
+              obscureText: _obscurePassword,
+              decoration: InputDecoration(
+                labelText: l.passwordLabel,
+                suffixIcon: IconButton(
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  ),
+                ),
+              ),
             ),
             FilledButton(
                 onPressed: _busy ? null : _login, child: Text(l.signInApp)),
@@ -947,6 +1059,41 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
                   .toList(),
               onChanged: (v) =>
                   setState(() => _selectedLocation = v ?? _selectedLocation),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _locationText != null
+                            ? 'GPS: $_locationText'
+                            : (_locationError ??
+                                (_locating
+                                    ? l.passengerLocationDetecting
+                                    : l.passengerLocationUnavailable)),
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                      if (_nearestZoneDistanceKm != null &&
+                          _selectedLocation.trim().isNotEmpty)
+                        Text(
+                          'Nearest zone: ${localizedPlaceName(l, _selectedLocation)} (${_nearestZoneDistanceKm!.toStringAsFixed(1)} km)',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: _distanceColor(_nearestZoneDistanceKm!),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: _locating ? null : () => unawaited(_detectDriverLocation()),
+                  icon: const Icon(Icons.my_location_rounded, size: 18),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             FilledButton.tonal(
@@ -1035,4 +1182,10 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     }
     return NetworkImage(raw);
   }
+}
+
+class _ZoneCoord {
+  const _ZoneCoord(this.lat, this.lng);
+  final double lat;
+  final double lng;
 }
