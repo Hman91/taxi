@@ -103,36 +103,7 @@ def admin_owner_metrics(**kwargs: Any) -> Tuple[Any, int]:
 @bp.get("/ratings/drivers")
 @require_roles("owner", "operator")
 def admin_driver_ratings(**kwargs: Any) -> Tuple[Any, int]:
-    rows = []
-    for d in db_module.list_driver_pin_accounts():
-        phone = (d.get("phone") or "").strip()
-        if not phone:
-            continue
-        app_user = db_module.user_by_email(f"driverpin_{phone}@taxipro.local")
-        if app_user is None:
-            rows.append(
-                {
-                    "driver_name": d.get("driver_name"),
-                    "phone": phone,
-                    "driver_id": None,
-                    "rating_average": 5.0,
-                    "rating_count": 0,
-                }
-            )
-            continue
-        drv = db_module.driver_by_user_id(int(app_user["id"]))
-        if drv is None:
-            continue
-        stats = db_module.rating_stats(driver_id=int(drv["id"]))
-        rows.append(
-            {
-                "driver_name": d.get("driver_name"),
-                "phone": phone,
-                "driver_id": int(drv["id"]),
-                "rating_average": stats["average"],
-                "rating_count": stats["count"],
-            }
-        )
+    rows = admin_service.list_driver_ratings()
     return jsonify({"driver_ratings": rows}), 200
 
 
@@ -150,6 +121,20 @@ def admin_list_users(**kwargs: Any) -> Tuple[Any, int]:
     return jsonify({"users": data}), 200
 
 
+@bp.get("/users/pending")
+@require_roles("owner", "operator")
+def admin_list_pending_users(**kwargs: Any) -> Tuple[Any, int]:
+    limit_raw = request.args.get("limit", "100")
+    offset_raw = request.args.get("offset", "0")
+    try:
+        limit = int(limit_raw)
+        offset = int(offset_raw)
+    except (TypeError, ValueError):
+        return _json_error("invalid_pagination", 400)
+    data = admin_service.list_pending_approvals(limit=limit, offset=offset)
+    return jsonify({"users": data}), 200
+
+
 @bp.patch("/users/<int:user_id>")
 @require_roles("owner", "operator")
 def admin_patch_user(user_id: int, **kwargs: Any) -> Tuple[Any, int]:
@@ -158,13 +143,87 @@ def admin_patch_user(user_id: int, **kwargs: Any) -> Tuple[Any, int]:
         return _json_error("is_enabled_required", 400)
     if not isinstance(body.get("is_enabled"), bool):
         return _json_error("invalid_is_enabled", 400)
-    user, err = admin_service.set_user_enabled(user_id, bool(body["is_enabled"]))
+    actor_user_id = kwargs.get("user_id")
+    user, err = admin_service.set_user_enabled(
+        user_id,
+        bool(body["is_enabled"]),
+        acted_by_user_id=int(actor_user_id) if actor_user_id is not None else None,
+    )
     if err == "not_found":
         return _json_error("not_found", 404)
     if err == "invalid_user_role":
         return _json_error("invalid_user_role", 400)
     assert user is not None
     return jsonify({"user": user}), 200
+
+
+@bp.post("/users")
+@require_roles("owner", "operator")
+def admin_create_app_user(**kwargs: Any) -> Tuple[Any, int]:
+    body = request.get_json(silent=True) or {}
+    actor_user_id = kwargs.get("user_id")
+    user, err = admin_service.create_app_user(
+        email=str(body.get("email") or "").strip(),
+        password=str(body.get("password") or ""),
+        role=str(body.get("role") or "").strip().lower(),
+        display_name=str(body.get("display_name") or "").strip(),
+        phone=str(body.get("phone") or "").strip(),
+        car_model=str(body.get("car_model") or "").strip(),
+        car_color=str(body.get("car_color") or "").strip(),
+        acted_by_user_id=int(actor_user_id) if actor_user_id is not None else None,
+        auto_approve=bool(body.get("auto_approve", True)),
+    )
+    if err in {
+        "invalid_role",
+        "invalid_email",
+        "weak_password",
+        "name_required",
+        "phone_required",
+        "driver_vehicle_required",
+    }:
+        return _json_error(err, 400)
+    if err == "email_taken":
+        return _json_error("email_taken", 409)
+    assert user is not None
+    return jsonify({"user": user}), 201
+
+
+@bp.patch("/users/<int:user_id>/profile")
+@require_roles("owner", "operator")
+def admin_patch_app_user_profile(user_id: int, **kwargs: Any) -> Tuple[Any, int]:
+    body = request.get_json(silent=True) or {}
+    user, err = admin_service.patch_app_user(
+        user_id,
+        email=(str(body.get("email")).strip() if "email" in body else None),
+        display_name=(
+            str(body.get("display_name")).strip() if "display_name" in body else None
+        ),
+        phone=(str(body.get("phone")).strip() if "phone" in body else None),
+        car_model=(str(body.get("car_model")).strip() if "car_model" in body else None),
+        car_color=(str(body.get("car_color")).strip() if "car_color" in body else None),
+        password=(str(body.get("password")) if "password" in body else None),
+    )
+    if err == "not_found":
+        return _json_error("not_found", 404)
+    if err in {"invalid_user_role", "invalid_email", "phone_required", "weak_password"}:
+        return _json_error(err, 400)
+    if err == "email_taken":
+        return _json_error("email_taken", 409)
+    assert user is not None
+    return jsonify({"user": user}), 200
+
+
+@bp.delete("/users/<int:user_id>")
+@require_roles("owner", "operator")
+def admin_delete_app_user(user_id: int, **kwargs: Any) -> Tuple[Any, int]:
+    err = admin_service.delete_app_user(user_id)
+    if err == "not_found":
+        return _json_error("not_found", 404)
+    if err == "invalid_user_role":
+        return _json_error("invalid_user_role", 400)
+    if err == "cannot_delete_user":
+        return _json_error("cannot_delete_user", 409)
+    return jsonify({"deleted": True, "user_id": user_id}), 200
 
 
 @bp.get("/b2b-tenants")

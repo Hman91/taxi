@@ -256,9 +256,9 @@ def save_chat_message(
     if ride["status"] not in ("accepted", "ongoing", "completed", "cancelled"):
         return None, "chat_not_open"
 
-    lang = (urow.get("preferred_language") or "en").strip() or "en"
-    if len(lang) > 10:
-        lang = lang[:10]
+    # Use auto-detect source language for message-level translation.
+    # This avoids wrong skip-translation when a user's profile language is stale.
+    lang = "auto"
 
     m = Message(
         conversation_id=conversation_id,

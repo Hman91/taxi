@@ -36,11 +36,13 @@ class TaxiAppService {
   Future<AppLoginResponse> loginGoogle({
     String? idToken,
     String? accessToken,
+    String? role,
     String? phone,
   }) =>
       _client.loginGoogle(
         idToken: idToken,
         accessToken: accessToken,
+        role: role,
         phone: phone,
       );
 
@@ -67,6 +69,8 @@ class TaxiAppService {
     String? displayName,
     String? phone,
     String? photoUrl,
+    String? carModel,
+    String? carColor,
   }) =>
       _client.registerAppUser(
         email: email,
@@ -75,6 +79,8 @@ class TaxiAppService {
         displayName: displayName,
         phone: phone,
         photoUrl: photoUrl,
+        carModel: carModel,
+        carColor: carColor,
       );
 
   Future<List<Ride>> listRides(String token) => _client.listRides(token);
@@ -191,6 +197,19 @@ class TaxiAppService {
         preferredLanguage: preferredLanguage,
       );
 
+  Future<Map<String, dynamic>> patchMyAccount({
+    required String token,
+    required String currentPassword,
+    String? email,
+    String? password,
+  }) =>
+      _client.patchMyAccount(
+        token: token,
+        currentPassword: currentPassword,
+        email: email,
+        password: password,
+      );
+
   Future<List<Map<String, dynamic>>> listAdminFareRoutes(String token) =>
       _client.listAdminFareRoutes(token);
 
@@ -250,12 +269,72 @@ class TaxiAppService {
         sourceCode: sourceCode,
       );
 
+  Future<Map<String, dynamic>> getB2bMe(String token) => _client.getB2bMe(token);
+
+  Future<Map<String, dynamic>> patchB2bMe({
+    required String token,
+    String? displayName,
+    String? phone,
+    String? label,
+    String? contactName,
+    String? pin,
+    String? tenantPhone,
+    String? hotel,
+    String? email,
+    String? password,
+    String? currentPassword,
+  }) =>
+      _client.patchB2bMe(
+        token: token,
+        displayName: displayName,
+        phone: phone,
+        label: label,
+        contactName: contactName,
+        pin: pin,
+        tenantPhone: tenantPhone,
+        hotel: hotel,
+        email: email,
+        password: password,
+        currentPassword: currentPassword,
+      );
+
+  Future<Map<String, dynamic>> getDriverMe(String token) =>
+      _client.getDriverMe(token);
+
+  Future<Map<String, dynamic>> patchDriverMe({
+    required String token,
+    String? displayName,
+    String? phone,
+    String? email,
+    String? password,
+    String? carModel,
+    String? carColor,
+    String? photoUrl,
+  }) =>
+      _client.patchDriverMe(
+        token: token,
+        displayName: displayName,
+        phone: phone,
+        email: email,
+        password: password,
+        carModel: carModel,
+        carColor: carColor,
+        photoUrl: photoUrl,
+      );
+
   Future<List<Map<String, dynamic>>> listAdminUsers(
     String token, {
     int limit = 100,
     int offset = 0,
   }) =>
       _client.listAdminUsers(token, limit: limit, offset: offset);
+
+  Future<List<Map<String, dynamic>>> listAdminPendingUsers(
+    String token, {
+    int limit = 100,
+    int offset = 0,
+  }) =>
+      _client.listAdminPendingUsers(token, limit: limit, offset: offset);
 
   Future<Map<String, dynamic>> setAdminUserEnabled({
     required String token,
@@ -266,6 +345,49 @@ class TaxiAppService {
         token: token,
         userId: userId,
         isEnabled: isEnabled,
+      );
+
+  Future<Map<String, dynamic>> createAdminAppUser({
+    required String token,
+    required String email,
+    required String password,
+    required String role,
+    required String displayName,
+    required String phone,
+    String? carModel,
+    String? carColor,
+    bool autoApprove = true,
+  }) =>
+      _client.createAdminAppUser(
+        token: token,
+        email: email,
+        password: password,
+        role: role,
+        displayName: displayName,
+        phone: phone,
+        carModel: carModel,
+        carColor: carColor,
+        autoApprove: autoApprove,
+      );
+
+  Future<Map<String, dynamic>> patchAdminAppUserProfile({
+    required String token,
+    required int userId,
+    required Map<String, dynamic> payload,
+  }) =>
+      _client.patchAdminAppUserProfile(
+        token: token,
+        userId: userId,
+        payload: payload,
+      );
+
+  Future<void> deleteAdminAppUser({
+    required String token,
+    required int userId,
+  }) =>
+      _client.deleteAdminAppUser(
+        token: token,
+        userId: userId,
       );
 
   Future<List<Map<String, dynamic>>> listAdminB2bTenants(String token) =>

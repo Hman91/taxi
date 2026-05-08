@@ -40,6 +40,11 @@ def _user_dict(u: User) -> Dict[str, Any]:
         "photo_url": (u.photo_url or None),
         "preferred_language": u.preferred_language,
         "is_enabled": u.is_enabled,
+        "approval_status": (u.approval_status or "approved"),
+        "approved_at": _dt(u.approved_at),
+        "approved_by_user_id": int(u.approved_by_user_id)
+        if u.approved_by_user_id is not None
+        else None,
     }
 
 def list_user_ids_by_role(role: str) -> List[int]:
@@ -98,11 +103,8 @@ def _ride_dict(r: Ride) -> Dict[str, Any]:
             driver_vehicle = d.vehicle_info or None
             u = db.session.get(User, int(d.user_id))
             if u is not None:
-                email = (u.email or "").strip().lower()
-                prefix = "driverpin_"
-                suffix = "@taxipro.local"
-                if email.startswith(prefix) and email.endswith(suffix):
-                    phone = email[len(prefix) : -len(suffix)]
+                phone = (u.phone or "").strip()
+                if phone:
                     pin_row = db.session.scalars(
                         select(DriverPinAccount).where(DriverPinAccount.phone == phone)
                     ).first()
@@ -112,7 +114,7 @@ def _ride_dict(r: Ride) -> Dict[str, Any]:
                         driver_car_model = pin_row.car_model
                         driver_car_color = pin_row.car_color
                         driver_current_zone = pin_row.current_zone
-    return {
+    out: Dict[str, Any] = {
         "id": int(r.id),
         "user_id": int(r.user_id),
         "driver_id": int(r.driver_id) if r.driver_id is not None else None,
@@ -137,6 +139,16 @@ def _ride_dict(r: Ride) -> Dict[str, Any]:
         "created_at": _dt(r.created_at),
         "updated_at": _dt(r.updated_at),
     }
+    try:
+        from ..services import pricing
+
+        q = pricing.fare_quote_for_pickup_destination(r.pickup, r.destination)
+        out["quoted_distance_km"] = q["distance_km"]
+        out["quoted_fare_dt"] = q["fare_dt"]
+    except Exception:
+        out["quoted_distance_km"] = None
+        out["quoted_fare_dt"] = None
+    return out
 
 
 def _fare_route_dict(r: FareRoute) -> Dict[str, Any]:
@@ -280,17 +292,16 @@ def driver_pin_by_phone(phone: str) -> Optional[Dict[str, Any]]:
 
 
 def driver_pin_account_by_user_id(user_id: int) -> Optional[Dict[str, Any]]:
-    """Resolve PIN wallet row for drivers logged in as driverpin_{phone}@taxipro.local."""
+    """Resolve driver wallet row from app user phone."""
     u = db.session.get(User, user_id)
     if u is None:
         return None
-    email = (u.email or "").strip().lower()
-    prefix = "driverpin_"
-    suffix = "@taxipro.local"
-    if not (email.startswith(prefix) and email.endswith(suffix)):
-        return None
-    phone = email[len(prefix) : -len(suffix)]
-    return driver_pin_by_phone(phone)
+    phone = (u.phone or "").strip()
+    if phone:
+        by_phone = driver_pin_by_phone(phone)
+        if by_phone is not None:
+            return by_phone
+    return None
 
 
 def driver_pin_seed_defaults(rows: List[Dict[str, Any]]) -> int:
@@ -320,6 +331,15 @@ def driver_pin_seed_defaults(rows: List[Dict[str, Any]]) -> int:
 
 
 def list_driver_pin_accounts() -> List[Dict[str, Any]]:
+    # Ensure app-driver wallets exist and are hydrated from drivers.vehicle_info.
+    driver_rows = db.session.execute(
+        select(Driver, User).join(User, Driver.user_id == User.id).order_by(Driver.id.asc())
+    ).all()
+    for d, u in driver_rows:
+        try:
+            driver_pin_ensure_for_app_driver(int(u.id))
+        except Exception:
+            pass
     rows = db.session.scalars(
         select(DriverPinAccount).order_by(DriverPinAccount.id.asc())
     ).all()
@@ -353,6 +373,68 @@ def driver_pin_create(
         car_model=car_model.strip(),
         car_color=car_color.strip(),
         photo_url=photo_url.strip() or None,
+    )
+    db.session.add(row)
+    db.session.commit()
+    db.session.refresh(row)
+    return _driver_pin_account_dict(row)
+
+
+def driver_pin_ensure_for_app_driver(user_id: int) -> Optional[Dict[str, Any]]:
+    """Ensure wallet row exists for a driver app-user (email/password flow)."""
+    import re
+
+    def _vehicle_parts(raw: str) -> tuple[str, str]:
+        txt = (raw or "").strip()
+        if not txt:
+            return "", ""
+        m1 = re.search(r'["\']car_model["\']\s*:\s*["\']([^"\']+)["\']', txt)
+        m2 = re.search(r'model\s*=\s*([^;,\n]+)', txt, flags=re.IGNORECASE)
+        c1 = re.search(r'["\']car_color["\']\s*:\s*["\']([^"\']+)["\']', txt)
+        c2 = re.search(r'color\s*=\s*([^;,\n]+)', txt, flags=re.IGNORECASE)
+        model = (m1.group(1) if m1 else (m2.group(1) if m2 else "")).strip()
+        color = (c1.group(1) if c1 else (c2.group(1) if c2 else "")).strip()
+        return model, color
+
+    u = db.session.get(User, int(user_id))
+    if u is None or (u.role or "").strip().lower() != "driver":
+        return None
+    phone = (u.phone or "").strip()
+    if not phone:
+        return None
+    d = db.session.scalars(select(Driver).where(Driver.user_id == int(user_id))).first()
+    raw_vehicle = (d.vehicle_info if d is not None else None) or ""
+    vehicle_model, vehicle_color = _vehicle_parts(raw_vehicle)
+    existing = driver_pin_by_phone(phone)
+    if existing is not None:
+        updates: Dict[str, Any] = {}
+        if (not str(existing.get("car_model") or "").strip()) and vehicle_model:
+            updates["car_model"] = vehicle_model
+        if (not str(existing.get("car_color") or "").strip()) and vehicle_color:
+            updates["car_color"] = vehicle_color
+        if updates:
+            refreshed = driver_pin_update(int(existing["id"]), **updates)
+            if refreshed is not None:
+                return refreshed
+        return existing
+
+    display_name = (
+        (d.display_name if d is not None else None)
+        or (u.display_name or "")
+        or (u.email or "").split("@", 1)[0]
+    ).strip() or "-"
+    row = DriverPinAccount(
+        phone=phone,
+        pin="0000",
+        driver_name=display_name,
+        wallet_balance=0.0,
+        owner_commission_rate=10.0,
+        b2b_commission_rate=5.0,
+        auto_deduct_enabled=True,
+        car_model=vehicle_model or None,
+        car_color=vehicle_color or None,
+        photo_url=None,
+        current_zone=None,
     )
     db.session.add(row)
     db.session.commit()
@@ -455,6 +537,47 @@ def b2b_tenant_seed_defaults(rows: List[Dict[str, Any]]) -> int:
     return created
 
 
+def b2b_tenant_update_by_code(
+    code: str,
+    *,
+    label: Optional[str] = None,
+    contact_name: Optional[str] = None,
+    pin: Optional[str] = None,
+    phone: Optional[str] = None,
+    hotel: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    code_norm = (code or "").strip()
+    if not code_norm:
+        return None
+    row = db.session.scalars(
+        select(B2BTenant).where(func.lower(B2BTenant.code) == code_norm.lower())
+    ).first()
+    if row is None:
+        return None
+    if label is not None:
+        row.label = label.strip() or None
+    if contact_name is not None:
+        row.contact_name = contact_name.strip() or None
+    if pin is not None:
+        row.pin = pin.strip() or None
+    if phone is not None:
+        row.phone = phone.strip() or None
+    if hotel is not None:
+        row.hotel = hotel.strip() or None
+    db.session.commit()
+    db.session.refresh(row)
+    return {
+        "id": int(row.id),
+        "code": row.code,
+        "label": row.label,
+        "contact_name": row.contact_name,
+        "pin": row.pin,
+        "phone": row.phone,
+        "hotel": row.hotel,
+        "is_enabled": bool(row.is_enabled),
+    }
+
+
 def b2b_booking_insert(
     *,
     tenant_id: Optional[int],
@@ -514,6 +637,24 @@ def b2b_booking_update(booking_id: int, **fields: Any) -> Optional[Dict[str, Any
     return _b2b_booking_dict(row)
 
 
+def rides_for_b2b_user(user_id: int) -> List[Dict[str, Any]]:
+    """List rides created by a B2B account, keyed by its source code (email local-part)."""
+    user = user_by_id(int(user_id))
+    if user is None:
+        return []
+    email = str(user.get("email") or "").strip().lower()
+    source_code = email.split("@")[0].strip() if "@" in email else email
+    if not source_code:
+        return []
+    rows = db.session.scalars(
+        select(Ride)
+        .join(B2BBooking, B2BBooking.ride_id == Ride.id)
+        .where(func.lower(B2BBooking.source_code) == source_code.lower())
+        .order_by(Ride.id.desc())
+    ).all()
+    return [_ride_dict(r) for r in rows]
+
+
 # --- users / drivers (JWT app auth) ---
 
 
@@ -525,6 +666,8 @@ def user_create(
     display_name: str = "",
     phone: Optional[str] = None,
     photo_url: Optional[str] = None,
+    is_enabled: bool = True,
+    approval_status: str = "approved",
 ) -> int:
     u = User(
         email=email.strip().lower(),
@@ -533,6 +676,8 @@ def user_create(
         display_name=(display_name or "").strip(),
         phone=(phone or "").strip() or None,
         photo_url=(photo_url or "").strip() or None,
+        is_enabled=bool(is_enabled),
+        approval_status=(approval_status or "approved").strip().lower() or "approved",
     )
     db.session.add(u)
     db.session.commit()
@@ -679,8 +824,8 @@ def driver_mark_online(user_id: int, *, last_lat: float | None = None, last_lng:
     if row is None:
         return
     acct = driver_pin_account_by_user_id(user_id)
-    # PIN drivers with depleted wallet cannot be marked available.
-    if acct is not None and float(acct.get("wallet_balance") or 0.0) <= 0.0:
+    # Drivers without wallet account or with depleted wallet cannot be marked available.
+    if acct is None or float(acct.get("wallet_balance") or 0.0) <= 0.0:
         row.is_available = False
     else:
         row.is_available = True
@@ -710,7 +855,7 @@ def driver_set_availability_by_user_id(user_id: int, is_available: bool) -> None
         return
     acct = driver_pin_account_by_user_id(user_id)
     # Never allow availability=True when wallet is depleted.
-    if bool(is_available) and acct is not None and float(acct.get("wallet_balance") or 0.0) <= 0.0:
+    if bool(is_available) and (acct is None or float(acct.get("wallet_balance") or 0.0) <= 0.0):
         row.is_available = False
     else:
         row.is_available = bool(is_available)
@@ -722,12 +867,9 @@ def driver_update_current_zone_by_user_id(user_id: int, current_zone: str) -> No
     u = db.session.get(User, user_id)
     if u is None:
         return
-    email = (u.email or "").strip().lower()
-    prefix = "driverpin_"
-    suffix = "@taxipro.local"
-    if not (email.startswith(prefix) and email.endswith(suffix)):
+    phone = (u.phone or "").strip()
+    if not phone:
         return
-    phone = email[len(prefix) : -len(suffix)]
     row = db.session.scalars(
         select(DriverPinAccount).where(DriverPinAccount.phone == phone)
     ).first()
@@ -741,12 +883,9 @@ def driver_current_zone_by_user_id(user_id: int) -> Optional[str]:
     u = db.session.get(User, user_id)
     if u is None:
         return None
-    email = (u.email or "").strip().lower()
-    prefix = "driverpin_"
-    suffix = "@taxipro.local"
-    if not (email.startswith(prefix) and email.endswith(suffix)):
+    phone = (u.phone or "").strip()
+    if not phone:
         return None
-    phone = email[len(prefix) : -len(suffix)]
     row = db.session.scalars(
         select(DriverPinAccount).where(DriverPinAccount.phone == phone)
     ).first()

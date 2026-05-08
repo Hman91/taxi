@@ -5,12 +5,15 @@ from datetime import date
 from datetime import datetime
 import json
 import os
+import re
 from typing import Any, Dict, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
+from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.security import generate_password_hash
 
 from ..extensions import db
 from .. import db as db_module
@@ -24,6 +27,38 @@ def _ts(val: Any) -> Any:
     if hasattr(val, "isoformat"):
         return val.isoformat()
     return str(val)
+
+
+def _vehicle_parts(raw: str) -> tuple[str, str]:
+    txt = (raw or "").strip()
+    if not txt:
+        return "", ""
+    car_model = ""
+    car_color = ""
+    if txt.startswith("{"):
+        try:
+            info = json.loads(txt)
+            if isinstance(info, dict):
+                car_model = str(info.get("car_model") or "").strip()
+                car_color = str(info.get("car_color") or "").strip()
+        except Exception:
+            pass
+    if not car_model:
+        m = re.search(r"""['"]car_model['"]\s*:\s*['"]([^'"]+)['"]""", txt)
+        if m:
+            car_model = str(m.group(1) or "").strip()
+    if not car_color:
+        m = re.search(r"""['"]car_color['"]\s*:\s*['"]([^'"]+)['"]""", txt)
+        if m:
+            car_color = str(m.group(1) or "").strip()
+    if not car_model or not car_color:
+        for part in txt.split(";"):
+            seg = part.strip()
+            if seg.lower().startswith("model=") and not car_model:
+                car_model = seg.split("=", 1)[1].strip()
+            if seg.lower().startswith("color=") and not car_color:
+                car_color = seg.split("=", 1)[1].strip()
+    return car_model, car_color
 
 
 def _ride_dict(r: Ride) -> Dict[str, Any]:
@@ -137,31 +172,61 @@ def list_app_users(*, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]
     offset = max(0, offset)
     rows = db.session.scalars(
         select(User)
-        .where(User.role.in_(("user", "driver")))
+        .where(User.role.in_(("owner", "operator", "user", "driver", "b2b")))
         .order_by(User.id.desc())
         .offset(offset)
         .limit(limit)
     ).all()
-    return [
-        {
-            "id": int(u.id),
-            "email": u.email,
-            "role": u.role,
-            "preferred_language": u.preferred_language,
-            "is_enabled": u.is_enabled,
-            "created_at": _ts(u.created_at),
-        }
-        for u in rows
-    ]
+    out: List[Dict[str, Any]] = []
+    for u in rows:
+        car_model = ""
+        car_color = ""
+        if u.role == "driver":
+            d = db.session.scalars(select(Driver).where(Driver.user_id == int(u.id))).first()
+            if d is not None:
+                car_model, car_color = _vehicle_parts(d.vehicle_info or "")
+        out.append(
+            {
+                "id": int(u.id),
+                "email": u.email,
+                "role": u.role,
+                "display_name": u.display_name or "",
+                "phone": u.phone or "",
+                "car_model": car_model,
+                "car_color": car_color,
+                "preferred_language": u.preferred_language,
+                "is_enabled": u.is_enabled,
+                "approval_status": u.approval_status,
+                "approved_at": _ts(u.approved_at),
+                "approved_by_user_id": int(u.approved_by_user_id)
+                if u.approved_by_user_id is not None
+                else None,
+                "created_at": _ts(u.created_at),
+            }
+        )
+    return out
 
 
-def set_user_enabled(user_id: int, enabled: bool) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+def set_user_enabled(
+    user_id: int,
+    enabled: bool,
+    *,
+    acted_by_user_id: Optional[int] = None,
+) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     u = db.session.get(User, user_id)
     if u is None:
         return None, "not_found"
-    if u.role not in ("user", "driver"):
+    if u.role not in ("owner", "operator", "user", "driver", "b2b"):
         return None, "invalid_user_role"
     u.is_enabled = bool(enabled)
+    if u.role in ("driver", "b2b"):
+        if enabled:
+            u.approval_status = "approved"
+            u.approved_at = datetime.utcnow()
+            u.approved_by_user_id = acted_by_user_id
+        else:
+            u.approval_status = "rejected"
+            u.approved_by_user_id = acted_by_user_id
     db.session.commit()
     db.session.refresh(u)
     return {
@@ -169,8 +234,219 @@ def set_user_enabled(user_id: int, enabled: bool) -> Tuple[Optional[Dict[str, An
         "email": u.email,
         "role": u.role,
         "is_enabled": u.is_enabled,
+        "approval_status": u.approval_status,
+        "approved_at": _ts(u.approved_at),
+        "approved_by_user_id": int(u.approved_by_user_id)
+        if u.approved_by_user_id is not None
+        else None,
         "preferred_language": u.preferred_language,
     }, None
+
+
+def list_pending_approvals(*, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+    limit = min(max(1, limit), 500)
+    offset = max(0, offset)
+    rows = db.session.scalars(
+        select(User)
+        .where(
+            User.role.in_(("driver", "b2b")),
+            User.approval_status == "pending",
+        )
+        .order_by(User.id.asc())
+        .offset(offset)
+        .limit(limit)
+    ).all()
+    out: List[Dict[str, Any]] = []
+    for u in rows:
+        car_model = ""
+        car_color = ""
+        if u.role == "driver":
+            d = db.session.scalars(select(Driver).where(Driver.user_id == int(u.id))).first()
+            if d is not None:
+                car_model, car_color = _vehicle_parts(d.vehicle_info or "")
+        out.append(
+            {
+                "id": int(u.id),
+                "email": u.email,
+                "role": u.role,
+                "display_name": u.display_name or "",
+                "phone": u.phone or "",
+                "photo_url": u.photo_url or "",
+                "car_model": car_model,
+                "car_color": car_color,
+                "approval_status": u.approval_status,
+                "is_enabled": u.is_enabled,
+                "created_at": _ts(u.created_at),
+            }
+        )
+    return out
+
+
+def create_app_user(
+    *,
+    email: str,
+    password: str,
+    role: str,
+    display_name: str = "",
+    phone: str = "",
+    car_model: str = "",
+    car_color: str = "",
+    acted_by_user_id: Optional[int] = None,
+    auto_approve: bool = True,
+) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    role_norm = (role or "").strip().lower()
+    if role_norm not in ("driver", "b2b"):
+        return None, "invalid_role"
+    email_norm = (email or "").strip().lower()
+    if not email_norm or "@" not in email_norm:
+        return None, "invalid_email"
+    if len(password or "") < 6:
+        return None, "weak_password"
+    if db_module.user_by_email(email_norm) is not None:
+        return None, "email_taken"
+    if not (display_name or "").strip():
+        return None, "name_required"
+    if not (phone or "").strip():
+        return None, "phone_required"
+    if role_norm == "driver" and (not car_model.strip() or not car_color.strip()):
+        return None, "driver_vehicle_required"
+
+    user_id = db_module.user_create(
+        email=email_norm,
+        password_hash=generate_password_hash(password),
+        role=role_norm,
+        display_name=display_name.strip(),
+        phone=phone.strip(),
+        is_enabled=bool(auto_approve),
+        approval_status="approved" if auto_approve else "pending",
+    )
+    if role_norm == "driver":
+        db_module.driver_create(
+            user_id=user_id,
+            display_name=display_name.strip(),
+            vehicle_info=json.dumps(
+                {
+                    "car_model": car_model.strip(),
+                    "car_color": car_color.strip(),
+                }
+            ),
+        )
+    u = db.session.get(User, int(user_id))
+    if u is None:
+        return None, "not_found"
+    if auto_approve:
+        u.approved_at = datetime.utcnow()
+        u.approved_by_user_id = acted_by_user_id
+        db.session.commit()
+    return {
+        "id": int(u.id),
+        "email": u.email,
+        "role": u.role,
+        "display_name": u.display_name or "",
+        "phone": u.phone or "",
+        "is_enabled": bool(u.is_enabled),
+        "approval_status": u.approval_status,
+    }, None
+
+
+def patch_app_user(
+    user_id: int,
+    *,
+    email: Optional[str] = None,
+    display_name: Optional[str] = None,
+    phone: Optional[str] = None,
+    car_model: Optional[str] = None,
+    car_color: Optional[str] = None,
+    password: Optional[str] = None,
+) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    u = db.session.get(User, int(user_id))
+    if u is None:
+        return None, "not_found"
+    if u.role not in ("driver", "b2b"):
+        return None, "invalid_user_role"
+
+    if email is not None:
+        email_norm = email.strip().lower()
+        if not email_norm or "@" not in email_norm:
+            return None, "invalid_email"
+        clash = db.session.scalars(
+            select(User).where(User.email == email_norm, User.id != int(user_id))
+        ).first()
+        if clash is not None:
+            return None, "email_taken"
+        u.email = email_norm
+    if display_name is not None:
+        u.display_name = display_name.strip()
+    if phone is not None:
+        p = phone.strip()
+        if not p:
+            return None, "phone_required"
+        u.phone = p
+    if password is not None:
+        pw = password.strip()
+        if len(pw) < 6:
+            return None, "weak_password"
+        u.password_hash = generate_password_hash(pw)
+
+    if u.role == "driver":
+        d = db.session.scalars(select(Driver).where(Driver.user_id == int(u.id))).first()
+        if d is not None:
+            if display_name is not None:
+                d.display_name = (display_name or "").strip()
+            info: Dict[str, Any] = {}
+            raw = (d.vehicle_info or "").strip()
+            if raw:
+                try:
+                    parsed = json.loads(raw)
+                    if isinstance(parsed, dict):
+                        info = dict(parsed)
+                except Exception:
+                    info = {}
+            if car_model is not None:
+                info["car_model"] = car_model.strip()
+            if car_color is not None:
+                info["car_color"] = car_color.strip()
+            d.vehicle_info = json.dumps(info)
+
+    db.session.commit()
+    db.session.refresh(u)
+    return {
+        "id": int(u.id),
+        "email": u.email,
+        "role": u.role,
+        "display_name": u.display_name or "",
+        "phone": u.phone or "",
+        "is_enabled": bool(u.is_enabled),
+        "approval_status": u.approval_status,
+    }, None
+
+
+def delete_app_user(user_id: int) -> Optional[str]:
+    u = db.session.get(User, int(user_id))
+    if u is None:
+        return "not_found"
+    if u.role not in ("driver", "b2b", "user"):
+        return "invalid_user_role"
+    try:
+        uid = int(u.id)
+        # Defensive cleanup for databases that may miss ON DELETE CASCADE.
+        db.session.execute(delete(Message).where(Message.sender_user_id == uid))
+        db.session.execute(delete(B2BBooking).where(B2BBooking.user_id == uid))
+        rides = db.session.scalars(select(Ride.id).where(Ride.user_id == uid)).all()
+        if rides:
+            ride_ids = [int(rid) for rid in rides]
+            db.session.execute(delete(Conversation).where(Conversation.ride_id.in_(ride_ids)))
+            db.session.execute(delete(Ride).where(Ride.id.in_(ride_ids)))
+        if u.role == "driver":
+            d = db.session.scalars(select(Driver).where(Driver.user_id == uid)).first()
+            if d is not None:
+                db.session.delete(d)
+        db.session.delete(u)
+        db.session.commit()
+        return None
+    except SQLAlchemyError:
+        db.session.rollback()
+        return "cannot_delete_user"
 
 
 def list_b2b_tenants() -> List[Dict[str, Any]]:
@@ -333,34 +609,97 @@ def list_b2b_bookings(*, limit: int = 200) -> List[Dict[str, Any]]:
 
 def list_driver_wallet_breakdown() -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
-    for acc in db_module.list_driver_pin_accounts():
-        phone = (acc.get("phone") or "").strip()
-        if not phone:
+
+    def _is_system_driver(*, email: str = "", name: str = "") -> bool:
+        e = (email or "").strip().lower()
+        n = (name or "").strip().lower()
+        if e.endswith("@taxipro.local") or e.endswith("@example.com"):
+            return True
+        if e.startswith("smoke_") or e.startswith("dispatch_"):
+            return True
+        if n.startswith("smoke_") or n.startswith("driver "):
+            return True
+        return False
+
+    rows = db.session.execute(
+        select(Driver, User).join(User, Driver.user_id == User.id).order_by(Driver.id.asc())
+    ).all()
+    for d, u in rows:
+        if _is_system_driver(
+            email=(u.email or ""),
+            name=(d.display_name or u.display_name or ""),
+        ):
             continue
-        app_user = db_module.user_by_email(f"driverpin_{phone}@taxipro.local")
-        if app_user is None:
-            summary = {
-                "completed_rides_count": 0,
-                "gross_normal": 0.0,
-                "gross_b2b": 0.0,
-                "deducted_normal": 0.0,
-                "deducted_b2b": 0.0,
-                "total_gross": 0.0,
-                "total_deducted": 0.0,
-                "net_gains": 0.0,
-                "is_available": False,
-            }
-        else:
-            summary = rides_service.driver_gains_summary(int(app_user["id"]))
+        uid = int(u.id)
+        acc = db_module.driver_pin_ensure_for_app_driver(uid)
+        if acc is None:
+            continue
+        car_model = str(acc.get("car_model") or "").strip()
+        car_color = str(acc.get("car_color") or "").strip()
+        if (not car_model or not car_color):
+            raw = (d.vehicle_info or "").strip()
+            if raw:
+                if raw.startswith("{"):
+                    try:
+                        info = json.loads(raw)
+                        if not car_model:
+                            car_model = str(info.get("car_model") or "").strip()
+                        if not car_color:
+                            car_color = str(info.get("car_color") or "").strip()
+                    except Exception:
+                        pass
+                else:
+                    for part in raw.split(";"):
+                        seg = part.strip()
+                        if seg.lower().startswith("model=") and not car_model:
+                            car_model = seg.split("=", 1)[1].strip()
+                        if seg.lower().startswith("color=") and not car_color:
+                            car_color = seg.split("=", 1)[1].strip()
+        summary = rides_service.driver_gains_summary(uid)
         out.append(
             {
                 "id": int(acc.get("id") or 0),
-                "driver_name": acc.get("driver_name"),
-                "phone": phone,
+                "driver_name": (d.display_name or u.display_name or acc.get("driver_name") or "-").strip(),
+                "phone": (u.phone or acc.get("phone") or "").strip(),
                 "wallet_balance": float(acc.get("wallet_balance") or 0.0),
                 "owner_commission_rate": float(acc.get("owner_commission_rate") or 10.0),
                 "b2b_commission_rate": float(acc.get("b2b_commission_rate") or 5.0),
+                "car_model": car_model,
+                "car_color": car_color,
                 **summary,
+                "source": "driver_account",
+            }
+        )
+    return out
+
+
+def list_driver_ratings() -> List[Dict[str, Any]]:
+    def _is_system_driver(*, email: str = "", name: str = "") -> bool:
+        e = (email or "").strip().lower()
+        n = (name or "").strip().lower()
+        if e.endswith("@taxipro.local") or e.endswith("@example.com"):
+            return True
+        if e.startswith("smoke_") or e.startswith("dispatch_"):
+            return True
+        if n.startswith("smoke_") or n.startswith("driver "):
+            return True
+        return False
+
+    rows = db.session.execute(
+        select(Driver, User).join(User, Driver.user_id == User.id).order_by(Driver.id.asc())
+    ).all()
+    out: List[Dict[str, Any]] = []
+    for d, u in rows:
+        if _is_system_driver(email=(u.email or ""), name=(d.display_name or u.display_name or "")):
+            continue
+        stats = db_module.rating_stats(driver_id=int(d.id))
+        out.append(
+            {
+                "driver_name": (d.display_name or u.display_name or "").strip(),
+                "phone": (u.phone or "").strip(),
+                "driver_id": int(d.id),
+                "rating_average": stats["average"],
+                "rating_count": stats["count"],
             }
         )
     return out
@@ -525,6 +864,7 @@ def _normalize_tracking_row(
     arrival_code = str(r.get("arr_iata") or arr_iata or "").upper()
     if arrival_code not in tunisian_iata:
         return None
+
     flight_number = (
         str(r.get("flight_iata") or "").strip()
         or str(r.get("flight_number") or "").strip()
@@ -533,6 +873,7 @@ def _normalize_tracking_row(
     )
     if not flight_number:
         return None
+
     dep_airport = (
         str(r.get("dep_name") or "").strip()
         or str(r.get("dep_city") or "").strip()
@@ -547,6 +888,7 @@ def _normalize_tracking_row(
         if fallback is not None:
             dep_city = dep_city or fallback[0]
             dep_country = dep_country or fallback[1]
+
     takeoff_raw = str(
         r.get("dep_time")
         or r.get("dep_estimated")

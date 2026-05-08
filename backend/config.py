@@ -64,7 +64,8 @@ class Config:
         "GOOGLE_OAUTH_CLIENT_ID",
         "962065998165-o2v10060s3l65ve7n8leee7hn28ddh6d.apps.googleusercontent.com",
     )
-    PASSWORD_RESET_DEV_MODE = os.environ.get("PASSWORD_RESET_DEV_MODE", "0")
+    # "1"/true: skip real SMTP — code is logged server-side only. Use ONLY for local QA; production MUST be "0".
+    PASSWORD_RESET_DEV_MODE = os.environ.get("PASSWORD_RESET_DEV_MODE", "0").strip().lower()
     SMTP_HOST = os.environ.get("SMTP_HOST", "").strip()
     SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
     SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "").strip()
@@ -75,3 +76,14 @@ class Config:
         "true",
         "yes",
     )
+    # When "1", use SMTP_SSL (e.g. Gmail on port 465). Helps if STARTTLS on 587 is blocked by the host.
+    SMTP_SSL = str(os.environ.get("SMTP_SSL", "0")).strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    SMTP_TIMEOUT_SECONDS = float(os.environ.get("SMTP_TIMEOUT_SECONDS", "25"))
+    # Render Free blocks outbound SMTP; use HTTPS email instead (same env on Render Dashboard).
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
+    # Resend "from" must be a verified sender/domain in Resend (or their onboarding address for tests).
+    RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "").strip()

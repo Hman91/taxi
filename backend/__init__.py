@@ -19,6 +19,26 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.config.from_object(Config)
     app.logger.setLevel(logging.INFO)
+    _resend_on = bool(str(app.config.get("RESEND_API_KEY") or "").strip())
+    _smtp_on = bool(str(app.config.get("SMTP_HOST") or "").strip())
+    if not _resend_on and not _smtp_on:
+        app.logger.warning(
+            "Password reset: neither RESEND_API_KEY nor SMTP_HOST — forgot-password emails cannot send "
+            "(API returns email_sent:false). Render Free blocks SMTP — use HTTPS: set RESEND_API_KEY + RESEND_FROM_EMAIL "
+            "(see https://resend.com)."
+        )
+    elif str(os.environ.get("RENDER") or "").strip().lower() == "true" and not _resend_on and _smtp_on:
+        app.logger.warning(
+            "Running on Render without RESEND_API_KEY: SMTP is often blocked (Free tier) or flaky; "
+            "set RESEND_API_KEY + RESEND_FROM_EMAIL for reliable forgot-password emails."
+        )
+    if (
+        str(app.config.get("PASSWORD_RESET_DEV_MODE") or "").strip().lower()
+        in ("1", "true", "yes")
+    ):
+        app.logger.warning(
+            "PASSWORD_RESET_DEV_MODE is on — forgot-password does not send email; codes only appear in logs."
+        )
     orm_db.init_app(app)
     socketio.init_app(
         app,

@@ -20,6 +20,12 @@ class TaxiAccountDisabledException implements Exception {
   String toString() => 'TaxiAccountDisabledException';
 }
 
+/// `login-app`/`login-google` returned 403 with `account_pending`.
+class TaxiAccountPendingException implements Exception {
+  @override
+  String toString() => 'TaxiAccountPendingException';
+}
+
 class TaxiApiClient {
   TaxiApiClient({http.Client? httpClient})
       : _http = httpClient ?? http.Client();
@@ -191,6 +197,8 @@ class TaxiApiClient {
     String? displayName,
     String? phone,
     String? photoUrl,
+    String? carModel,
+    String? carColor,
   }) async {
     final r = await _http.post(
       _u('/api/auth/register'),
@@ -202,6 +210,8 @@ class TaxiApiClient {
         if ((displayName ?? '').trim().isNotEmpty) 'display_name': displayName!.trim(),
         if ((phone ?? '').trim().isNotEmpty) 'phone': phone!.trim(),
         if ((photoUrl ?? '').trim().isNotEmpty) 'photo_url': photoUrl!.trim(),
+        if ((carModel ?? '').trim().isNotEmpty) 'car_model': carModel!.trim(),
+        if ((carColor ?? '').trim().isNotEmpty) 'car_color': carColor!.trim(),
       }),
     );
     if (r.statusCode != 201) {
@@ -223,6 +233,9 @@ class TaxiApiClient {
       final code = _errorCodeFromBody(r.body);
       if (r.statusCode == 403 && code == 'account_disabled') {
         throw TaxiAccountDisabledException();
+      }
+      if (r.statusCode == 403 && code == 'account_pending') {
+        throw TaxiAccountPendingException();
       }
       throw TaxiApiException(code ?? r.body, r.statusCode);
     }
@@ -269,6 +282,7 @@ class TaxiApiClient {
   Future<AppLoginResponse> loginGoogle({
     String? idToken,
     String? accessToken,
+    String? role,
     String? phone,
   }) async {
     final tokenId = (idToken ?? '').trim();
@@ -282,6 +296,7 @@ class TaxiApiClient {
       body: jsonEncode({
         if (tokenId.isNotEmpty) 'id_token': tokenId,
         if (tokenAccess.isNotEmpty) 'access_token': tokenAccess,
+        if ((role ?? '').trim().isNotEmpty) 'role': role!.trim(),
         if ((phone ?? '').trim().isNotEmpty) 'phone': phone!.trim(),
       }),
     );
@@ -289,6 +304,9 @@ class TaxiApiClient {
       final code = _errorCodeFromBody(r.body);
       if (r.statusCode == 403 && code == 'account_disabled') {
         throw TaxiAccountDisabledException();
+      }
+      if (r.statusCode == 403 && code == 'account_pending') {
+        throw TaxiAccountPendingException();
       }
       throw TaxiApiException(code ?? r.body, r.statusCode);
     }
@@ -369,6 +387,28 @@ class TaxiApiClient {
       throw TaxiApiException(
           _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
     }
+  }
+
+  Future<Map<String, dynamic>> patchMyAccount({
+    required String token,
+    required String currentPassword,
+    String? email,
+    String? password,
+  }) async {
+    final r = await _http.patch(
+      _u('/api/me/account'),
+      headers: _jsonHeaders(bearer: token),
+      body: jsonEncode({
+        'current_password': currentPassword,
+        if ((email ?? '').trim().isNotEmpty) 'email': email!.trim(),
+        if ((password ?? '').trim().isNotEmpty) 'password': password,
+      }),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(_errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return Map<String, dynamic>.from(body['user'] as Map);
   }
 
   Future<List<Map<String, dynamic>>> listAdminFareRoutes(String token) async {
@@ -513,12 +553,120 @@ class TaxiApiClient {
     return Map<String, dynamic>.from(body['booking'] as Map);
   }
 
+  Future<Map<String, dynamic>> getB2bMe(String token) async {
+    final r = await _http.get(
+      _u('/api/b2b/me'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    return Map<String, dynamic>.from(jsonDecode(r.body) as Map);
+  }
+
+  Future<Map<String, dynamic>> patchB2bMe({
+    required String token,
+    String? displayName,
+    String? phone,
+    String? label,
+    String? contactName,
+    String? pin,
+    String? tenantPhone,
+    String? hotel,
+    String? email,
+    String? password,
+    String? currentPassword,
+  }) async {
+    final body = <String, dynamic>{};
+    if (displayName != null) body['display_name'] = displayName;
+    if (phone != null) body['phone'] = phone;
+    if (label != null) body['label'] = label;
+    if (contactName != null) body['contact_name'] = contactName;
+    if (pin != null) body['pin'] = pin;
+    if (tenantPhone != null) body['tenant_phone'] = tenantPhone;
+    if (hotel != null) body['hotel'] = hotel;
+    if (email != null) body['email'] = email;
+    if (password != null) body['password'] = password;
+    if (currentPassword != null) body['current_password'] = currentPassword;
+    final r = await _http.patch(
+      _u('/api/b2b/me'),
+      headers: _jsonHeaders(bearer: token),
+      body: jsonEncode(body),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    return Map<String, dynamic>.from(jsonDecode(r.body) as Map);
+  }
+
+  Future<Map<String, dynamic>> getDriverMe(String token) async {
+    final r = await _http.get(
+      _u('/api/driver/me'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    return Map<String, dynamic>.from(jsonDecode(r.body) as Map);
+  }
+
+  Future<Map<String, dynamic>> patchDriverMe({
+    required String token,
+    String? displayName,
+    String? phone,
+    String? email,
+    String? password,
+    String? carModel,
+    String? carColor,
+    String? photoUrl,
+  }) async {
+    final body = <String, dynamic>{};
+    if (displayName != null) body['display_name'] = displayName;
+    if (phone != null) body['phone'] = phone;
+    if (email != null) body['email'] = email;
+    if (password != null) body['password'] = password;
+    if (carModel != null) body['car_model'] = carModel;
+    if (carColor != null) body['car_color'] = carColor;
+    if (photoUrl != null) body['photo_url'] = photoUrl;
+    final r = await _http.patch(
+      _u('/api/driver/me'),
+      headers: _jsonHeaders(bearer: token),
+      body: jsonEncode(body),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    return Map<String, dynamic>.from(jsonDecode(r.body) as Map);
+  }
+
   Future<List<Map<String, dynamic>>> listAdminUsers(
     String token, {
     int limit = 100,
     int offset = 0,
   }) async {
     final uri = _u('/api/admin/users').replace(
+      queryParameters: {'limit': '$limit', 'offset': '$offset'},
+    );
+    final r = await _http.get(uri, headers: _jsonHeaders(bearer: token));
+    if (r.statusCode != 200) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    final list = body['users'] as List<dynamic>;
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> listAdminPendingUsers(
+    String token, {
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    final uri = _u('/api/admin/users/pending').replace(
       queryParameters: {'limit': '$limit', 'offset': '$offset'},
     );
     final r = await _http.get(uri, headers: _jsonHeaders(bearer: token));
@@ -547,6 +695,71 @@ class TaxiApiClient {
     }
     final body = jsonDecode(r.body) as Map<String, dynamic>;
     return Map<String, dynamic>.from(body['user'] as Map);
+  }
+
+  Future<Map<String, dynamic>> createAdminAppUser({
+    required String token,
+    required String email,
+    required String password,
+    required String role,
+    required String displayName,
+    required String phone,
+    String? carModel,
+    String? carColor,
+    bool autoApprove = true,
+  }) async {
+    final r = await _http.post(
+      _u('/api/admin/users'),
+      headers: _jsonHeaders(bearer: token),
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+        'role': role,
+        'display_name': displayName,
+        'phone': phone,
+        if ((carModel ?? '').trim().isNotEmpty) 'car_model': carModel!.trim(),
+        if ((carColor ?? '').trim().isNotEmpty) 'car_color': carColor!.trim(),
+        'auto_approve': autoApprove,
+      }),
+    );
+    if (r.statusCode != 201) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return Map<String, dynamic>.from(body['user'] as Map);
+  }
+
+  Future<Map<String, dynamic>> patchAdminAppUserProfile({
+    required String token,
+    required int userId,
+    required Map<String, dynamic> payload,
+  }) async {
+    final r = await _http.patch(
+      _u('/api/admin/users/$userId/profile'),
+      headers: _jsonHeaders(bearer: token),
+      body: jsonEncode(payload),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return Map<String, dynamic>.from(body['user'] as Map);
+  }
+
+  Future<void> deleteAdminAppUser({
+    required String token,
+    required int userId,
+  }) async {
+    final r = await _http.delete(
+      _u('/api/admin/users/$userId'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(
+          _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
   }
 
   Future<List<Map<String, dynamic>>> listAdminB2bTenants(String token) async {

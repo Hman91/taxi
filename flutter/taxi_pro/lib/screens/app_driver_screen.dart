@@ -790,6 +790,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
             myUserId: uid,
             rideId: ride.id,
             conversationId: cid,
+            showDriverQuickReplies: true,
           ),
         ),
       );

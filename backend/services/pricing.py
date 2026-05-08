@@ -256,3 +256,24 @@ def calculate_gps_fare(distance_km: float) -> Tuple[float, bool]:
 def random_stub_distance_km() -> float:
     """Placeholder until real routing; matches old np.random.uniform(2, 20)."""
     return round(random.uniform(2.0, 20.0), 1)
+
+
+def fare_quote_for_pickup_destination(start: str, destination: str) -> Dict[str, float | bool]:
+    """Best-effort distance (km) and passenger fare (DT) for pickup → destination."""
+    _ensure_seed_if_empty()
+    pickup = (start or "").strip()
+    dest = (destination or "").strip()
+    row = db_module.fare_route_by_segments(pickup, dest)
+    if row is None:
+        d_km = float(_estimate_distance_km(pickup, dest))
+        b = float(_estimate_base_fare(d_km))
+    else:
+        d_km = float(row["distance_km"])
+        b = float(row["base_fare"])
+    fare, is_night = calculate_fare(b)
+    return {
+        "distance_km": round(d_km, 3),
+        "base_fare_dt": round(b, 3),
+        "fare_dt": round(float(fare), 3),
+        "is_night": bool(is_night),
+    }

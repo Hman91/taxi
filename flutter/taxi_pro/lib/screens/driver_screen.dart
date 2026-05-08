@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../api/models.dart';
 import '../app_locale.dart' show
@@ -32,6 +33,7 @@ import '../utils/chat_unread_poll.dart'
         rideMayHaveConversation;
 import '../utils/int_from_json.dart';
 import '../widgets/driver_ride_offer_card.dart';
+import '../widgets/voom_logo.dart';
 import 'ride_chat_screen.dart';
 import 'unified_login_screen.dart';
 
@@ -221,8 +223,9 @@ Widget _rowInfoCard({
 // DRIVER SCREEN
 // ─────────────────────────────────────────────────────────────
 class DriverScreen extends StatefulWidget {
-  const DriverScreen({super.key, this.initialSession});
+  const DriverScreen({super.key, this.initialSession, this.appInitialSession});
   final DriverPinLoginResponse? initialSession;
+  final AppLoginResponse? appInitialSession;
 
   @override
   State<DriverScreen> createState() => _DriverScreenState();
@@ -231,6 +234,7 @@ class DriverScreen extends StatefulWidget {
 class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderStateMixin {
   final _api = TaxiAppService();
   final _socket = ChatSocketService();
+  final _imagePicker = ImagePicker();
   final _phoneController = TextEditingController(text: '98123456');
   final _pinController = TextEditingController(text: '1234');
   List<String> _locations = [];
@@ -243,6 +247,8 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   int? _userId;
   int? _driverId;
   String? _driverName;
+  String? _driverEmail;
+  String? _driverPhone;
   double _walletBalance = 0.0;
   Map<String, dynamic>? _gains;
   bool _isAvailable = true;
@@ -250,6 +256,8 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   String? _carModel;
   String? _carColor;
   String? _photoUrl;
+  String? _profileImageRaw;
+  ImageProvider<Object>? _profileImageProvider;
   String? _message;
   List<Ride> _rides = [];
   List<Map<String, dynamic>> _flightArrivals = [];
@@ -275,6 +283,65 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   TabController? _tabController;
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
+
+  String _uiText({
+    required String en,
+    required String ar,
+    required String fr,
+    required String es,
+    required String de,
+    required String it,
+    required String ru,
+    required String zh,
+  }) {
+    final code = Localizations.localeOf(context).languageCode.toLowerCase();
+    if (code.startsWith('ar')) return ar;
+    if (code.startsWith('fr')) return fr;
+    if (code.startsWith('es')) return es;
+    if (code.startsWith('de')) return de;
+    if (code.startsWith('it')) return it;
+    if (code.startsWith('ru')) return ru;
+    if (code.startsWith('zh')) return zh;
+    return en;
+  }
+
+  String _resolvedDriverName({
+    String? primary,
+    String? email,
+    String? fallback,
+  }) {
+    final p = (primary ?? '').trim();
+    final f = (fallback ?? '').trim();
+    final e = (email ?? '').trim().toLowerCase();
+    final placeholder = RegExp(r'^driver_\d+$');
+    if (p.isNotEmpty && !placeholder.hasMatch(p.toLowerCase())) return p;
+    if (e.contains('@')) {
+      final left = e.split('@').first.trim();
+      if (left.isNotEmpty) return left;
+    }
+    if (f.isNotEmpty && !placeholder.hasMatch(f.toLowerCase())) return f;
+    return p.isNotEmpty ? p : (f.isNotEmpty ? f : 'Driver');
+  }
+
+  ({String? model, String? color}) _vehicleInfoParts(String? raw) {
+    final src = (raw ?? '').trim();
+    if (src.isEmpty) return (model: null, color: null);
+    String? model;
+    String? color;
+
+    final modelJson =
+        RegExp(r"""["']car_model["']\s*:\s*["']([^"']+)["']""").firstMatch(src);
+    final colorJson =
+        RegExp(r"""["']car_color["']\s*:\s*["']([^"']+)["']""").firstMatch(src);
+    final modelEq = RegExp(r'model\s*=\s*([^;,\n]+)', caseSensitive: false).firstMatch(src);
+    final colorEq = RegExp(r'color\s*=\s*([^;,\n]+)', caseSensitive: false).firstMatch(src);
+
+    model = (modelJson?.group(1) ?? modelEq?.group(1) ?? '').trim();
+    color = (colorJson?.group(1) ?? colorEq?.group(1) ?? '').trim();
+    if (model.isEmpty) model = null;
+    if (color.isEmpty) color = null;
+    return (model: model, color: color);
+  }
 
   static const Map<String, _ZoneCoord> _zoneCoords = {
     'مطار قرطاج': _ZoneCoord(36.8508, 10.2272),
@@ -381,6 +448,16 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     );
   }
 
+  Future<void> _goBack() async {
+    if (!mounted) return;
+    final nav = Navigator.of(context);
+    if (nav.canPop()) {
+      nav.pop();
+      return;
+    }
+    await _goToHome();
+  }
+
   Future<void> _logout() async {
     await SessionStore.clear();
     if (!mounted) return;
@@ -391,11 +468,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
 
   Widget _appBarHomeLogo() => GestureDetector(
     onTap: () => unawaited(_goToHome()),
-    child: Container(
-      width: 32, height: 32,
-      decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(9)),
-      child: const Icon(Icons.local_taxi_rounded, color: _C.charcoal, size: 18),
-    ),
+    child: const VoomLogo(height: 30),
   );
 
   @override
@@ -405,9 +478,25 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       restoreUiRoleLocale(AppUiRole.driver);
-      final s = widget.initialSession;
+      final s = widget.initialSession ?? _sessionFromApp(widget.appInitialSession);
       if (s != null && _token == null) _bootstrapFromSession(s);
     });
+  }
+
+  DriverPinLoginResponse? _sessionFromApp(AppLoginResponse? r) {
+    if (r == null) return null;
+    return DriverPinLoginResponse(
+      accessToken: r.accessToken,
+      role: r.role,
+      userId: r.userId,
+      driverName: 'driver_${r.userId}',
+      phone: '',
+      preferredLanguage: r.preferredLanguage,
+      walletBalance: 0,
+      ownerCommissionRate: 10,
+      b2bCommissionRate: 5,
+      autoDeductEnabled: true,
+    );
   }
 
   Future<void> _bootstrapFromSession(DriverPinLoginResponse r) async {
@@ -417,7 +506,9 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     rememberCurrentLocaleForRole(AppUiRole.driver);
     setState(() {
       _token = r.accessToken; _userId = r.userId; _driverId = r.driverId;
-      _driverName = r.driverName; _walletBalance = r.walletBalance; _isAvailable = true;
+      _driverName = _resolvedDriverName(primary: r.driverName, fallback: _driverName); _walletBalance = r.walletBalance; _isAvailable = true;
+      _driverPhone = r.phone;
+      _driverEmail = null;
       _carModel = r.carModel; _carColor = r.carColor; _photoUrl = r.photoUrl;
       _unreadChatByRideId.clear(); _rideIdByConversationId.clear();
       _conversationIdByRideId.clear(); _lastSeenMessageIdByConversationId.clear();
@@ -434,9 +525,204 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     await _detectDriverLocation(push: false);
     await _refreshRides();
     await _refreshArrivals(silent: true);
+    await _hydrateDriverProfile();
     _socket.connect(r.accessToken, onReceiveMessage: _onChatMessage, onRideStatus: _onRideStatusEvent, onDriverWallet: _onDriverWallet);
     _startRidesPolling();
     await _pushDriverLocation();
+  }
+
+  Future<void> _hydrateDriverProfile() async {
+    final t = _token;
+    if (t == null) return;
+    try {
+      final payload = await _api.getDriverMe(t);
+      final user = Map<String, dynamic>.from(
+        (payload['user'] as Map?)?.cast<String, dynamic>() ?? const {},
+      );
+      final pin = Map<String, dynamic>.from(
+        (payload['pin_account'] as Map?)?.cast<String, dynamic>() ?? const {},
+      );
+      final driver = Map<String, dynamic>.from(
+        (payload['driver'] as Map?)?.cast<String, dynamic>() ?? const {},
+      );
+      final v = _vehicleInfoParts(driver['vehicle_info']?.toString());
+      if (!mounted) return;
+      setState(() {
+        _driverEmail = (user['email'] ?? _driverEmail)?.toString();
+        final name = (user['display_name'] ?? pin['driver_name'] ?? _driverName).toString().trim();
+        _driverName = _resolvedDriverName(
+          primary: name,
+          email: _driverEmail,
+          fallback: _driverName,
+        );
+        _driverPhone = (user['phone'] ?? pin['phone'] ?? _driverPhone)?.toString();
+        final pinModel = (pin['car_model'] ?? '').toString().trim();
+        final pinColor = (pin['car_color'] ?? '').toString().trim();
+        _carModel = pinModel.isNotEmpty ? pinModel : (v.model ?? _carModel);
+        _carColor = pinColor.isNotEmpty ? pinColor : (v.color ?? _carColor);
+        _photoUrl = (pin['photo_url'] ?? _photoUrl)?.toString();
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _showEditDriverProfileDialog() async {
+    final t = _token;
+    if (t == null) return;
+    final nameCtrl = TextEditingController(text: (_driverName ?? '').trim());
+    final phoneCtrl = TextEditingController(text: (_driverPhone ?? _phoneController.text).trim());
+    final emailCtrl = TextEditingController(text: (_driverEmail ?? '').trim());
+    final modelCtrl = TextEditingController(text: (_carModel ?? '').trim());
+    final colorCtrl = TextEditingController(text: (_carColor ?? '').trim());
+    final passwordCtrl = TextEditingController();
+    String photoData = (_photoUrl ?? '').trim();
+    bool saving = false;
+    String? localError;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          backgroundColor: _C.surface,
+          surfaceTintColor: _C.surface,
+          title: Text(_uiText(en: 'Edit profile', ar: 'تعديل الملف الشخصي', fr: 'Modifier le profil', es: 'Editar perfil', de: 'Profil bearbeiten', it: 'Modifica profilo', ru: 'Редактировать профиль', zh: '编辑资料')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: _fd(
+                    _uiText(en: 'Name', ar: 'الاسم', fr: 'Nom', es: 'Nombre', de: 'Name', it: 'Nome', ru: 'Имя', zh: '姓名'),
+                    icon: Icons.person_outline_rounded,
+                  ).copyWith(hintText: _driverName ?? ''),
+                ),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: _fd(
+                    _uiText(en: 'Phone', ar: 'الهاتف', fr: 'Telephone', es: 'Telefono', de: 'Telefon', it: 'Telefono', ru: 'Телефон', zh: '电话'),
+                    icon: Icons.phone_outlined,
+                  ).copyWith(hintText: _driverPhone ?? ''),
+                ),
+                TextField(
+                  controller: emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: _fd(
+                    _uiText(en: 'Email', ar: 'البريد الإلكتروني', fr: 'Email', es: 'Correo', de: 'E-Mail', it: 'Email', ru: 'Email', zh: '邮箱'),
+                    icon: Icons.alternate_email_rounded,
+                  ).copyWith(hintText: _driverEmail ?? ''),
+                ),
+                TextField(
+                  controller: modelCtrl,
+                  decoration: _fd(
+                    _uiText(en: 'Car model', ar: 'موديل السيارة', fr: 'Modele voiture', es: 'Modelo de coche', de: 'Automodell', it: 'Modello auto', ru: 'Модель авто', zh: '车型'),
+                    icon: Icons.directions_car_outlined,
+                  ).copyWith(hintText: _carModel ?? ''),
+                ),
+                TextField(
+                  controller: colorCtrl,
+                  decoration: _fd(
+                    _uiText(en: 'Car color', ar: 'لون السيارة', fr: 'Couleur voiture', es: 'Color del coche', de: 'Autofarbe', it: 'Colore auto', ru: 'Цвет авто', zh: '车身颜色'),
+                    icon: Icons.palette_outlined,
+                  ).copyWith(hintText: _carColor ?? ''),
+                ),
+                TextField(
+                  controller: passwordCtrl,
+                  obscureText: true,
+                  decoration: _fd(
+                    _uiText(en: 'New password (optional)', ar: 'كلمة مرور جديدة (اختياري)', fr: 'Nouveau mot de passe (optionnel)', es: 'Nueva contraseña (opcional)', de: 'Neues Passwort (optional)', it: 'Nuova password (opzionale)', ru: 'Новый пароль (необязательно)', zh: '新密码（可选）'),
+                    icon: Icons.lock_outline_rounded,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: saving
+                            ? null
+                            : () async {
+                                final picked = await _imagePicker.pickImage(
+                                  source: ImageSource.gallery,
+                                  imageQuality: 80,
+                                  maxWidth: 1600,
+                                );
+                                if (picked == null) return;
+                                final bytes = await picked.readAsBytes();
+                                final n = picked.name.toLowerCase();
+                                final ext = n.contains('.') ? n.split('.').last : 'jpeg';
+                                final mime = ext == 'png'
+                                    ? 'image/png'
+                                    : ext == 'webp'
+                                        ? 'image/webp'
+                                        : 'image/jpeg';
+                                setLocal(() => photoData = 'data:$mime;base64,${base64Encode(bytes)}');
+                              },
+                        icon: const Icon(Icons.photo_library_outlined),
+                        label: Text(_uiText(en: 'Pick photo', ar: 'اختيار صورة', fr: 'Choisir photo', es: 'Elegir foto', de: 'Foto wählen', it: 'Scegli foto', ru: 'Выбрать фото', zh: '选择照片')),
+                      ),
+                    ),
+                  ],
+                ),
+                if (localError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(localError!, style: const TextStyle(color: _C.danger, fontSize: 12)),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: saving ? null : () => Navigator.pop(ctx, false), child: Text(_uiText(en: 'Cancel', ar: 'إلغاء', fr: 'Annuler', es: 'Cancelar', de: 'Abbrechen', it: 'Annulla', ru: 'Отмена', zh: '取消'))),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: _C.yellow,
+                foregroundColor: _C.charcoal,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final name = nameCtrl.text.trim();
+                      final phone = phoneCtrl.text.trim();
+                      final email = emailCtrl.text.trim();
+                      final model = modelCtrl.text.trim();
+                      final color = colorCtrl.text.trim();
+                      setLocal(() { saving = true; localError = null; });
+                      try {
+                        String? onlyIfFilled(String v) {
+                          final t = v.trim();
+                          return t.isEmpty ? null : t;
+                        }
+                        await _api.patchDriverMe(
+                          token: t,
+                          displayName: onlyIfFilled(name),
+                          phone: onlyIfFilled(phone),
+                          email: onlyIfFilled(email),
+                          password: onlyIfFilled(passwordCtrl.text),
+                          // Car fields are optional and may be cleared.
+                          carModel: model,
+                          carColor: color,
+                          photoUrl: onlyIfFilled(photoData),
+                        );
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx, true);
+                      } catch (e) {
+                        setLocal(() { localError = e.toString(); saving = false; });
+                      }
+                    },
+              child: Text(_uiText(en: 'Save', ar: 'حفظ', fr: 'Enregistrer', es: 'Guardar', de: 'Speichern', it: 'Salva', ru: 'Сохранить', zh: '保存')),
+            ),
+          ],
+        ),
+      ),
+    );
+    // Keep dialog controllers alive through route teardown to avoid
+    // "TextEditingController was used after being disposed" during pop animation.
+    if (ok == true) {
+      await _hydrateDriverProfile();
+      if (!mounted) return;
+      setState(() => _message = _uiText(en: 'Profile updated successfully.', ar: 'تم تحديث الملف الشخصي بنجاح.', fr: 'Profil mis a jour avec succes.', es: 'Perfil actualizado correctamente.', de: 'Profil erfolgreich aktualisiert.', it: 'Profilo aggiornato con successo.', ru: 'Профиль успешно обновлен.', zh: '资料更新成功。'));
+    }
   }
 
   void _pushNotification({required String title, required String body, String? event, int? rideId}) {
@@ -514,7 +800,9 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
       rememberCurrentLocaleForRole(AppUiRole.driver);
       setState(() {
         _token = r.accessToken; _userId = r.userId; _driverId = r.driverId;
-        _driverName = r.driverName; _walletBalance = r.walletBalance; _isAvailable = true;
+        _driverName = _resolvedDriverName(primary: r.driverName, fallback: _driverName); _walletBalance = r.walletBalance; _isAvailable = true;
+        _driverPhone = r.phone;
+        _driverEmail = null;
         _carModel = r.carModel; _carColor = r.carColor; _photoUrl = r.photoUrl;
         _unreadChatByRideId.clear(); _rideIdByConversationId.clear();
         _conversationIdByRideId.clear(); _lastSeenMessageIdByConversationId.clear();
@@ -529,6 +817,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
       await _detectDriverLocation(push: false);
       await _refreshRides();
       await _refreshArrivals(silent: true);
+      await _hydrateDriverProfile();
       final host = Uri.tryParse(apiBaseUrl)?.host.toLowerCase() ?? '';
       final isWebLocal = kIsWeb && (host == '127.0.0.1' || host == 'localhost' || host == '0.0.0.0');
       if (!isWebLocal) _socket.connect(r.accessToken, onReceiveMessage: _onChatMessage, onRideStatus: _onRideStatusEvent, onDriverWallet: _onDriverWallet);
@@ -547,12 +836,15 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     try {
       final previousById = {for (final r in _rides) r.id: r};
       final rides = await _api.listRides(t);
+      final walletSafeRides = (_walletBalance <= 0)
+          ? rides.where((r) => r.status != 'pending').toList()
+          : rides;
       if (_driverId == null) { for (final r in rides) { if (r.driverId != null) { _driverId = r.driverId; break; } } }
-      setState(() => _rides = rides);
-      await _syncConversationRideMap(rides);
+      setState(() => _rides = walletSafeRides);
+      await _syncConversationRideMap(walletSafeRides);
       await _pollChatUnreadFallback();
       await _refreshGains();
-      if (mounted) _processRideTransitions(previousById, rides);
+      if (mounted) _processRideTransitions(previousById, walletSafeRides);
     } catch (e) { if (!silent) setState(() => _message = e.toString()); }
     finally { if (!silent && mounted) setState(() => _busy = false); }
   }
@@ -568,7 +860,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
       _lastWalletSample = wb;
       setState(() {
         _gains = g;
-        _isAvailable = (g['is_available'] == true);
+        _isAvailable = (g['is_available'] == true) && wb > 0;
         _walletBalance = wb;
       });
       if (wb > 0) {
@@ -790,7 +1082,19 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
 
   Future<void> _pushDriverLocation() async {
     final t = _token; if (t == null || _location.isEmpty) return;
-    try { await _api.updateDriverLocation(token: t, currentZone: _location, isAvailable: _isAvailable); } catch (_) {}
+    try {
+      await _api.updateDriverLocation(
+        token: t,
+        currentZone: _location,
+        isAvailable: _isAvailable,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString();
+      if (msg.contains('wallet_depleted')) {
+        setState(() => _isAvailable = false);
+      }
+    }
   }
 
   Future<void> _setAvailability(bool v) async {
@@ -803,7 +1107,14 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
         final l = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${l.statusLinePrefix}${localizedRideStatusLabel(l, v ? 'active' : 'cancelled')}')));
       }
-    } catch (e) { if (!mounted) return; setState(() { _isAvailable = !v; _message = e.toString(); }); }
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString();
+      setState(() {
+        _isAvailable = msg.contains('wallet_depleted') ? false : !v;
+        _message = msg;
+      });
+    }
   }
 
   void _onDriverWallet(Map<String, dynamic> data) {
@@ -812,7 +1123,10 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     final wbRaw = data['wallet_balance'];
     if (wbRaw is num) {
       final wb = wbRaw.toDouble();
-      setState(() => _walletBalance = wb);
+      setState(() {
+        _walletBalance = wb;
+        if (wb <= 0) _isAvailable = false;
+      });
       _lastWalletSample = wb;
     }
     final event = (data['event'] ?? '').toString();
@@ -992,7 +1306,13 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
       _conversationIdByRideId[ride.id] = cid;
       await Navigator.of(context).push<void>(
         MaterialPageRoute<void>(
-          builder: (_) => RideChatScreen(token: t, myUserId: uid, rideId: ride.id, conversationId: cid),
+          builder: (_) => RideChatScreen(
+            token: t,
+            myUserId: uid,
+            rideId: ride.id,
+            conversationId: cid,
+            showDriverQuickReplies: true,
+          ),
         ),
       );
       if (mounted && _activeChatRideId == ride.id) setState(() => _activeChatRideId = null);
@@ -1420,7 +1740,9 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final pendingOffers = _rides.where((r) => r.status == 'pending').toList();
+    final pendingOffers = (_walletBalance > 0 && _isAvailable)
+        ? _rides.where((r) => r.status == 'pending').toList()
+        : <Ride>[];
     final historyRides = _rides.where((r) => _driverId != null && r.driverId == _driverId).toList();
 
     return Scaffold(
@@ -1428,7 +1750,23 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
       appBar: AppBar(
         backgroundColor: _C.charcoal,
         centerTitle: true,
-        title: _appBarHomeLogo(),
+        leading: IconButton(
+          onPressed: _goBack,
+          icon: const Icon(Icons.arrow_back_rounded, color: _C.yellow),
+        ),
+        title: Text(
+          _uiText(
+            en: 'Driver Workspace',
+            ar: 'مساحة السائق',
+            fr: 'Espace chauffeur',
+            es: 'Espacio conductor',
+            de: 'Fahrerbereich',
+            it: 'Area autista',
+            ru: 'Панель водителя',
+            zh: '司机工作台',
+          ),
+          style: const TextStyle(color: _C.yellow, fontWeight: FontWeight.w800, fontSize: 16),
+        ),
         actions: [
           LocalePopupMenuButton(authToken: _token, uiRole: AppUiRole.driver),
           if (_token != null)
@@ -1463,9 +1801,9 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                 padding: const EdgeInsets.all(24),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Container(
-                    width: 72, height: 72,
+                    width: 92, height: 72,
                     decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: _C.yellow.withOpacity(0.45), blurRadius: 20)]),
-                    child: const Icon(Icons.local_taxi_rounded, color: _C.charcoal, size: 40),
+                    child: const VoomLogo(height: 44),
                   ),
                   const SizedBox(height: 16),
                   const Text('Driver Portal', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: _C.textStrong)),
@@ -1564,9 +1902,8 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                     _StatChip(label: 'Trips', value: '${_gains!['completed_rides_count'] ?? 0}', icon: Icons.route_outlined),
                   ]),
                 ),
-              // Driver photo strip (if available)
-              if ((_photoUrl?.isNotEmpty ?? false))
-                _buildPhotoStrip(l),
+              // Driver profile card (name/photo/info/edit)
+              _buildPhotoStrip(l),
               const SizedBox(height: 6),
               // Tab bar
               Container(
@@ -1607,29 +1944,60 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   }
 
   Widget _buildPhotoStrip(AppLocalizations l) {
-    final provider = _imageProviderFromString(_photoUrl);
-    if (provider == null) return const SizedBox.shrink();
+    final provider = _stableProfileImageProvider();
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 0),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: _C.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: _C.border)),
-      child: Row(children: [
-        Container(
-          width: 52, height: 52,
-          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: _C.yellowDeep, width: 2), image: DecorationImage(image: provider, fit: BoxFit.cover)),
-        ),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(_driverName ?? '', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: _C.textStrong)),
-          if (_carModel != null || _carColor != null)
-            Text('${_carModel ?? '—'} · ${_carColor ?? '—'}', style: const TextStyle(color: _C.textSoft, fontSize: 12)),
-        ])),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(color: _C.yellowSoft, borderRadius: BorderRadius.circular(50), border: Border.all(color: _C.yellowDeep)),
-          child: Text(l.driverVehicleIdentityTitle, style: const TextStyle(color: _C.charcoal, fontSize: 10, fontWeight: FontWeight.w700)),
-        ),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: _C.yellowDeep, width: 2),
+                image: provider == null
+                    ? null
+                    : DecorationImage(image: provider, fit: BoxFit.cover),
+                color: _C.surfaceAlt,
+              ),
+              child: provider == null
+                  ? const Icon(Icons.person_rounded, color: _C.textSoft)
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(
+                  (_driverName ?? '').trim().isEmpty
+                      ? _uiText(en: 'Driver', ar: 'السائق', fr: 'Chauffeur', es: 'Conductor', de: 'Fahrer', it: 'Autista', ru: 'Водитель', zh: '司机')
+                      : _driverName!,
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _C.textStrong),
+                ),
+                if ((_driverPhone ?? '').trim().isNotEmpty)
+                  Text('${_uiText(en: 'Phone', ar: 'الهاتف', fr: 'Telephone', es: 'Telefono', de: 'Telefon', it: 'Telefono', ru: 'Телефон', zh: '电话')}: ${_driverPhone!}', style: const TextStyle(color: _C.textSoft, fontSize: 12)),
+                if ((_driverEmail ?? '').trim().isNotEmpty)
+                  Text('${_uiText(en: 'Email', ar: 'البريد الإلكتروني', fr: 'Email', es: 'Correo', de: 'E-Mail', it: 'Email', ru: 'Email', zh: '邮箱')}: ${_driverEmail!}', style: const TextStyle(color: _C.textSoft, fontSize: 12)),
+                Text('${_uiText(en: 'Car', ar: 'السيارة', fr: 'Voiture', es: 'Coche', de: 'Auto', it: 'Auto', ru: 'Авто', zh: '车辆')}: ${(_carModel ?? '').trim().isEmpty ? '—' : _carModel} · ${(_carColor ?? '').trim().isEmpty ? '—' : _carColor}', style: const TextStyle(color: _C.textSoft, fontSize: 12)),
+              ]),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: _C.yellowSoft,
+                foregroundColor: _C.charcoal,
+                side: const BorderSide(color: _C.yellowDeep),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+              ),
+              onPressed: _busy ? null : _showEditDriverProfileDialog,
+              icon: const Icon(Icons.edit_rounded, size: 16),
+              label: Text(_uiText(en: 'Edit', ar: 'تعديل', fr: 'Modifier', es: 'Editar', de: 'Bearbeiten', it: 'Modifica', ru: 'Изменить', zh: '编辑')),
+            ),
+          ]),
+        ],
+      ),
     );
   }
 
@@ -1651,6 +2019,14 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
       try { return MemoryImage(base64Decode(raw.substring(commaIdx + 1))); } catch (_) { return null; }
     }
     return NetworkImage(raw);
+  }
+
+  ImageProvider<Object>? _stableProfileImageProvider() {
+    final raw = (_photoUrl ?? '').trim();
+    if (raw == _profileImageRaw) return _profileImageProvider;
+    _profileImageRaw = raw;
+    _profileImageProvider = _imageProviderFromString(raw);
+    return _profileImageProvider;
   }
 }
 

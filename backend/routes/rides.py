@@ -21,7 +21,7 @@ def _guard_enabled(uid: int) -> Tuple[Any, int] | None:
 
 
 @bp.get("")
-@require_jwt_with_uid("user", "driver")
+@require_jwt_with_uid("user", "driver", "b2b")
 def list_rides(**kwargs: Any) -> Tuple[Any, int]:
     uid = kwargs["_uid"]
     bad = _guard_enabled(uid)
@@ -156,6 +156,13 @@ def driver_location(**kwargs: Any) -> Tuple[Any, int]:
         return bad
     body = request.get_json(silent=True) or {}
     current_zone = (body.get("current_zone") or "").strip()
+    acct = db_module.driver_pin_account_by_user_id(uid)
+    depleted = acct is None or float(acct.get("wallet_balance") or 0.0) <= 0.0
+    if depleted:
+        # Wallet-depleted drivers are always offline.
+        rides_service.set_driver_availability(uid, False)
+        if "is_available" in body and bool(body.get("is_available")):
+            return jsonify({"error": "wallet_depleted"}), 400
     if "is_available" in body and isinstance(body.get("is_available"), bool):
         rides_service.set_driver_availability(uid, bool(body.get("is_available")))
     lat_raw = body.get("lat")

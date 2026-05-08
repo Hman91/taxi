@@ -31,6 +31,13 @@ def _distance_km(a_lat: float, a_lng: float, b_lat: float, b_lng: float) -> floa
     return math.sqrt((a_lat - b_lat) ** 2 + (a_lng - b_lng) ** 2) * 111.0
 
 
+def _wallet_depleted_or_missing_for_driver(user_id: int) -> bool:
+    acct = db_module.driver_pin_account_by_user_id(user_id)
+    if acct is None:
+        return True
+    return float(acct.get("wallet_balance") or 0.0) <= 0.0
+
+
 def _select_top5_driver_user_ids_for_pickup(pickup_zone: str) -> List[int]:
     candidates = db_module.driver_profiles_for_dispatch_online(window_minutes=30)
     if not candidates:
@@ -42,9 +49,11 @@ def _select_top5_driver_user_ids_for_pickup(pickup_zone: str) -> List[int]:
     scored: List[tuple[float, int]] = []
     for d in candidates:
         uid = int(d["user_id"])
-        acct = db_module.driver_pin_account_by_user_id(uid)
-        if acct is not None and float(acct.get("wallet_balance") or 0.0) <= 0.0:
+        if not bool(int(d.get("is_available", 0))):
+            continue
+        if _wallet_depleted_or_missing_for_driver(uid):
             # Depleted wallet drivers must not receive new dispatch offers.
+            db_module.driver_set_availability_by_user_id(uid, False)
             continue
         current_zone = (db_module.driver_current_zone_by_user_id(uid) or "").strip()
         lat = d.get("last_lat")
@@ -257,17 +266,26 @@ def driver_gains_summary(driver_user_id: int) -> Dict[str, Any]:
 
 
 def set_driver_availability(driver_user_id: int, is_available: bool) -> None:
-    db_module.driver_set_availability_by_user_id(driver_user_id, is_available)
+    depleted = _wallet_depleted_or_missing_for_driver(driver_user_id)
+    # A depleted wallet forces driver offline until wallet is topped up.
+    db_module.driver_set_availability_by_user_id(
+        driver_user_id, False if depleted else is_available
+    )
 
 
 def list_for_app_user(user_id: int, role: str) -> List[Dict[str, Any]]:
     if role == "user":
         return db_module.rides_for_user(user_id)
+    if role == "b2b":
+        return db_module.rides_for_b2b_user(user_id)
     if role == "driver":
         d = db_module.driver_by_user_id(user_id)
-        acct = db_module.driver_pin_account_by_user_id(user_id)
-        depleted = acct is not None and float(acct.get("wallet_balance") or 0.0) <= 0.0
+        depleted = _wallet_depleted_or_missing_for_driver(user_id)
         is_available = bool(int((d or {}).get("is_available", 0)))
+        # Keep DB state consistent: depleted wallet means forced offline.
+        if depleted and is_available:
+            db_module.driver_set_availability_by_user_id(user_id, False)
+            is_available = False
         pending: List[Dict[str, Any]] = []
         # Depleted/unavailable drivers must not see dispatch offers.
         if is_available and not depleted:
@@ -284,8 +302,8 @@ def accept_ride(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[str, A
     d = db_module.driver_by_user_id(driver_user_id)
     if d is None:
         return None, "not_a_driver"
-    acct = db_module.driver_pin_account_by_user_id(driver_user_id)
-    if acct is not None and float(acct.get("wallet_balance") or 0.0) <= 0.0:
+    if _wallet_depleted_or_missing_for_driver(driver_user_id):
+        db_module.driver_set_availability_by_user_id(driver_user_id, False)
         return None, "wallet_depleted"
     if not bool(int(d.get("is_available", 0))):
         return None, "driver_unavailable"

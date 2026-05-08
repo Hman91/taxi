@@ -42,8 +42,9 @@ class ChatSocketService {
     // - Native + https:// (e.g. Render): websocket + polling.
     // - Native + http:// to **Android emulator only** (10.0.2.2): polling-only + disable
     //   upgrade — some proxies return 200 on WS upgrade attempts.
-    // - Native + http:// to **LAN / USB-reverse** IP (physical device → dev PC): WebSocket +
-    //   polling works reliably; polling-only often yields connect_error while REST succeeds.
+    // - Native + http:// local/LAN dev servers: prefer polling-only and disable upgrade.
+    //   Some Werkzeug/threading setups fail websocket upgrade with:
+    //   "write() before start_response".
     final List<String> resolvedTransports;
     final bool suppressEngineUpgrade;
     if (kIsWeb) {
@@ -59,8 +60,11 @@ class ChatSocketService {
       }
       suppressEngineUpgrade = true;
     } else {
-      resolvedTransports = ['websocket', 'polling'];
-      suppressEngineUpgrade = false;
+      resolvedTransports = List<String>.from(transports ?? const ['polling']);
+      if (resolvedTransports.isEmpty) {
+        resolvedTransports.add('polling');
+      }
+      suppressEngineUpgrade = true;
     }
 
     final opts = socket_io.OptionBuilder()

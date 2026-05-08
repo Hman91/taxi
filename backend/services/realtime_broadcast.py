@@ -155,7 +155,15 @@ def notify_dispatch_offer(ride: Dict[str, Any], driver_user_ids: Iterable[int]) 
         "message": "Passenger sent a new ride request.",
     }
     for uid in driver_user_ids:
-        _emit_to_user(int(uid), payload)
+        uid_int = int(uid)
+        d = db_module.driver_by_user_id(uid_int)
+        if d is None or not bool(int(d.get("is_available", 0))):
+            continue
+        acct = db_module.driver_pin_account_by_user_id(uid_int)
+        if acct is None or float(acct.get("wallet_balance") or 0.0) <= 0.0:
+            db_module.driver_set_availability_by_user_id(uid_int, False)
+            continue
+        _emit_to_user(uid_int, payload)
 
 
 def notify_dispatch_taken(

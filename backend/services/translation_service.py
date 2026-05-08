@@ -103,7 +103,11 @@ def get_or_translate(message_id: int, text: str, source_lang: str, target_lang: 
         )
     ).first()
     if row is not None:
-        return row.translated_text
+        cached = row.translated_text or ""
+        # If a previous attempt cached the original text (e.g. timeout/provider outage),
+        # allow retry instead of serving the stale untranslated cache forever.
+        if cached != text or _langs_equivalent(source_lang, tgt):
+            return cached
 
     provider = _provider_name()
     timeout = _timeout_seconds()
@@ -118,20 +122,24 @@ def get_or_translate(message_id: int, text: str, source_lang: str, target_lang: 
         log.warning("Translation worker error: %s", e)
         out = text
 
-    t = Translation(message_id=message_id, target_language=tgt, translated_text=out)
-    db.session.add(t)
-    try:
-        db.session.commit()
-    except IntegrityError:
-        db.session.rollback()
-        row = db.session.scalars(
-            select(Translation).where(
-                Translation.message_id == message_id,
-                Translation.target_language == tgt,
-            )
-        ).first()
-        if row is not None:
-            return row.translated_text
+    # Avoid persisting untranslated fallback for different languages,
+    # so future deliveries can retry translation when provider is healthy.
+    should_cache = (out != text) or _langs_equivalent(source_lang, tgt)
+    if should_cache:
+        t = Translation(message_id=message_id, target_language=tgt, translated_text=out)
+        db.session.add(t)
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            row = db.session.scalars(
+                select(Translation).where(
+                    Translation.message_id == message_id,
+                    Translation.target_language == tgt,
+                )
+            ).first()
+            if row is not None:
+                return row.translated_text
     return out
 
 

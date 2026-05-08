@@ -28,12 +28,14 @@ class RideChatScreen extends StatefulWidget {
     required this.myUserId,
     required this.rideId,
     required this.conversationId,
+    this.showDriverQuickReplies = false,
   });
 
   final String token;
   final int myUserId;
   final int rideId;
   final int conversationId;
+  final bool showDriverQuickReplies;
 
   @override
   State<RideChatScreen> createState() => _RideChatScreenState();
@@ -50,6 +52,40 @@ class _RideChatScreenState extends State<RideChatScreen> {
   String? _error;
   bool _loading = true;
   bool _sending = false;
+  static const List<String> _driverQuickReplies = [
+    'أنا في الطريق',
+    'وصلت',
+    'أنا أمام الفندق',
+    'أنا أمام المطار',
+    'أنا عند المدخل',
+    'أنا بالخارج',
+    'أنا قريب منك',
+    'سأصل بعد دقيقتين',
+    'تأخير بسيط',
+    'أين أنت؟',
+    'أرسل موقعك',
+    'أنا بانتظارك',
+    'تفضل بالخروج',
+    'أنا عند البوابة',
+    'وصلت إلى الموقع',
+    'اتصل بي عند الوصول',
+    'تم التأكيد',
+    'الرحلة جاهزة',
+    'شكرًا لك',
+    'يوم سعيد',
+    'للمطار ✈️',
+    'أنا في قاعة الوصول',
+    'أنا عند بوابة الوصول',
+    'أنا في موقف التاكسي',
+    'أحمل لافتة باسمك',
+    'هل استلمت أمتعتك؟',
+    'بأسلوب احترافي',
+    'مرحبًا، أنا سائقك',
+    'يسعدني خدمتك',
+    'في خدمتك دائمًا',
+    'رحلة موفقة',
+    'أهلاً وسهلاً بك',
+  ];
 
   Widget _module({required Widget child}) {
     return Container(
@@ -235,6 +271,13 @@ class _RideChatScreenState extends State<RideChatScreen> {
     }
   }
 
+  void _applyQuickReply(String phrase) {
+    _textCtrl.value = TextEditingValue(
+      text: phrase,
+      selection: TextSelection.collapsed(offset: phrase.length),
+    );
+  }
+
   @override
   void dispose() {
     _repo.socket.leaveConversation(widget.conversationId);
@@ -390,51 +433,83 @@ class _RideChatScreenState extends State<RideChatScreen> {
               child: _module(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _textCtrl,
-                          decoration: InputDecoration(
-                            hintText: l.messageFieldHint,
-                            hintStyle: const TextStyle(color: _C.textSoft),
-                            filled: true,
-                            fillColor: _C.panelSoft,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: _C.border),
+                      if (widget.showDriverQuickReplies)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: SizedBox(
+                            height: 34,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _driverQuickReplies.length,
+                              separatorBuilder: (_, __) => const SizedBox(width: 6),
+                              itemBuilder: (context, index) {
+                                final phrase = _driverQuickReplies[index];
+                                return ActionChip(
+                                  label: Text(
+                                    phrase,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: _C.textStrong,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  side: const BorderSide(color: _C.border),
+                                  backgroundColor: _C.panelSoft,
+                                  onPressed: () => _applyQuickReply(phrase),
+                                );
+                              },
                             ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: _C.border),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: _C.yellowDeep, width: 2),
-                            ),
-                            isDense: true,
                           ),
-                          style: const TextStyle(color: _C.textStrong),
-                          minLines: 1,
-                          maxLines: 4,
-                          onSubmitted: (_) => _send(),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: _C.yellow,
-                          foregroundColor: _C.charcoal,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        ),
-                        onPressed: _sending ? null : _send,
-                        icon: const Icon(Icons.send_rounded, size: 16),
-                        label: Text(
-                          l.sendChatMessage,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _textCtrl,
+                              decoration: InputDecoration(
+                                hintText: l.messageFieldHint,
+                                hintStyle: const TextStyle(color: _C.textSoft),
+                                filled: true,
+                                fillColor: _C.panelSoft,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: _C.border),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: _C.border),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: _C.yellowDeep, width: 2),
+                                ),
+                                isDense: true,
+                              ),
+                              style: const TextStyle(color: _C.textStrong),
+                              minLines: 1,
+                              maxLines: 4,
+                              onSubmitted: (_) => _send(),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: _C.yellow,
+                              foregroundColor: _C.charcoal,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            ),
+                            onPressed: _sending ? null : _send,
+                            icon: const Icon(Icons.send_rounded, size: 16),
+                            label: Text(
+                              l.sendChatMessage,
+                              style: const TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

@@ -3,7 +3,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app_locale.dart';
 import 'l10n/app_localizations.dart';
-import 'screens/app_driver_screen.dart';
 import 'screens/app_passenger_screen.dart';
 import 'screens/b2b_screen.dart';
 import 'screens/driver_screen.dart';
@@ -68,7 +67,7 @@ class _SessionGateState extends State<_SessionGate> {
     final s = await SessionStore.load();
     if (!mounted) return;
     setState(() {
-      _home = _screenFromSession(s) ?? const UnifiedLoginScreen();
+      _home = _screenFromSession(s) ?? const UnifiedLoginScreen(showPassengerEntry: false);
     });
   }
 
@@ -80,7 +79,7 @@ class _SessionGateState extends State<_SessionGate> {
         return r == null ? null : AppPassengerScreen(initialSession: r);
       case PersistedRole.appDriver:
         final r = s.appLogin;
-        return r == null ? null : AppDriverScreen(initialSession: r);
+        return r == null ? null : DriverScreen(appInitialSession: r);
       case PersistedRole.driverPin:
         final r = s.driverPinLogin;
         return r == null ? null : DriverScreen(initialSession: r);

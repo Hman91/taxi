@@ -3,11 +3,11 @@ from __future__ import annotations
 
 from datetime import datetime
 from functools import wraps
+import re
 from typing import Any, Callable, Optional, Tuple, TypeVar
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, jsonify, request
 from werkzeug.security import generate_password_hash
-
 from .. import db as db_module
 from ..auth_tokens import issue_token, verify_token_safe
 from ..services import pricing
@@ -18,51 +18,6 @@ from .jwt_auth import require_jwt_with_uid
 bp = Blueprint("api", __name__, url_prefix="/api")
 
 F = TypeVar("F", bound=Callable[..., Any])
-
-_DRIVER_PIN_DEFAULTS = [
-    {"phone": "98123456", "pin": "1234", "driver_name": "خليل (سائق 1)"},
-    {"phone": "50111222", "pin": "0000", "driver_name": "أحمد (سائق 2)"},
-]
-
-_B2B_TENANT_DEFAULTS = [
-    {"code": "Biz2026", "label": "Default B2B Tenant", "is_enabled": True},
-]
-
-
-def _ensure_b2b_operator_user(source_code: str) -> int:
-    code = (source_code or "b2b").strip().lower()
-    email = f"b2b_operator_{code}@taxipro.local"
-    row = db_module.user_by_email(email)
-    if row is not None:
-        return int(row["id"])
-    uid = db_module.user_create(
-        email=email,
-        password_hash=generate_password_hash(f"b2b::{code}"),
-        role="user",
-    )
-    return int(uid)
-
-
-def _b2b_source_code_for_uid(uid: int) -> Optional[str]:
-    row = db_module.user_by_id(uid)
-    if row is None:
-        return None
-    email = str(row.get("email") or "").strip().lower()
-    prefix = "b2b_operator_"
-    suffix = "@taxipro.local"
-    if not (email.startswith(prefix) and email.endswith(suffix)):
-        return None
-    code = email[len(prefix) : -len(suffix)].strip()
-    return code or None
-
-
-def _preferred_language_for_uid(uid: int) -> str:
-    row = db_module.user_by_id(uid)
-    if not row:
-        return "en"
-    raw = str(row.get("preferred_language") or "en").strip()
-    return raw if raw else "en"
-
 
 def _bearer_token() -> Optional[str]:
     auth = request.headers.get("Authorization", "")
@@ -153,90 +108,12 @@ def quote_fare() -> Tuple[Any, int]:
 
 @bp.post("/auth/login")
 def login() -> Tuple[Any, int]:
-    data = request.get_json(silent=True) or {}
-    role = (data.get("role") or "").strip().lower()
-    secret = data.get("secret") or data.get("password") or ""
-
-    db_module.b2b_tenant_seed_defaults(_B2B_TENANT_DEFAULTS)
-    checks = {
-        "owner": current_app.config["OWNER_PASSWORD"],
-        "driver": current_app.config["DRIVER_CODE"],
-        "operator": current_app.config["OPERATOR_CODE"],
-    }
-    if role not in (set(checks.keys()) | {"b2b"}):
-        return jsonify({"error": "invalid_role"}), 400
-    if role == "b2b":
-        tenant = db_module.b2b_tenant_by_code(secret)
-        if tenant is None or not tenant.get("is_enabled", False):
-            return jsonify({"error": "invalid_credentials"}), 401
-        b2b_uid = _ensure_b2b_operator_user(secret)
-        app_token = issue_token("user", user_id=b2b_uid)
-    else:
-        if secret != checks[role]:
-            return jsonify({"error": "invalid_credentials"}), 401
-
-    token = issue_token(role, user_id=b2b_uid) if role == "b2b" else issue_token(role)
-    out = {"access_token": token, "token_type": "Bearer", "role": role}
-    if role == "b2b":
-        out["app_access_token"] = app_token
-        out["app_role"] = "user"
-        out["user_id"] = b2b_uid
-    return jsonify(out), 200
+    return jsonify({"error": "deprecated_use_login_app"}), 410
 
 
 @bp.post("/auth/login-driver-pin")
 def login_driver_pin() -> Tuple[Any, int]:
-    """Driver login using phone + PIN from PostgreSQL table."""
-    db_module.driver_pin_seed_defaults(_DRIVER_PIN_DEFAULTS)
-    data = request.get_json(silent=True) or {}
-    phone = (data.get("phone") or "").strip()
-    pin = (data.get("pin") or "").strip()
-    row = db_module.driver_pin_by_phone(phone)
-    if row is None or pin != row["pin"]:
-        return jsonify({"error": "invalid_credentials"}), 401
-    # Bridge PIN-only driver accounts to app JWT flow (/api/rides requires uid).
-    synthetic_email = f"driverpin_{phone}@taxipro.local"
-    app_user = db_module.user_by_email(synthetic_email)
-    if app_user is None:
-        uid = db_module.user_create(
-            email=synthetic_email,
-            password_hash=generate_password_hash(f"pin::{phone}"),
-            role="driver",
-        )
-    else:
-        uid = int(app_user["id"])
-    if db_module.driver_by_user_id(uid) is None:
-        db_module.driver_create(
-            user_id=uid,
-            display_name=row.get("driver_name") or f"Driver {phone}",
-            vehicle_info="",
-        )
-    driver_row = db_module.driver_by_user_id(uid)
-    db_module.driver_mark_online(uid)
-    token = issue_token("driver", user_id=uid)
-    return (
-        jsonify(
-            {
-                "access_token": token,
-                "token_type": "Bearer",
-                "role": "driver",
-                "user_id": uid,
-                "driver_id": (driver_row or {}).get("id"),
-                "driver_name": row["driver_name"],
-                "phone": phone,
-                "wallet_balance": row.get("wallet_balance", 0.0),
-                "owner_commission_rate": row.get("owner_commission_rate", 10.0),
-                "b2b_commission_rate": row.get("b2b_commission_rate", 5.0),
-                "auto_deduct_enabled": row.get("auto_deduct_enabled", True),
-                "photo_url": row.get("photo_url"),
-                "car_model": row.get("car_model"),
-                "car_color": row.get("car_color"),
-                "current_zone": row.get("current_zone"),
-                "preferred_language": _preferred_language_for_uid(uid),
-            }
-        ),
-        200,
-    )
+    return jsonify({"error": "deprecated_use_login_app"}), 410
 
 
 @bp.post("/b2b/bookings")
@@ -251,7 +128,10 @@ def create_b2b_booking(**kwargs: Any) -> Tuple[Any, int]:
     flight_eta = (data.get("flight_eta") or "").strip()
     room_number = (data.get("room_number") or "").strip()
     source_code_input = (data.get("source_code") or "").strip()
-    source_code = _b2b_source_code_for_uid(uid) or source_code_input
+    user = db_module.user_by_id(int(uid)) or {}
+    email = str(user.get("email") or "").strip().lower()
+    source_code_by_uid = email.split("@")[0].strip() if "@" in email else ""
+    source_code = source_code_by_uid or source_code_input or "b2b"
     try:
         fare = float(data.get("fare", 0.0))
     except (TypeError, ValueError):
@@ -263,10 +143,7 @@ def create_b2b_booking(**kwargs: Any) -> Tuple[Any, int]:
     destination = parts[1].strip() if len(parts) > 1 else ""
     if not pickup or not destination:
         return jsonify({"error": "invalid_route"}), 400
-    db_module.b2b_tenant_seed_defaults(_B2B_TENANT_DEFAULTS)
     tenant = db_module.b2b_tenant_by_code(source_code) if source_code else None
-    if source_code and (tenant is None or not tenant.get("is_enabled", False)):
-        return jsonify({"error": "invalid_source_code"}), 400
     room_compound = " | ".join(
         [
             f"Room: {room_number or '-'}",
@@ -287,9 +164,8 @@ def create_b2b_booking(**kwargs: Any) -> Tuple[Any, int]:
         source_code=source_code or "b2b",
         ride_id=None,
     )
-    b2b_user_id = _ensure_b2b_operator_user(source_code or "b2b")
     ride, err = rides_service.request_ride(
-        b2b_user_id,
+        int(uid),
         pickup,
         destination,
         enforce_single_active=False,
@@ -303,15 +179,329 @@ def create_b2b_booking(**kwargs: Any) -> Tuple[Any, int]:
     return jsonify({"booking": booking, "ride": ride, "ride_error": err}), 201
 
 
+@bp.get("/b2b/me")
+@require_jwt_with_uid("b2b")
+def b2b_me(**kwargs: Any) -> Tuple[Any, int]:
+    uid = kwargs["_uid"]
+    user = db_module.user_by_id(int(uid))
+    if user is None:
+        return jsonify({"error": "not_found"}), 404
+    email = str(user.get("email") or "").strip().lower()
+    source_code = email.split("@")[0].strip() if "@" in email else ""
+    tenant = db_module.b2b_tenant_by_code(source_code) if source_code else None
+    return (
+        jsonify(
+            {
+                "user": {
+                    "id": user.get("id"),
+                    "email": user.get("email"),
+                    "display_name": user.get("display_name"),
+                    "phone": user.get("phone"),
+                    "source_code": source_code,
+                },
+                "tenant": tenant,
+            }
+        ),
+        200,
+    )
+
+
+@bp.patch("/b2b/me")
+@require_jwt_with_uid("b2b")
+def b2b_me_patch(**kwargs: Any) -> Tuple[Any, int]:
+    uid = kwargs["_uid"]
+    user = db_module.user_by_id(int(uid))
+    if user is None:
+        return jsonify({"error": "not_found"}), 404
+    body = request.get_json(silent=True) or {}
+
+    email = str(user.get("email") or "").strip().lower()
+    source_code = email.split("@")[0].strip() if "@" in email else ""
+
+    display_name = body.get("display_name")
+    phone = body.get("phone")
+    label = body.get("label")
+    contact_name = body.get("contact_name")
+    pin = body.get("pin")
+    tenant_phone = body.get("tenant_phone")
+    hotel = body.get("hotel")
+    new_email = body.get("email")
+    new_password = body.get("password")
+
+    # Optional user profile patch (name/phone) without password change.
+    if display_name is not None or phone is not None:
+        u = db_module.db.session.get(db_module.User, int(uid))
+        if u is None:
+            return jsonify({"error": "not_found"}), 404
+        if display_name is not None:
+            u.display_name = str(display_name).strip() or None
+        if phone is not None:
+            u.phone = str(phone).strip() or None
+        db_module.db.session.commit()
+
+    # Optional account credentials patch (B2B self-service, no current password required).
+    if new_email is not None or new_password is not None:
+        u = db_module.db.session.get(db_module.User, int(uid))
+        if u is None:
+            return jsonify({"error": "not_found"}), 404
+        if new_email is not None:
+            email_norm = str(new_email).strip().lower()
+            if not email_norm:
+                return jsonify({"error": "invalid_email"}), 400
+            existing = db_module.user_by_email(email_norm)
+            if existing is not None and int(existing["id"]) != int(uid):
+                return jsonify({"error": "email_taken"}), 409
+            u.email = email_norm
+        if new_password is not None:
+            pw = str(new_password)
+            if pw.strip() and len(pw) < 6:
+                return jsonify({"error": "weak_password"}), 400
+            if pw.strip():
+                u.password_hash = generate_password_hash(pw.strip())
+        db_module.db.session.commit()
+        user = db_module.user_by_id(int(uid)) or user
+        email = str(user.get("email") or "").strip().lower()
+        source_code = email.split("@")[0].strip() if "@" in email else source_code
+
+    tenant = db_module.b2b_tenant_update_by_code(
+        source_code,
+        label=str(label).strip() if label is not None else None,
+        contact_name=str(contact_name).strip() if contact_name is not None else None,
+        pin=str(pin).strip() if pin is not None else None,
+        phone=str(tenant_phone).strip() if tenant_phone is not None else None,
+        hotel=str(hotel).strip() if hotel is not None else None,
+    ) or db_module.b2b_tenant_by_code(source_code)
+
+    user = db_module.user_by_id(int(uid)) or user
+    return (
+        jsonify(
+            {
+                "user": {
+                    "id": user.get("id"),
+                    "email": user.get("email"),
+                    "display_name": user.get("display_name"),
+                    "phone": user.get("phone"),
+                    "source_code": source_code,
+                },
+                "tenant": tenant,
+            }
+        ),
+        200,
+    )
+
+
+@bp.get("/driver/me")
+@require_jwt_with_uid("driver")
+def driver_me(**kwargs: Any) -> Tuple[Any, int]:
+    uid = int(kwargs["_uid"])
+    user = db_module.user_by_id(uid)
+    if user is None:
+        return jsonify({"error": "not_found"}), 404
+    pin = db_module.driver_pin_ensure_for_app_driver(uid)
+    driver = db_module.driver_by_user_id(uid)
+    return (
+        jsonify(
+            {
+                "user": {
+                    "id": user.get("id"),
+                    "email": user.get("email"),
+                    "display_name": user.get("display_name"),
+                    "phone": user.get("phone"),
+                },
+                "driver": driver,
+                "pin_account": pin,
+            }
+        ),
+        200,
+    )
+
+
+@bp.patch("/driver/me")
+@require_jwt_with_uid("driver")
+def driver_me_patch(**kwargs: Any) -> Tuple[Any, int]:
+    uid = int(kwargs["_uid"])
+    user = db_module.user_by_id(uid)
+    if user is None:
+        return jsonify({"error": "not_found"}), 404
+    body = request.get_json(silent=True) or {}
+
+    display_name = body.get("display_name")
+    phone = body.get("phone")
+    email = body.get("email")
+    password = body.get("password")
+    car_model = body.get("car_model")
+    car_color = body.get("car_color")
+    photo_url = body.get("photo_url")
+
+    u = db_module.db.session.get(db_module.User, uid)
+    if u is None:
+        return jsonify({"error": "not_found"}), 404
+    if display_name is not None:
+        name_norm = str(display_name).strip()
+        if not name_norm:
+            return jsonify({"error": "name_required"}), 400
+        u.display_name = name_norm
+    if phone is not None:
+        phone_norm = str(phone).strip()
+        if not phone_norm:
+            return jsonify({"error": "phone_required"}), 400
+        u.phone = phone_norm
+    if email is not None:
+        email_norm = str(email).strip().lower()
+        if not email_norm:
+            return jsonify({"error": "invalid_email"}), 400
+        existing = db_module.user_by_email(email_norm)
+        if existing is not None and int(existing["id"]) != uid:
+            return jsonify({"error": "email_taken"}), 409
+        u.email = email_norm
+    if password is not None:
+        pw = str(password).strip()
+        if pw and len(pw) < 6:
+            return jsonify({"error": "weak_password"}), 400
+        if pw:
+            u.password_hash = generate_password_hash(pw)
+    db_module.db.session.commit()
+
+    acct = db_module.driver_pin_ensure_for_app_driver(uid)
+    if acct is not None:
+        updates: dict[str, Any] = {}
+        new_phone = str((u.phone or "")).strip()
+        if new_phone and new_phone != str(acct.get("phone") or "").strip():
+            updates["phone"] = new_phone
+        if display_name is not None:
+            updates["driver_name"] = str(display_name).strip()
+        if car_model is not None:
+            updates["car_model"] = str(car_model).strip()
+        if car_color is not None:
+            updates["car_color"] = str(car_color).strip()
+        if photo_url is not None:
+            updates["photo_url"] = str(photo_url).strip()
+        if updates:
+            acct = db_module.driver_pin_update(int(acct["id"]), **updates)
+
+    d = db_module.db.session.scalars(
+        db_module.select(db_module.Driver).where(db_module.Driver.user_id == uid)
+    ).first()
+    if d is not None:
+        if display_name is not None:
+            d.display_name = str(display_name).strip() or d.display_name
+        if car_model is not None or car_color is not None:
+            current = str(d.vehicle_info or "")
+            current_model = ""
+            current_color = ""
+            m1 = re.search(r'["\']car_model["\']\s*:\s*["\']([^"\']+)["\']', current)
+            m2 = re.search(r'model\s*=\s*([^;,\n]+)', current, flags=re.IGNORECASE)
+            c1 = re.search(r'["\']car_color["\']\s*:\s*["\']([^"\']+)["\']', current)
+            c2 = re.search(r'color\s*=\s*([^;,\n]+)', current, flags=re.IGNORECASE)
+            if m1:
+                current_model = str(m1.group(1)).strip()
+            elif m2:
+                current_model = str(m2.group(1)).strip()
+            if c1:
+                current_color = str(c1.group(1)).strip()
+            elif c2:
+                current_color = str(c2.group(1)).strip()
+
+            new_model = str(car_model).strip() if car_model is not None else current_model
+            new_color = str(car_color).strip() if car_color is not None else current_color
+            d.vehicle_info = (
+                ""
+                if not new_model and not new_color
+                else f"model={new_model};color={new_color}"
+            )
+        db_module.db.session.commit()
+
+    return jsonify({"ok": True, "user": db_module.user_by_id(uid), "pin_account": acct}), 200
+
+
+def _user_public_dict(row: dict[str, Any]) -> dict[str, Any]:
+    """Safe subset for client apps (no secrets)."""
+    return {
+        "id": row.get("id"),
+        "email": row.get("email"),
+        "role": row.get("role"),
+        "display_name": row.get("display_name") or "",
+        "phone": row.get("phone"),
+        "photo_url": row.get("photo_url"),
+        "preferred_language": str(row.get("preferred_language") or "en").strip() or "en",
+        "is_enabled": bool(row.get("is_enabled", True)),
+        "approval_status": row.get("approval_status") or "approved",
+    }
+
+
+@bp.get("/passenger/me")
+@require_jwt_with_uid("user")
+def passenger_me(**kwargs: Any) -> Tuple[Any, int]:
+    uid = int(kwargs["_uid"])
+    user = db_module.user_by_id(uid)
+    if user is None:
+        return jsonify({"error": "not_found"}), 404
+    return jsonify({"user": _user_public_dict(user)}), 200
+
+
+@bp.patch("/passenger/me")
+@require_jwt_with_uid("user")
+def passenger_me_patch(**kwargs: Any) -> Tuple[Any, int]:
+    uid = int(kwargs["_uid"])
+    user = db_module.user_by_id(uid)
+    if user is None:
+        return jsonify({"error": "not_found"}), 404
+    body = request.get_json(silent=True) or {}
+
+    display_name = body.get("display_name")
+    phone = body.get("phone")
+    email = body.get("email")
+    password = body.get("password")
+    photo_url = body.get("photo_url")
+
+    u = db_module.db.session.get(db_module.User, uid)
+    if u is None:
+        return jsonify({"error": "not_found"}), 404
+    if display_name is not None:
+        name_norm = str(display_name).strip()
+        if not name_norm:
+            return jsonify({"error": "name_required"}), 400
+        u.display_name = name_norm
+    if phone is not None:
+        phone_norm = str(phone).strip()
+        if not phone_norm:
+            return jsonify({"error": "phone_required"}), 400
+        u.phone = phone_norm
+    if email is not None:
+        email_norm = str(email).strip().lower()
+        if not email_norm:
+            return jsonify({"error": "invalid_email"}), 400
+        existing = db_module.user_by_email(email_norm)
+        if existing is not None and int(existing["id"]) != uid:
+            return jsonify({"error": "email_taken"}), 409
+        u.email = email_norm
+    if photo_url is not None:
+        raw = str(photo_url).strip()
+        u.photo_url = raw or None
+    if password is not None:
+        pw = str(password).strip()
+        if pw:
+            if len(pw) < 6:
+                return jsonify({"error": "weak_password"}), 400
+            u.password_hash = generate_password_hash(pw)
+
+    db_module.db.session.commit()
+    refreshed = db_module.user_by_id(uid)
+    assert refreshed is not None
+    return jsonify({"ok": True, "user": _user_public_dict(refreshed)}), 200
+
+
 @bp.post("/auth/register")
 def register() -> Tuple[Any, int]:
     data = request.get_json(silent=True) or {}
     email = (data.get("email") or "").strip()
     password = data.get("password") or ""
-    role = (data.get("role") or "user").strip().lower()
+    role = (data.get("role") or "").strip().lower()
     display_name = (data.get("display_name") or data.get("name") or "").strip()
     phone = (data.get("phone") or "").strip()
     photo_url = (data.get("photo_url") or data.get("image") or "").strip()
+    car_model = (data.get("car_model") or "").strip()
+    car_color = (data.get("car_color") or "").strip()
     user, err = users_service.register(
         email,
         password,
@@ -319,6 +509,8 @@ def register() -> Tuple[Any, int]:
         display_name=display_name,
         phone=phone,
         photo_url=photo_url,
+        car_model=car_model,
+        car_color=car_color,
     )
     if err:
         code = 409 if err == "email_taken" else 400
@@ -328,13 +520,13 @@ def register() -> Tuple[Any, int]:
 
 @bp.post("/auth/login-app")
 def login_app() -> Tuple[Any, int]:
-    """JWT for mobile/web app users (`user` | `driver`) with `uid` in token."""
+    """JWT for app users (`owner|operator|driver|b2b|user`) with `uid` in token."""
     data = request.get_json(silent=True) or {}
     email = (data.get("email") or "").strip()
     password = data.get("password") or ""
     user, err = users_service.authenticate(email, password)
     if err:
-        code = 403 if err == "account_disabled" else 401
+        code = 403 if err in {"account_disabled", "account_pending"} else 401
         return jsonify({"error": err}), code
     if user["role"] == "user" and not str(user.get("phone") or "").strip():
         return jsonify({"error": "phone_required"}), 400
@@ -346,6 +538,7 @@ def login_app() -> Tuple[Any, int]:
                 "token_type": "Bearer",
                 "role": user["role"],
                 "user_id": user["id"],
+                "email": user.get("email"),
                 "display_name": user.get("display_name"),
                 "phone": user.get("phone"),
                 "photo_url": user.get("photo_url"),
@@ -386,22 +579,23 @@ def forgot_password_confirm() -> Tuple[Any, int]:
 
 @bp.post("/auth/login-google")
 def login_google() -> Tuple[Any, int]:
-    """Passenger Google sign-in using Google ID token or access token."""
+    """Google sign-in for self-registerable app roles."""
     data = request.get_json(silent=True) or {}
     id_token = data.get("id_token") or ""
     access_token = data.get("access_token") or ""
+    role = (data.get("role") or "").strip().lower()
     phone = (data.get("phone") or "").strip()
     if id_token:
-        user, err = users_service.authenticate_google_id_token(id_token)
+        user, err = users_service.authenticate_google_id_token(id_token, role)
         # Flutter Web may return an unusable ID token while access token is valid.
         if err == "invalid_google_token" and access_token:
-            user, err = users_service.authenticate_google_access_token(access_token)
+            user, err = users_service.authenticate_google_access_token(access_token, role)
     elif access_token:
-        user, err = users_service.authenticate_google_access_token(access_token)
+        user, err = users_service.authenticate_google_access_token(access_token, role)
     else:
         user, err = None, "missing_google_token"
     if err:
-        code = 403 if err == "account_disabled" else 401
+        code = 403 if err in {"account_disabled", "account_pending"} else 401
         return jsonify({"error": err}), code
     if not str(user.get("phone") or "").strip():
         if not phone:
@@ -419,6 +613,9 @@ def login_google() -> Tuple[Any, int]:
                 "role": user["role"],
                 "user_id": user["id"],
                 "email": user["email"],
+                "display_name": user.get("display_name"),
+                "phone": user.get("phone"),
+                "photo_url": user.get("photo_url"),
                 "preferred_language": str(user.get("preferred_language") or "en").strip()
                 or "en",
             }
@@ -482,9 +679,10 @@ def owner_metrics(**kwargs: Any) -> Tuple[Any, int]:
 
 
 @bp.post("/ratings")
-@require_jwt_with_uid("user")
+@require_jwt_with_uid("user", "b2b")
 def add_rating(**kwargs: Any) -> Tuple[Any, int]:
     uid = int(kwargs["_uid"])
+    role = str(kwargs.get("_role") or "").strip().lower()
     data = request.get_json(silent=True) or {}
     try:
         ride_id = int(data.get("ride_id", 0))
@@ -497,7 +695,15 @@ def add_rating(**kwargs: Any) -> Tuple[Any, int]:
     ride = db_module.ride_get(ride_id)
     if ride is None:
         return jsonify({"error": "ride_not_found"}), 404
-    if int(ride.get("user_id") or 0) != uid:
+    is_owner_passenger = int(ride.get("user_id") or 0) == uid
+    is_owner_b2b = False
+    if role == "b2b":
+        u = db_module.user_by_id(uid) or {}
+        email = str(u.get("email") or "").strip().lower()
+        my_code = email.split("@", 1)[0].strip() if "@" in email else ""
+        ride_code = str(ride.get("b2b_source_code") or "").strip().lower()
+        is_owner_b2b = bool(my_code and ride_code and my_code == ride_code)
+    if not (is_owner_passenger or is_owner_b2b):
         return jsonify({"error": "forbidden"}), 403
     if ride.get("status") != "completed":
         return jsonify({"error": "ride_not_completed"}), 400

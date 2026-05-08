@@ -4,7 +4,13 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:geolocator/geolocator.dart';
 
-import '../app_locale.dart' show AppUiRole, restoreUiRoleLocale;
+import '../app_locale.dart'
+    show
+        AppUiRole,
+        rememberCurrentLocaleForRole,
+        restoreUiRoleLocale,
+        userChoseLocaleThisSession,
+        appLocale;
 import '../config.dart';
 import '../api/models.dart';
 import '../l10n/app_localizations.dart';
@@ -25,6 +31,7 @@ import '../utils/chat_unread_poll.dart'
 import '../utils/int_from_json.dart';
 import '../theme/taxi_app_theme.dart';
 import '../widgets/locale_popup_menu.dart';
+import '../widgets/voom_logo.dart';
 import 'ride_chat_screen.dart';
 import 'unified_login_screen.dart';
 
@@ -141,12 +148,6 @@ class _SectionHead extends StatelessWidget {
       );
 }
 
-enum _B2bTripOption {
-  airportToTourist,
-  currentToTourist,
-  currentToAirport,
-}
-
 /// Corporate portal: login matches API; booking is UI-only until B2B billing API exists.
 class B2bScreen extends StatefulWidget {
   const B2bScreen({super.key, this.initialSession});
@@ -159,15 +160,16 @@ class B2bScreen extends StatefulWidget {
 class _B2bScreenState extends State<B2bScreen> {
   final _api = TaxiAppService();
   final _socket = ChatSocketService();
-  final _secretController = TextEditingController(text: 'Biz2026');
+  final _secretController = TextEditingController();
   final _guestController = TextEditingController();
   final _guestPhoneController = TextEditingController();
+  final _destinationController = TextEditingController();
+  final _destinationFocus = FocusNode();
   final _hotelController = TextEditingController();
   final _flightEtaController = TextEditingController();
   final _roomController = TextEditingController();
   Map<String, double> _fares = {};
   String? _routeKey;
-  _B2bTripOption _tripOption = _B2bTripOption.currentToAirport;
   String? _locationText;
   String? _locationError;
   bool _locating = false;
@@ -182,6 +184,7 @@ class _B2bScreenState extends State<B2bScreen> {
   final Map<int, int> _rideIdByConversationId = {};
   final Map<int, int> _conversationIdByRideId = {};
   final Map<int, int> _lastSeenMessageIdByConversationId = <int, int>{};
+  final Map<String, ImageProvider<Object>?> _photoProviderCache = <String, ImageProvider<Object>?>{};
   final Set<int> _ratedRideIds = <int>{};
   final Map<int, int> _ratingByRideId = <int, int>{};
   int? _activeChatRideId;
@@ -191,6 +194,17 @@ class _B2bScreenState extends State<B2bScreen> {
   bool _busy = false;
   bool _obscureSecret = true;
   bool _ok = false;
+  bool _requestFormExpanded = true;
+  _B2bRideFilter _rideFilter = _B2bRideFilter.all;
+  String _b2bDisplayName = 'B2B account';
+  String _b2bEmail = '';
+  String _b2bPhone = '';
+  String _b2bCode = '';
+  String _b2bLabel = '';
+  String _b2bContactName = '';
+  String _b2bPin = '';
+  String _b2bHotel = '';
+  String _b2bTenantPhone = '';
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
   int _rideUnread(int rideId) => _unreadChatByRideId[rideId] ?? 0;
@@ -211,13 +225,74 @@ class _B2bScreenState extends State<B2bScreen> {
 
   Widget _appBarHomeLogo() => GestureDetector(
         onTap: () => unawaited(_goToHome()),
-        child: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(9)),
-          child: const Icon(Icons.local_taxi_rounded, color: _C.charcoal, size: 18),
-        ),
+        child: const VoomLogo(height: 30),
       );
+
+  Map<String, dynamic> _decodeJwtClaims(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length < 2) return const <String, dynamic>{};
+      final normalized = base64Url.normalize(parts[1]);
+      final payload = utf8.decode(base64Url.decode(normalized));
+      final parsed = jsonDecode(payload);
+      if (parsed is Map<String, dynamic>) return parsed;
+      if (parsed is Map) return Map<String, dynamic>.from(parsed);
+    } catch (_) {}
+    return const <String, dynamic>{};
+  }
+
+  void _hydrateB2bProfileFromToken(String? token) {
+    if ((token ?? '').trim().isEmpty) return;
+    final claims = _decodeJwtClaims(token!);
+    final email = (claims['email'] ?? claims['sub'] ?? '').toString().trim();
+    final name = (claims['display_name'] ?? claims['name'] ?? '').toString().trim();
+    final phone = (claims['phone'] ?? '').toString().trim();
+    final code = (claims['source_code'] ?? claims['code'] ?? '').toString().trim();
+    if (!mounted) return;
+    setState(() {
+      if (name.isNotEmpty) _b2bDisplayName = name;
+      if (email.isNotEmpty) _b2bEmail = email;
+      if (phone.isNotEmpty) _b2bPhone = phone;
+      if (code.isNotEmpty) _b2bCode = code;
+      if (_b2bDisplayName.trim().isEmpty) {
+        _b2bDisplayName = _b2bEmail.isNotEmpty ? _b2bEmail : 'B2B #${_userId ?? ''}';
+      }
+    });
+  }
+
+  Future<void> _hydrateB2bProfileFromApi(String token) async {
+    try {
+      final data = await _api.getB2bMe(token);
+      if (!mounted) return;
+      final user = Map<String, dynamic>.from((data['user'] as Map?) ?? const {});
+      final tenant =
+          Map<String, dynamic>.from((data['tenant'] as Map?) ?? const {});
+      final display = (user['display_name'] ?? '').toString().trim();
+      final email = (user['email'] ?? '').toString().trim();
+      final phone = (user['phone'] ?? '').toString().trim();
+      final code = (user['source_code'] ?? '').toString().trim();
+      final tenantName = (tenant['contact_name'] ?? '').toString().trim();
+      final tenantLabel = (tenant['label'] ?? '').toString().trim();
+      final tenantPin = (tenant['pin'] ?? '').toString().trim();
+      final tenantHotel = (tenant['hotel'] ?? '').toString().trim();
+      final tenantPhone = (tenant['phone'] ?? '').toString().trim();
+      if (!mounted) return;
+      setState(() {
+        if (display.isNotEmpty) _b2bDisplayName = display;
+        if (_b2bDisplayName == 'B2B account' && tenantName.isNotEmpty) {
+          _b2bDisplayName = tenantName;
+        }
+        if (email.isNotEmpty) _b2bEmail = email;
+        if (phone.isNotEmpty) _b2bPhone = phone;
+        if (code.isNotEmpty) _b2bCode = code;
+        if (tenantLabel.isNotEmpty) _b2bLabel = tenantLabel;
+        if (tenantName.isNotEmpty) _b2bContactName = tenantName;
+        if (tenantPin.isNotEmpty) _b2bPin = tenantPin;
+        if (tenantHotel.isNotEmpty) _b2bHotel = tenantHotel;
+        if (tenantPhone.isNotEmpty) _b2bTenantPhone = tenantPhone;
+      });
+    } catch (_) {}
+  }
   String _uiText({
     required String en,
     required String ar,
@@ -351,53 +426,256 @@ class _B2bScreenState extends State<B2bScreen> {
     }
   }
 
-  List<String> _filteredRouteKeys([_B2bTripOption? option]) {
-    final selected = option ?? _tripOption;
+  List<String> _filteredRouteKeys() {
     final all = _fares.keys.toList();
     final filtered = all.where((k) {
       final parts = k.split(airportRouteKeySeparator);
       if (parts.length < 2) return false;
       final start = parts.first.trim();
-      final dest = parts[1].trim();
-      switch (selected) {
-        case _B2bTripOption.airportToTourist:
-          return _isAirport(start) && !_isAirport(dest);
-        case _B2bTripOption.currentToTourist:
-          return !_isAirport(start) && !_isAirport(dest);
-        case _B2bTripOption.currentToAirport:
-          return !_isAirport(start) && _isAirport(dest);
-      }
+      final preferredStart = (_nearestZoneName ?? '').trim();
+      if (preferredStart.isNotEmpty) return start == preferredStart;
+      return true;
     }).toList();
-    final preferredStart = (_nearestZoneName ?? '').trim();
-    if (preferredStart.isNotEmpty) {
-      filtered.sort((a, b) {
-        final aStart = a.split(airportRouteKeySeparator).first.trim();
-        final bStart = b.split(airportRouteKeySeparator).first.trim();
-        final aPref = aStart == preferredStart ? 0 : 1;
-        final bPref = bStart == preferredStart ? 0 : 1;
-        if (aPref != bPref) return aPref.compareTo(bPref);
-        return a.compareTo(b);
-      });
-      return filtered;
-    }
+    if (filtered.isEmpty) return all..sort((a, b) => a.compareTo(b));
     filtered.sort((a, b) => a.compareTo(b));
     return filtered;
-  }
-
-  List<_B2bTripOption> _availableTripOptions() {
-    return _B2bTripOption.values
-        .where((o) => _filteredRouteKeys(o).isNotEmpty)
-        .toList();
   }
 
   void _syncRouteSelectionForCurrentOption() {
     final keys = _filteredRouteKeys();
     if (keys.isEmpty) {
       _routeKey = null;
+      _destinationController.clear();
       return;
     }
     if (_routeKey == null || !keys.contains(_routeKey)) {
       _routeKey = keys.first;
+    }
+    final parts = (_routeKey ?? '').split(airportRouteKeySeparator);
+    if (parts.length >= 2) {
+      _destinationController.text = parts[1].trim();
+    }
+  }
+
+  List<String> _destinationChoices() {
+    final keys = _filteredRouteKeys();
+    final set = <String>{};
+    for (final key in keys) {
+      final parts = key.split(airportRouteKeySeparator);
+      if (parts.length < 2) continue;
+      final dest = parts[1].trim();
+      if (dest.isNotEmpty) set.add(dest);
+    }
+    final list = set.toList()..sort();
+    return list;
+  }
+
+  List<String> _destinationSuggestions() {
+    final query = _destinationController.text.trim().toLowerCase();
+    final base = _destinationChoices();
+    if (query.isEmpty) return base.take(10).toList();
+    return base
+        .where((d) => d.toLowerCase().contains(query))
+        .take(10)
+        .toList();
+  }
+
+  String? _resolveRouteFromDestination(String destination) {
+    final target = destination.trim().toLowerCase();
+    if (target.isEmpty) return null;
+    final keys = _filteredRouteKeys();
+    if (keys.isEmpty) return null;
+    final exact = keys.where((k) {
+      final parts = k.split(airportRouteKeySeparator);
+      return parts.length >= 2 && parts[1].trim().toLowerCase() == target;
+    }).toList();
+    if (exact.isNotEmpty) return exact.first;
+    final fuzzy = keys.where((k) {
+      final parts = k.split(airportRouteKeySeparator);
+      return parts.length >= 2 && parts[1].trim().toLowerCase().contains(target);
+    }).toList();
+    if (fuzzy.isNotEmpty) return fuzzy.first;
+    return null;
+  }
+
+  String? _routeForSuggestion(String suggestion) {
+    final dest = suggestion.trim();
+    if (dest.isEmpty) return null;
+    return _resolveRouteFromDestination(dest);
+  }
+
+  double? _routeDistanceKm(String? routeKey) {
+    if ((routeKey ?? '').trim().isEmpty) return null;
+    final parts = routeKey!.split(airportRouteKeySeparator);
+    if (parts.length < 2) return null;
+    final start = _zoneCoords[parts.first.trim()];
+    final dest = _zoneCoords[parts[1].trim()];
+    if (start == null || dest == null) return null;
+    final m = Geolocator.distanceBetween(start.lat, start.lng, dest.lat, dest.lng);
+    return m / 1000.0;
+  }
+
+  String _normPlace(String s) => s.trim().toLowerCase();
+
+  double _fareForRouteKey(String? routeKey) {
+    final key = (routeKey ?? '').trim();
+    if (key.isEmpty) return 0.0;
+    final exact = _fares[key];
+    if (exact != null) return exact.toDouble();
+    final parts = key.split(airportRouteKeySeparator);
+    if (parts.length < 2) return 0.0;
+    final s = _normPlace(parts.first);
+    final d = _normPlace(parts[1]);
+    for (final e in _fares.entries) {
+      final p = e.key.split(airportRouteKeySeparator);
+      if (p.length < 2) continue;
+      if (_normPlace(p.first) == s && _normPlace(p[1]) == d) {
+        return e.value.toDouble();
+      }
+    }
+    return 0.0;
+  }
+
+  Widget _statusFilterChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return ChoiceChip(
+      label: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        softWrap: false,
+      ),
+      selected: selected,
+      onSelected: (_) => onTap(),
+      labelStyle: TextStyle(
+        color: selected ? _C.charcoal : _C.textMid,
+        fontWeight: FontWeight.w700,
+        fontSize: 11,
+      ),
+      selectedColor: _C.yellowSoft,
+      backgroundColor: _C.surfaceAlt,
+      side: BorderSide(color: selected ? _C.yellowDeep : _C.border),
+    );
+  }
+
+  Future<void> _showB2bAccountDialog() async {
+    final token = _token;
+    if (token == null) return;
+    final displayNameCtrl = TextEditingController(text: _b2bDisplayName);
+    final emailCtrl = TextEditingController(text: _b2bEmail);
+    final phoneCtrl = TextEditingController(text: _b2bPhone);
+    final newPasswordCtrl = TextEditingController();
+    var obscureNext = true;
+    String? error;
+    var localBusy = false;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Edit B2B Account'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: _fd('E-mail', icon: Icons.alternate_email_rounded),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: newPasswordCtrl,
+                  obscureText: obscureNext,
+                  decoration: _fd('New password (optional)', icon: Icons.password_rounded).copyWith(
+                    suffixIcon: IconButton(
+                      onPressed: () => setLocal(() => obscureNext = !obscureNext),
+                      icon: Icon(obscureNext ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: displayNameCtrl,
+                  decoration: _fd('Name', icon: Icons.person_outline_rounded),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: _fd('Phone', icon: Icons.phone_outlined),
+                ),
+                if ((error ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(error!, style: const TextStyle(color: _C.danger, fontSize: 12)),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: localBusy ? null : () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: localBusy
+                  ? null
+                  : () async {
+                      setLocal(() {
+                        localBusy = true;
+                        error = null;
+                      });
+                      try {
+                        final result = await _api.patchB2bMe(
+                          token: token,
+                          displayName: displayNameCtrl.text.trim(),
+                          phone: phoneCtrl.text.trim(),
+                          email: emailCtrl.text.trim(),
+                          password: newPasswordCtrl.text.trim().isEmpty
+                              ? null
+                              : newPasswordCtrl.text.trim(),
+                        );
+                        if (!mounted) return;
+                        final user = Map<String, dynamic>.from(
+                            (result['user'] as Map?) ?? const {});
+                        final tenant = Map<String, dynamic>.from(
+                            (result['tenant'] as Map?) ?? const {});
+                        setState(() {
+                          _b2bEmail = (user['email'] ?? _b2bEmail).toString();
+                          _b2bPhone = (user['phone'] ?? _b2bPhone).toString();
+                          final dn = (user['display_name'] ?? '').toString().trim();
+                          if (dn.isNotEmpty) _b2bDisplayName = dn;
+                          final sc = (user['source_code'] ?? '').toString().trim();
+                          if (sc.isNotEmpty) _b2bCode = sc;
+                          _b2bLabel = (tenant['label'] ?? _b2bLabel).toString();
+                          _b2bContactName =
+                              (tenant['contact_name'] ?? _b2bContactName).toString();
+                          _b2bPin = (tenant['pin'] ?? _b2bPin).toString();
+                          _b2bTenantPhone =
+                              (tenant['phone'] ?? _b2bTenantPhone).toString();
+                          _b2bHotel = (tenant['hotel'] ?? _b2bHotel).toString();
+                        });
+                        Navigator.pop(ctx, true);
+                      } catch (e) {
+                        setLocal(() {
+                          error = e.toString();
+                          localBusy = false;
+                        });
+                      }
+                    },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+    displayNameCtrl.dispose();
+    emailCtrl.dispose();
+    phoneCtrl.dispose();
+    newPasswordCtrl.dispose();
+    if (ok == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Account updated successfully.')),
+      );
     }
   }
 
@@ -422,11 +700,27 @@ class _B2bScreenState extends State<B2bScreen> {
     try {
       final auth =
           await _api.login(role: 'b2b', secret: _secretController.text.trim());
+      if (userChoseLocaleThisSession.value) {
+        try {
+          await _api.patchPreferredLanguage(
+            token: auth.appAccessToken ?? auth.accessToken,
+            preferredLanguage: appLocale.value.languageCode,
+          );
+        } catch (_) {}
+      }
+      rememberCurrentLocaleForRole(AppUiRole.b2b);
       await SessionStore.saveB2b(auth);
       final fares = await _api.getAirportFares();
       _token = auth.accessToken;
-      _appToken = auth.appAccessToken;
+      _appToken = auth.appAccessToken ?? auth.accessToken;
       _userId = auth.userId;
+      final entered = _secretController.text.trim();
+      if (entered.isNotEmpty) {
+        _b2bCode = entered;
+        if (_b2bDisplayName.trim().isEmpty || _b2bDisplayName == 'B2B account') {
+          _b2bDisplayName = entered;
+        }
+      }
       if (_appToken != null) {
         _unreadChatByRideId.clear();
         _rideIdByConversationId.clear();
@@ -435,12 +729,18 @@ class _B2bScreenState extends State<B2bScreen> {
         _connectRealtime(_appToken!);
         await _refreshRides();
         _startPolling();
+        await _hydrateB2bProfileFromApi(_appToken!);
       }
       setState(() {
         _ok = true;
         _fares = fares;
         _syncRouteSelectionForCurrentOption();
+        if (_b2bCode.isEmpty) _b2bCode = _secretController.text.trim();
       });
+      _hydrateB2bProfileFromToken(_appToken ?? _token);
+      if ((_appToken ?? _token) != null) {
+        await _hydrateB2bProfileFromApi((_appToken ?? _token)!);
+      }
       await _detectB2bLocation();
     } catch (e) {
       setState(() {
@@ -455,9 +755,10 @@ class _B2bScreenState extends State<B2bScreen> {
   void _bookGuest() {
     final l = AppLocalizations.of(context)!;
     final guest = _guestController.text.trim();
-    final route = _routeKey;
+    final destination = _destinationController.text.trim();
+    final route = _resolveRouteFromDestination(destination) ?? _routeKey;
     final token = _token;
-    if (guest.isEmpty || route == null || token == null) {
+    if (guest.isEmpty || destination.isEmpty || route == null || token == null) {
       setState(() => _message = l.loginFirst);
       return;
     }
@@ -465,7 +766,7 @@ class _B2bScreenState extends State<B2bScreen> {
     final guestPhone = _guestPhoneController.text.trim();
     final hotel = _hotelController.text.trim();
     final flightEta = _flightEtaController.text.trim();
-    final fare = (_fares[route] ?? 0).toDouble();
+    final fare = _fareForRouteKey(route);
     _api
         .createB2bBooking(
       token: token,
@@ -476,7 +777,7 @@ class _B2bScreenState extends State<B2bScreen> {
       flightEta: flightEta,
       roomNumber: room,
       fare: fare,
-      sourceCode: _secretController.text.trim(),
+      sourceCode: (_b2bCode.isNotEmpty ? _b2bCode : _secretController.text.trim()),
     )
         .then((booking) {
       if (!mounted) return;
@@ -619,7 +920,7 @@ class _B2bScreenState extends State<B2bScreen> {
   }
 
   Future<void> _refreshRides() async {
-    final t = _appToken;
+    final t = _appToken ?? _token;
     if (t == null) return;
     try {
       final list = await _api.listRides(t);
@@ -816,6 +1117,7 @@ class _B2bScreenState extends State<B2bScreen> {
             myUserId: uid,
             rideId: ride.id,
             conversationId: cid,
+            showDriverQuickReplies: false,
           ),
         ),
       );
@@ -887,9 +1189,30 @@ class _B2bScreenState extends State<B2bScreen> {
     return NetworkImage(raw);
   }
 
+  ImageProvider<Object>? _stableImageProviderFromString(String? value) {
+    final raw = (value ?? '').trim();
+    if (raw.isEmpty) return null;
+    if (_photoProviderCache.containsKey(raw)) {
+      return _photoProviderCache[raw];
+    }
+    final provider = _imageProviderFromString(raw);
+    _photoProviderCache[raw] = provider;
+    return provider;
+  }
+
   @override
   void initState() {
     super.initState();
+    _destinationFocus.addListener(() {
+      if (mounted) setState(() {});
+    });
+    _destinationController.addListener(() {
+      final resolved = _resolveRouteFromDestination(_destinationController.text);
+      if (resolved != null && resolved != _routeKey && mounted) {
+        setState(() => _routeKey = resolved);
+      }
+      if (mounted) setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       restoreUiRoleLocale(AppUiRole.b2b);
@@ -902,9 +1225,18 @@ class _B2bScreenState extends State<B2bScreen> {
 
   Future<void> _bootstrapFromSession(LoginResponse auth) async {
     await SessionStore.saveB2b(auth);
+    if (userChoseLocaleThisSession.value) {
+      try {
+        await _api.patchPreferredLanguage(
+          token: auth.appAccessToken ?? auth.accessToken,
+          preferredLanguage: appLocale.value.languageCode,
+        );
+      } catch (_) {}
+    }
+    rememberCurrentLocaleForRole(AppUiRole.b2b);
     final fares = await _api.getAirportFares();
     _token = auth.accessToken;
-    _appToken = auth.appAccessToken;
+    _appToken = auth.appAccessToken ?? auth.accessToken;
     _userId = auth.userId;
     if (_appToken != null) {
       _unreadChatByRideId.clear();
@@ -914,6 +1246,7 @@ class _B2bScreenState extends State<B2bScreen> {
       _connectRealtime(_appToken!);
       await _refreshRides();
       _startPolling();
+      await _hydrateB2bProfileFromApi(_appToken!);
     }
     if (!mounted) return;
     setState(() {
@@ -931,6 +1264,8 @@ class _B2bScreenState extends State<B2bScreen> {
     _secretController.dispose();
     _guestController.dispose();
     _guestPhoneController.dispose();
+    _destinationController.dispose();
+    _destinationFocus.dispose();
     _hotelController.dispose();
     _flightEtaController.dispose();
     _roomController.dispose();
@@ -943,30 +1278,50 @@ class _B2bScreenState extends State<B2bScreen> {
     final isPhone = MediaQuery.of(context).size.width < 700;
     const activeStatuses = {'pending', 'accepted', 'ongoing'};
     final activeCount = _rides.where((r) => activeStatuses.contains(r.status)).length;
-    final availableTripOptions = _availableTripOptions();
     final routeKeys = _filteredRouteKeys();
+    final filteredRides = _rides.where((r) {
+      switch (_rideFilter) {
+        case _B2bRideFilter.pending:
+          return r.status == 'pending';
+        case _B2bRideFilter.accepted:
+          return r.status == 'accepted' || r.status == 'ongoing';
+        case _B2bRideFilter.cancelled:
+          return r.status == 'cancelled';
+        case _B2bRideFilter.completed:
+          return r.status == 'completed';
+        case _B2bRideFilter.all:
+          return true;
+      }
+    }).toList();
     if (_routeKey != null && !routeKeys.contains(_routeKey)) {
       _routeKey = routeKeys.isNotEmpty ? routeKeys.first : null;
-    }
-    String tripOptionLabel(_B2bTripOption option) {
-      switch (option) {
-        case _B2bTripOption.airportToTourist:
-          return 'Airport → Tourist zone';
-        case _B2bTripOption.currentToTourist:
-          return 'Current location → Tourist zone';
-        case _B2bTripOption.currentToAirport:
-          return 'Current location → Airport';
-      }
     }
     return Scaffold(
       backgroundColor: _C.bgWarm,
       appBar: AppBar(
+        leading: IconButton(
+          onPressed: _goToHome,
+          icon: const Icon(Icons.arrow_back),
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+        ),
         centerTitle: true,
-        title: _appBarHomeLogo(),
+        title: Text(
+          _uiText(
+            en: 'B2B Portal',
+            ar: 'بوابة B2B',
+            fr: 'Portail B2B',
+            es: 'Portal B2B',
+            de: 'B2B-Portal',
+            it: 'Portale B2B',
+            ru: 'Портал B2B',
+            zh: 'B2B门户',
+          ),
+          style: const TextStyle(color: _C.yellow, fontWeight: FontWeight.w800, fontSize: 16),
+        ),
         backgroundColor: _C.charcoal,
         foregroundColor: Colors.white,
         actions: [
-          const LocalePopupMenuButton(uiRole: AppUiRole.b2b),
+          LocalePopupMenuButton(authToken: _appToken ?? _token, uiRole: AppUiRole.b2b),
           if (_ok)
             IconButton(
               onPressed: () => unawaited(_logout()),
@@ -1055,21 +1410,48 @@ class _B2bScreenState extends State<B2bScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _SectionHead('Portal Status', subtitle: '${l.passengerActiveRidesChip(activeCount)} • ${l.passengerTotalRidesChip(_rides.length)}'),
-                        _rowInfoCard(
-                          icon: Icons.verified_user,
-                          content: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l.b2bConnectedStub,
-                                style: const TextStyle(color: _C.textStrong, fontWeight: FontWeight.w700, fontSize: 13),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                l.b2bConnectedWorkflowSubtitle,
-                                style: const TextStyle(color: _C.textSoft, fontSize: 11),
-                              ),
-                            ],
+                        InkWell(
+                          onTap: _busy ? null : () => unawaited(_showB2bAccountDialog()),
+                          borderRadius: BorderRadius.circular(12),
+                          child: _rowInfoCard(
+                            icon: Icons.account_circle_outlined,
+                            content: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _b2bDisplayName,
+                                  style: const TextStyle(
+                                    color: _C.textStrong,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  (_b2bEmail.isNotEmpty ? _b2bEmail : 'Tap to open account details') +
+                                      (_b2bPhone.isNotEmpty ? ' · $_b2bPhone' : ''),
+                                  style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _b2bCode.trim().isEmpty
+                                      ? 'Code unavailable'
+                                      : 'Code: ${_b2bCode.trim()}',
+                                  style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                                ),
+                                if (_b2bContactName.trim().isNotEmpty || _b2bPin.trim().isNotEmpty)
+                                  Text(
+                                    'Name: ${_b2bContactName.trim().isEmpty ? '-' : _b2bContactName} | PIN: ${_b2bPin.trim().isEmpty ? '-' : _b2bPin}',
+                                    style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                                  ),
+                                if (_b2bTenantPhone.trim().isNotEmpty || _b2bHotel.trim().isNotEmpty)
+                                  Text(
+                                    'Phone: ${_b2bTenantPhone.trim().isEmpty ? '-' : _b2bTenantPhone} | Hotel: ${_b2bHotel.trim().isEmpty ? '-' : _b2bHotel}',
+                                    style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                                  ),
+                              ],
+                            ),
+                            trailing: const Icon(Icons.edit_outlined, size: 18, color: _C.textMid),
                           ),
                         ),
                       ],
@@ -1082,8 +1464,59 @@ class _B2bScreenState extends State<B2bScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _SectionHead(l.b2bBookOnAccountHeading, subtitle: 'Request a ride for a guest'),
-                          TextField(
+                          _SectionHead(
+                            l.b2bBookOnAccountHeading,
+                            subtitle: _uiText(
+                              en: 'Light request flow',
+                              ar: 'نموذج طلب خفيف',
+                              fr: 'Formulaire de demande leger',
+                              es: 'Formulario de solicitud ligero',
+                              de: 'Leichtes Anfrageformular',
+                              it: 'Modulo richiesta leggero',
+                              ru: 'Легкая форма запроса',
+                              zh: '轻量请求表单',
+                            ),
+                          ),
+                          Theme(
+                            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                            child: ExpansionTile(
+                              initiallyExpanded: _requestFormExpanded,
+                              onExpansionChanged: (v) => setState(() => _requestFormExpanded = v),
+                              tilePadding: EdgeInsets.zero,
+                              childrenPadding: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              backgroundColor: _C.surfaceAlt,
+                              collapsedBackgroundColor: _C.surfaceAlt,
+                              title: Text(
+                                _uiText(
+                                  en: 'New ride request',
+                                  ar: 'طلب رحلة جديد',
+                                  fr: 'Nouvelle demande',
+                                  es: 'Nueva solicitud',
+                                  de: 'Neue Anfrage',
+                                  it: 'Nuova richiesta',
+                                  ru: 'Новый запрос',
+                                  zh: '新行程请求',
+                                ),
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                              ),
+                              subtitle: Text(
+                                _uiText(
+                                  en: 'Tap to open/close form',
+                                  ar: 'اضغط لفتح/إغلاق النموذج',
+                                  fr: 'Touchez pour ouvrir/fermer',
+                                  es: 'Toca para abrir/cerrar',
+                                  de: 'Tippen zum Öffnen/Schließen',
+                                  it: 'Tocca per aprire/chiudere',
+                                  ru: 'Нажмите, чтобы открыть/закрыть',
+                                  zh: '点击展开/收起表单',
+                                ),
+                                style: const TextStyle(fontSize: 11, color: _C.textSoft),
+                              ),
+                              children: [
+                                const SizedBox(height: 10),
+                                TextField(
                             controller: _guestController,
                             decoration: _fd(
                               _uiText(
@@ -1159,30 +1592,6 @@ class _B2bScreenState extends State<B2bScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          InputDecorator(
-                            decoration: _fd('Trip option', icon: Icons.alt_route_rounded),
-                            child: DropdownButton<_B2bTripOption>(
-                              value: _tripOption,
-                              isExpanded: true,
-                              underline: const SizedBox.shrink(),
-                              items: availableTripOptions
-                                  .map(
-                                    (o) => DropdownMenuItem<_B2bTripOption>(
-                                      value: o,
-                                      child: Text(tripOptionLabel(o)),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (v) {
-                                if (v == null) return;
-                                setState(() {
-                                  _tripOption = v;
-                                  _syncRouteSelectionForCurrentOption();
-                                });
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 8),
                           Row(
                             children: [
                               Expanded(
@@ -1219,27 +1628,122 @@ class _B2bScreenState extends State<B2bScreen> {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          InputDecorator(
-                            decoration: _fd(l.route, icon: Icons.route_rounded),
-                            child: DropdownButton<String>(
-                              value: _routeKey,
-                              isExpanded: true,
-                              underline: const SizedBox.shrink(),
-                              items: routeKeys
-                                  .map((k) => DropdownMenuItem(
-                                        value: k,
-                                        child: Text(
-                                            localizedRouteKeyForDisplay(l, k)),
-                                      ))
-                                  .toList(),
-                              onChanged: (v) => setState(() => _routeKey = v),
+                          _rowInfoCard(
+                            icon: Icons.my_location_rounded,
+                            content: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Departure: ${_nearestZoneName != null ? localizedPlaceName(l, _nearestZoneName) : l.passengerLocationCurrent}',
+                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _locationText != null
+                                      ? 'GPS: $_locationText'
+                                      : (_locationError ??
+                                          (_locating ? l.passengerLocationDetecting : l.passengerLocationUnavailable)),
+                                  style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                            trailing: IconButton(
+                              onPressed: _locating ? null : () => unawaited(_detectB2bLocation()),
+                              icon: const Icon(Icons.refresh_rounded, size: 18),
                             ),
                           ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _destinationController,
+                            focusNode: _destinationFocus,
+                            decoration: _fd(
+                              _uiText(
+                                en: 'Destination',
+                                ar: 'الوجهة',
+                                fr: 'Destination',
+                                es: 'Destino',
+                                de: 'Ziel',
+                                it: 'Destinazione',
+                                ru: 'Пункт назначения',
+                                zh: '目的地',
+                              ),
+                              icon: Icons.place_outlined,
+                            ).copyWith(
+                              suffixIcon: _destinationController.text.trim().isEmpty
+                                  ? null
+                                  : IconButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _destinationController.clear();
+                                          _routeKey = null;
+                                        });
+                                      },
+                                      icon: const Icon(Icons.close_rounded, size: 18),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (_destinationFocus.hasFocus) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              constraints: const BoxConstraints(maxHeight: 220),
+                              decoration: BoxDecoration(
+                                color: _C.surfaceAlt,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: _C.border),
+                              ),
+                              child: ListView(
+                                shrinkWrap: true,
+                                children: _destinationSuggestions().map((s) {
+                                  final route = _routeForSuggestion(s);
+                                  final km = _routeDistanceKm(route);
+                                  final fare = route == null ? null : _fareForRouteKey(route);
+                                  return ListTile(
+                                    dense: true,
+                                    leading: const Icon(Icons.location_on_outlined, size: 16),
+                                    title: Text(s, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                    subtitle: (km == null && fare == null)
+                                        ? null
+                                        : Text(
+                                            '${km?.toStringAsFixed(1) ?? '-'} km • ${l.fareDt((fare ?? 0).toStringAsFixed(2))}',
+                                            style: const TextStyle(fontSize: 11, color: _C.textSoft),
+                                          ),
+                                    onTap: () {
+                                      _destinationController.text = s;
+                                      final resolved = route ?? _resolveRouteFromDestination(s);
+                                      if (resolved != null) {
+                                        setState(() => _routeKey = resolved);
+                                      }
+                                      _destinationFocus.unfocus();
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 8),
                           if (_routeKey != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                '${l.fareDt((_fares[_routeKey] ?? 0).toStringAsFixed(2))} ${l.b2bFareAdminPercentSuffix}',
+                              child: _rowInfoCard(
+                                icon: Icons.route_rounded,
+                                content: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      localizedRouteKeyForDisplay(l, _routeKey!),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 12),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${_routeDistanceKm(_routeKey)?.toStringAsFixed(1) ?? '-'} km • ${l.fareDt(_fareForRouteKey(_routeKey).toStringAsFixed(2))} ${l.b2bFareAdminPercentSuffix}',
+                                      style: const TextStyle(
+                                          color: _C.textSoft, fontSize: 11),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           const SizedBox(height: 8),
@@ -1247,45 +1751,72 @@ class _B2bScreenState extends State<B2bScreen> {
                             width: double.infinity,
                             child: FilledButton(
                               style: FilledButton.styleFrom(
-                                backgroundColor: _C.charcoal,
-                                foregroundColor: Colors.white,
+                                backgroundColor: _C.yellow,
+                                foregroundColor: _C.charcoal,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
                               ),
                               onPressed: _busy ? null : _bookGuest,
-                              child: Text(l.requestRideButton),
+                              child: Text(
+                                l.requestRideButton,
+                                style: const TextStyle(fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                          ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  _Module(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _SectionHead(l.b2bMonthlyUsageTitle),
-                        _rowInfoCard(
-                          icon: Icons.bar_chart,
-                          content: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(l.b2bMonthlyUsageTitle, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                              const SizedBox(height: 2),
-                              Text(l.b2bMonthlyAmountDue('450.000'), style: const TextStyle(color: _C.textSoft, fontSize: 11)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 12),
-                  _SectionHead(l.myRidesHeading, subtitle: '${_rides.length} rides'),
+                  _SectionHead(l.myRidesHeading, subtitle: '${filteredRides.length} rides'),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _statusFilterChip(
+                        label: _uiText(
+                          en: 'All',
+                          ar: 'الكل',
+                          fr: 'Tous',
+                          es: 'Todos',
+                          de: 'Alle',
+                          it: 'Tutti',
+                          ru: 'Все',
+                          zh: '全部',
+                        ),
+                        selected: _rideFilter == _B2bRideFilter.all,
+                        onTap: () => setState(() => _rideFilter = _B2bRideFilter.all),
+                      ),
+                      _statusFilterChip(
+                        label: localizedRideStatusLabel(l, 'pending'),
+                        selected: _rideFilter == _B2bRideFilter.pending,
+                        onTap: () => setState(() => _rideFilter = _B2bRideFilter.pending),
+                      ),
+                      _statusFilterChip(
+                        label: localizedRideStatusLabel(l, 'accepted'),
+                        selected: _rideFilter == _B2bRideFilter.accepted,
+                        onTap: () => setState(() => _rideFilter = _B2bRideFilter.accepted),
+                      ),
+                      _statusFilterChip(
+                        label: localizedRideStatusLabel(l, 'cancelled'),
+                        selected: _rideFilter == _B2bRideFilter.cancelled,
+                        onTap: () => setState(() => _rideFilter = _B2bRideFilter.cancelled),
+                      ),
+                      _statusFilterChip(
+                        label: localizedRideStatusLabel(l, 'completed'),
+                        selected: _rideFilter == _B2bRideFilter.completed,
+                        onTap: () => setState(() => _rideFilter = _B2bRideFilter.completed),
+                      ),
+                    ],
+                  ),
                   _Module(
-                    child: _rides.isEmpty
+                    child: filteredRides.isEmpty
                         ? Text(l.noRidesYetApp, style: const TextStyle(color: _C.textSoft))
                         : Column(
-                            children: _rides
+                            children: filteredRides
                                 .map(
                                   (r) => Container(
                                     key: ValueKey<String>('b2b-ride-${r.id}-chat-${_rideUnread(r.id)}'),
@@ -1304,6 +1835,31 @@ class _B2bScreenState extends State<B2bScreen> {
                                                 l.rideStatusFmt(localizedRideStatusLabel(l, r.status)),
                                                 style: const TextStyle(color: _C.textSoft, fontSize: 11),
                                               ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                'Depart: ${localizedPlaceName(l, r.pickup)} • Destination: ${localizedPlaceName(l, r.destination)}',
+                                                style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                                              ),
+                                              Builder(
+                                                builder: (_) {
+                                                  final route = '${r.pickup}$airportRouteKeySeparator${r.destination}';
+                                                  final fare = _fareForRouteKey(route);
+                                                  final km = _routeDistanceKm(route);
+                                                  return Text(
+                                                    '${km?.toStringAsFixed(1) ?? '-'} km • ${l.fareDt(fare.toStringAsFixed(2))}',
+                                                    style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                                                  );
+                                                },
+                                              ),
+                                              if (r.status == 'pending')
+                                                Text(
+                                                  'Chauffeur en cours...',
+                                                  style: const TextStyle(
+                                                    color: _C.yellowDeep,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
                                               if ((r.driverName ?? '').trim().isNotEmpty ||
                                                   (r.driverPhone ?? '').trim().isNotEmpty) ...[
                                                 const SizedBox(height: 4),
@@ -1319,7 +1875,7 @@ class _B2bScreenState extends State<B2bScreen> {
                                           trailing: (r.driverPhotoUrl ?? '').trim().isNotEmpty
                                               ? Builder(
                                                   builder: (context) {
-                                                    final provider = _imageProviderFromString(r.driverPhotoUrl);
+                                                    final provider = _stableImageProviderFromString(r.driverPhotoUrl);
                                                     if (provider == null) return const SizedBox.shrink();
                                                     return CircleAvatar(radius: 16, backgroundImage: provider);
                                                   },
@@ -1355,16 +1911,16 @@ class _B2bScreenState extends State<B2bScreen> {
                                                   backgroundColor: _C.yellow,
                                                   child: Container(
                                                     decoration: BoxDecoration(
-                                                      color: _C.charcoal,
+                                                      color: _C.surfaceAlt,
                                                       borderRadius: BorderRadius.circular(20),
-                                                      boxShadow: [BoxShadow(color: _C.charcoal.withOpacity(0.22), blurRadius: 8, offset: const Offset(0, 3))],
+                                                      border: Border.all(color: _C.border),
                                                     ),
                                                     child: TextButton.icon(
                                                       onPressed: _busy ? null : () => _openChat(r),
-                                                      icon: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
+                                                      icon: const Icon(Icons.chat_bubble_rounded, color: _C.charcoal, size: 16),
                                                       label: Text(
                                                         l.openChatButton,
-                                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                                                        style: const TextStyle(color: _C.charcoal, fontWeight: FontWeight.w700),
                                                       ),
                                                     ),
                                                   ),
@@ -1373,31 +1929,43 @@ class _B2bScreenState extends State<B2bScreen> {
                                             ),
                                             if (r.status == 'completed' &&
                                                 (_pendingRatingRideId == r.id || !_ratedRideIds.contains(r.id)))
-                                              Row(
-                                                mainAxisSize: MainAxisSize.min,
+                                              Wrap(
+                                                spacing: 4,
+                                                runSpacing: 4,
+                                                crossAxisAlignment: WrapCrossAlignment.center,
                                                 children: [
                                                   ...List.generate(5, (i) {
                                                     final star = i + 1;
-                                                    return IconButton(
-                                                      constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-                                                      padding: EdgeInsets.zero,
-                                                      icon: Icon(
-                                                        (_ratingByRideId[r.id] ?? 0) >= star ? Icons.star : Icons.star_border,
-                                                        color: _C.yellowDeep,
-                                                        size: 18,
+                                                    final selected = (_ratingByRideId[r.id] ?? 0) >= star;
+                                                    return InkWell(
+                                                      borderRadius: BorderRadius.circular(20),
+                                                      onTap: _busy ? null : () => setState(() => _ratingByRideId[r.id] = star),
+                                                      child: Container(
+                                                        width: 24,
+                                                        height: 24,
+                                                        decoration: BoxDecoration(
+                                                          color: selected ? _C.yellowSoft : _C.surfaceAlt,
+                                                          borderRadius: BorderRadius.circular(20),
+                                                          border: Border.all(color: selected ? _C.yellowDeep : _C.border),
+                                                        ),
+                                                        child: Icon(
+                                                          selected ? Icons.star_rounded : Icons.star_border_rounded,
+                                                          color: selected ? _C.yellowDeep : _C.textSoft,
+                                                          size: 15,
+                                                        ),
                                                       ),
-                                                      onPressed: _busy ? null : () => setState(() => _ratingByRideId[r.id] = star),
                                                     );
                                                   }),
-                                                  const SizedBox(width: 4),
                                                   FilledButton(
                                                     style: FilledButton.styleFrom(
                                                       backgroundColor: _C.yellow,
                                                       foregroundColor: _C.charcoal,
                                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                                      minimumSize: const Size(0, 30),
                                                     ),
                                                     onPressed: _busy || ((_ratingByRideId[r.id] ?? 0) < 1) ? null : () => _submitRideRating(r.id),
-                                                    child: Text(l.submitRating, style: const TextStyle(fontWeight: FontWeight.w800)),
+                                                    child: Text(l.submitRating, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
                                                   ),
                                                 ],
                                               ),
@@ -1426,3 +1994,5 @@ class _ZoneCoord {
   final double lat;
   final double lng;
 }
+
+enum _B2bRideFilter { all, pending, accepted, cancelled, completed }

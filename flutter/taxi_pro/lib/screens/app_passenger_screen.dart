@@ -28,6 +28,7 @@ import '../widgets/locale_popup_menu.dart';
 import '../utils/chat_unread_poll.dart';
 import '../utils/int_from_json.dart';
 import '../widgets/passenger_google_sign_in_button.dart';
+import '../widgets/voom_logo.dart';
 import 'passenger_forgot_password_screen.dart';
 import 'ride_chat_screen.dart';
 import 'unified_login_screen.dart';
@@ -199,15 +200,12 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   Widget _appBarHomeLogo() => GestureDetector(
     onTap: () {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+        MaterialPageRoute(
+          builder: (_) => const UnifiedLoginScreen(showPassengerEntry: true),
+        ),
       );
     },
-    child: Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(9)),
-      child: const Icon(Icons.local_taxi_rounded, color: _C.charcoal, size: 18),
-    ),
+    child: const VoomLogo(height: 30),
   );
   static const Map<String, _ZoneCoord> _zoneCoords = {
     'مطار قرطاج': _ZoneCoord(36.8508, 10.2272),
@@ -318,6 +316,19 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   }
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
+
+  Future<void> _goBack() async {
+    if (!mounted) return;
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+      return;
+    }
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => const UnifiedLoginScreen(showPassengerEntry: true),
+      ),
+    );
+  }
 
   void _pushNotification({required String title, required String body, String? event, int? rideId}) {
     final now = DateTime.now();
@@ -533,12 +544,23 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       final hasIdToken = idToken != null && idToken.isNotEmpty; final hasAccessToken = accessToken != null && accessToken.isNotEmpty;
       if (!hasIdToken && !hasAccessToken) { if (!mounted) return; setState(() => _message = AppLocalizations.of(context)!.errorGoogleSignInMissingToken); return; }
       AppLoginResponse r;
-      try { r = await _api.loginGoogle(idToken: hasIdToken ? idToken : null, accessToken: hasAccessToken ? accessToken : null); }
+      try {
+        r = await _api.loginGoogle(
+          idToken: hasIdToken ? idToken : null,
+          accessToken: hasAccessToken ? accessToken : null,
+          role: 'user',
+        );
+      }
       on TaxiApiException catch (e) {
         if (e.message == 'phone_required') {
           final phone = await _askPhone();
           if (phone == null || phone.trim().isEmpty) { if (!mounted) return; setState(() => _message = 'Phone number is required.'); return; }
-          r = await _api.loginGoogle(idToken: hasIdToken ? idToken : null, accessToken: hasAccessToken ? accessToken : null, phone: phone.trim());
+          r = await _api.loginGoogle(
+            idToken: hasIdToken ? idToken : null,
+            accessToken: hasAccessToken ? accessToken : null,
+            role: 'user',
+            phone: phone.trim(),
+          );
         } else { rethrow; }
       }
       if (!userChoseLocaleThisSession.value) applyPreferredLanguageToApp(r.preferredLanguage);
@@ -955,9 +977,17 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       appBar: AppBar(
         backgroundColor: _C.charcoal,
         centerTitle: true,
-        title: _appBarHomeLogo(),
+        leading: IconButton(
+          onPressed: _goBack,
+          icon: const Icon(Icons.arrow_back),
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+        ),
+        title: Text(
+          l.rolePassenger,
+          style: const TextStyle(color: _C.yellow, fontWeight: FontWeight.w800, fontSize: 16),
+        ),
         actions: [
-          const LocalePopupMenuButton(authToken: null, uiRole: AppUiRole.passenger),
+          LocalePopupMenuButton(authToken: _token, uiRole: AppUiRole.passenger),
           if (_token != null) ...[
             IconButton(
               onPressed: _showNotifications,
@@ -1087,7 +1117,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(18), boxShadow: [BoxShadow(color: _C.yellow.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))]),
               child: Row(children: [
-                const Icon(Icons.local_taxi_rounded, color: _C.charcoal, size: 22),
+                const VoomLogo(height: 24),
                 const SizedBox(width: 10),
                 Text(l.passengerDispatchPanelTitle, style: const TextStyle(color: _C.charcoal, fontWeight: FontWeight.w800, fontSize: 14)),
                 const Spacer(),

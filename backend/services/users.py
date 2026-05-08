@@ -7,9 +7,11 @@ import secrets
 import smtplib
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
-from urllib.error import URLError
+import ssl
+
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 from typing import Any, Dict, Optional, Tuple
 
 from flask import current_app
@@ -27,6 +29,10 @@ except Exception:  # pragma: no cover - optional dependency for local/dev
     google_requests = None
     google_id_token = None
 
+APP_AUTH_ROLES = {"owner", "operator", "driver", "b2b", "user"}
+SELF_REGISTERABLE_ROLES = {"driver", "b2b", "user"}
+APPROVAL_REQUIRED_ROLES = {"driver", "b2b"}
+
 
 def register(
     email: str,
@@ -36,29 +42,45 @@ def register(
     display_name: str = "",
     phone: str = "",
     photo_url: str = "",
+    car_model: str = "",
+    car_color: str = "",
 ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
-    if role not in ("user", "driver"):
+    role_norm = (role or "").strip().lower()
+    if role_norm not in SELF_REGISTERABLE_ROLES:
         return None, "invalid_role"
     if not email or not password:
         return None, "missing_fields"
-    if role == "user" and not phone.strip():
+    if role_norm == "user" and not phone.strip():
         return None, "phone_required"
+    if role_norm in {"driver", "b2b"}:
+        if not display_name.strip():
+            return None, "display_name_required"
+        if not phone.strip():
+            return None, "phone_required"
+    if role_norm == "driver":
+        if not car_model.strip():
+            return None, "car_model_required"
+        if not car_color.strip():
+            return None, "car_color_required"
     if db_module.user_by_email(email):
         return None, "email_taken"
+    requires_approval = role_norm in APPROVAL_REQUIRED_ROLES
     pw_hash = generate_password_hash(password)
     uid = db_module.user_create(
         email=email,
         password_hash=pw_hash,
-        role=role,
-        display_name=display_name.strip() if role == "user" else "",
-        phone=phone.strip() if role == "user" else "",
-        photo_url=photo_url.strip() if role == "user" else "",
+        role=role_norm,
+        display_name=display_name.strip(),
+        phone=phone.strip(),
+        photo_url=photo_url.strip(),
+        is_enabled=not requires_approval,
+        approval_status="pending" if requires_approval else "approved",
     )
-    if role == "driver":
+    if role_norm == "driver":
         db_module.driver_create(
             user_id=uid,
-            display_name=email.split("@", 1)[0],
-            vehicle_info="",
+            display_name=(display_name.strip() or email.split("@", 1)[0]),
+            vehicle_info=f"model={car_model.strip()};color={car_color.strip()}",
         )
     row = db_module.user_by_id(uid)
     assert row is not None
@@ -71,6 +93,7 @@ def register(
         "photo_url": row.get("photo_url"),
         "preferred_language": row["preferred_language"],
         "is_enabled": row["is_enabled"],
+        "approval_status": row.get("approval_status", "approved"),
     }, None
 
 
@@ -78,6 +101,10 @@ def authenticate(email: str, password: str) -> Tuple[Optional[Dict[str, Any]], O
     row = db_module.user_by_email(email)
     if row is None or not check_password_hash(row["password_hash"], password):
         return None, "invalid_credentials"
+    if row.get("role") not in APP_AUTH_ROLES:
+        return None, "invalid_role"
+    if row.get("approval_status") == "pending":
+        return None, "account_pending"
     if not row.get("is_enabled", True):
         return None, "account_disabled"
     return {
@@ -89,6 +116,7 @@ def authenticate(email: str, password: str) -> Tuple[Optional[Dict[str, Any]], O
         "photo_url": row.get("photo_url"),
         "preferred_language": row["preferred_language"],
         "is_enabled": row["is_enabled"],
+        "approval_status": row.get("approval_status", "approved"),
     }, None
 
 
@@ -120,19 +148,87 @@ def set_phone(user_id: int, phone: str) -> Tuple[Optional[Dict[str, Any]], Optio
     return out, None
 
 
-def _upsert_google_user(email: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+def update_account_credentials(
+    user_id: int,
+    *,
+    current_password: str,
+    new_email: Optional[str] = None,
+    new_password: Optional[str] = None,
+) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    u = db.session.get(User, user_id)
+    if u is None:
+        return None, "not_found"
+    if not check_password_hash(u.password_hash, current_password or ""):
+        return None, "invalid_credentials"
+
+    changed = False
+    if new_email is not None:
+        email_norm = new_email.strip().lower()
+        if not email_norm:
+            return None, "invalid_email"
+        existing = db_module.user_by_email(email_norm)
+        if existing is not None and int(existing["id"]) != int(user_id):
+            return None, "email_taken"
+        if email_norm != (u.email or "").strip().lower():
+            u.email = email_norm
+            changed = True
+
+    if new_password is not None:
+        pw = new_password or ""
+        if len(pw) < 6:
+            return None, "weak_password"
+        u.password_hash = generate_password_hash(pw)
+        changed = True
+
+    if not changed:
+        return None, "no_changes"
+
+    db.session.commit()
+    out = db_module.user_by_id(user_id)
+    assert out is not None
+    return out, None
+
+
+def _normalize_google_login_role(role: str) -> str:
+    """Map UI/client role names onto DB roles (passenger ⇔ ``user``)."""
+    r = (role or "").strip().lower()
+    if r == "passenger":
+        return "user"
+    return r
+
+
+def _upsert_google_user(email: str, role: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    role_norm = _normalize_google_login_role(role)
     row = db_module.user_by_email(email)
+    if row is not None and not role_norm:
+        role_norm = _normalize_google_login_role(row.get("role") or "")
+    if row is None and not role_norm:
+        role_norm = "user"
+    if role_norm not in SELF_REGISTERABLE_ROLES:
+        return None, "invalid_role"
     if row is None:
+        requires_approval = role_norm in APPROVAL_REQUIRED_ROLES
         uid = db_module.user_create(
             email=email,
             password_hash=generate_password_hash(f"google::{email}"),
-            role="user",
+            role=role_norm,
+            is_enabled=not requires_approval,
+            approval_status="pending" if requires_approval else "approved",
         )
+        if role_norm == "driver":
+            db_module.driver_create(
+                user_id=uid,
+                display_name=email.split("@", 1)[0],
+                vehicle_info="",
+            )
         row = db_module.user_by_id(uid)
     if row is None:
         return None, "server_error"
-    if row.get("role") != "user":
+    row_role = _normalize_google_login_role(row.get("role") or "")
+    if row_role != role_norm:
         return None, "invalid_role"
+    if row.get("approval_status") == "pending":
+        return None, "account_pending"
     if not row.get("is_enabled", True):
         return None, "account_disabled"
     return {
@@ -144,10 +240,13 @@ def _upsert_google_user(email: str) -> Tuple[Optional[Dict[str, Any]], Optional[
         "photo_url": row.get("photo_url"),
         "preferred_language": row["preferred_language"],
         "is_enabled": row["is_enabled"],
+        "approval_status": row.get("approval_status", "approved"),
     }, None
 
 
-def authenticate_google_id_token(id_token: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+def authenticate_google_id_token(
+    id_token: str, role: str = ""
+) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     token = (id_token or "").strip()
     if not token:
         return None, "missing_google_id_token"
@@ -186,10 +285,12 @@ def authenticate_google_id_token(id_token: str) -> Tuple[Optional[Dict[str, Any]
         email_verified = str(info.get("email_verified") or "").strip().lower() == "true"
     if not email or not email_verified:
         return None, "google_email_not_verified"
-    return _upsert_google_user(email)
+    return _upsert_google_user(email, role)
 
 
-def authenticate_google_access_token(access_token: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+def authenticate_google_access_token(
+    access_token: str, role: str = ""
+) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     token = (access_token or "").strip()
     if not token:
         return None, "missing_google_access_token"
@@ -211,14 +312,74 @@ def authenticate_google_access_token(access_token: str) -> Tuple[Optional[Dict[s
         return None, "invalid_google_token"
     if not email or not email_verified:
         return None, "google_email_not_verified"
-    return _upsert_google_user(email)
+    return _upsert_google_user(email, role)
 
 
 def _reset_token_hash(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-def _send_password_reset_email(email: str, token: str) -> bool:
+def _password_reset_email_plain_text(token: str) -> str:
+    return "\n".join(
+        [
+            "You requested a password reset.",
+            f"Your reset code is: {token}",
+            "This code expires in 20 minutes.",
+            "If you did not request this, ignore this email.",
+        ]
+    )
+
+
+def _send_password_reset_resend(to_email: str, token: str) -> bool:
+    """HTTPS email — works on Render Free where SMTP ports are blocked."""
+    api_key = (current_app.config.get("RESEND_API_KEY") or "").strip()
+    from_email = (
+        (current_app.config.get("RESEND_FROM_EMAIL") or "").strip()
+        or (current_app.config.get("SMTP_FROM_EMAIL") or "").strip()
+    )
+    if not api_key or not from_email:
+        return False
+    payload = json.dumps(
+        {
+            "from": from_email,
+            "to": [to_email],
+            "subject": "Taxi App password reset code",
+            "text": _password_reset_email_plain_text(token),
+        }
+    ).encode("utf-8")
+    req = Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(req, timeout=20) as res:
+            ok = getattr(res, "status", 200) in (200, 201, 202)
+            if not ok:
+                current_app.logger.error(
+                    "password_reset_resend_bad_status status=%s", getattr(res, "status", "?")
+                )
+            return bool(ok)
+    except HTTPError as e:
+        err_body = ""
+        try:
+            err_body = (e.read() or b"").decode("utf-8", errors="replace")[:500]
+        except Exception:
+            pass
+        current_app.logger.error(
+            "password_reset_resend_http_error code=%s body=%s", e.code, err_body
+        )
+        return False
+    except Exception:
+        current_app.logger.exception("password_reset_resend_failed email=%s", to_email)
+        return False
+
+
+def _send_password_reset_smtp(email: str, token: str) -> bool:
     host = (current_app.config.get("SMTP_HOST") or "").strip()
     from_email = (current_app.config.get("SMTP_FROM_EMAIL") or "").strip()
     if not host or not from_email:
@@ -229,32 +390,56 @@ def _send_password_reset_email(email: str, token: str) -> bool:
     # Gmail app passwords are often copied with spaces every 4 chars.
     password_compact = password.replace(" ", "")
     use_tls = bool(current_app.config.get("SMTP_USE_TLS", True))
+    use_ssl = bool(current_app.config.get("SMTP_SSL", False))
+    timeout = float(current_app.config.get("SMTP_TIMEOUT_SECONDS") or 25.0)
 
     msg = EmailMessage()
     msg["Subject"] = "Taxi App password reset code"
     msg["From"] = from_email
     msg["To"] = email
-    msg.set_content(
-        "\n".join(
-            [
-                "You requested a password reset.",
-                f"Your reset code is: {token}",
-                "This code expires in 20 minutes.",
-                "If you did not request this, ignore this email.",
-            ]
-        )
-    )
+    msg.set_content(_password_reset_email_plain_text(token))
+
+    tls_context = ssl.create_default_context()
+
     try:
-        with smtplib.SMTP(host, port, timeout=10) as server:
+        if use_ssl:
+            with smtplib.SMTP_SSL(host, port, timeout=timeout, context=tls_context) as server:
+                if username:
+                    server.login(username, password_compact)
+                server.send_message(msg)
+            return True
+        with smtplib.SMTP(host, port, timeout=timeout) as server:
             if use_tls:
-                server.starttls()
+                server.starttls(context=tls_context)
             if username:
                 server.login(username, password_compact)
             server.send_message(msg)
         return True
     except Exception:
-        current_app.logger.exception("password_reset_email_failed email=%s", email)
+        current_app.logger.exception(
+            "password_reset_email_failed email=%s host=%s port=%s ssl=%s tls=%s",
+            email,
+            host,
+            port,
+            use_ssl,
+            use_tls,
+        )
         return False
+
+
+def _send_password_reset_email(email: str, token: str) -> bool:
+    """Try Resend (HTTPS) first when configured; then SMTP (often blocked on Render Free)."""
+    if _send_password_reset_resend(email, token):
+        return True
+    return _send_password_reset_smtp(email, token)
+
+
+def _password_reset_dev_mode() -> bool:
+    return str(current_app.config.get("PASSWORD_RESET_DEV_MODE") or "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
 
 
 def request_password_reset(email: str) -> Tuple[Dict[str, Any], Optional[str]]:
@@ -267,15 +452,24 @@ def request_password_reset(email: str) -> Tuple[Dict[str, Any], Optional[str]]:
     if not email_n:
         return generic, None
     u = db.session.scalars(select(User).where(User.email == email_n)).first()
-    if u is None or u.role not in ("user", "driver"):
+    if u is None or u.role not in APP_AUTH_ROLES:
         return generic, None
     token = secrets.token_urlsafe(8)[:8].upper()
     u.password_reset_token_hash = _reset_token_hash(token)
     u.password_reset_expires_at = datetime.now(timezone.utc) + timedelta(minutes=20)
     db.session.commit()
     out: Dict[str, Any] = {"ok": True}
-    sent_email = _send_password_reset_email(email_n, token)
-    out["email_sent"] = sent_email
+    if _password_reset_dev_mode():
+        current_app.logger.warning(
+            "password_reset PASSWORD_RESET_DEV_MODE is on — SMTP skipped. "
+            "email=%s code=%s — set PASSWORD_RESET_DEV_MODE=0 in production.",
+            email_n,
+            token,
+        )
+        out["email_sent"] = False
+    else:
+        sent_email = _send_password_reset_email(email_n, token)
+        out["email_sent"] = sent_email
     # Always log once for local testing/support.
     current_app.logger.info("password_reset_code email=%s code=%s", email_n, token)
     return out, None
