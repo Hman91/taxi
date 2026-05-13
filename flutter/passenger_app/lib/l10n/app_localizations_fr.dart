@@ -25,6 +25,52 @@ class AppLocalizationsFr extends AppLocalizations {
   String get language => 'Langue';
 
   @override
+  String get passengerLanguageReminderTitle => 'Choisissez votre langue';
+
+  @override
+  String get passengerLanguageReminderSubtitle =>
+      'Personnalisez votre expérience Voom.';
+
+  @override
+  String get passengerLanguageReminderContinue => 'Continuer';
+
+  @override
+  String get passengerLanguageNameEnglish => 'Anglais';
+
+  @override
+  String get passengerLanguageNameFrench => 'Français';
+
+  @override
+  String get passengerLanguageNameArabic => 'Arabe';
+
+  @override
+  String get passengerLanguageNameGerman => 'Allemand';
+
+  @override
+  String get passengerLanguageNameSpanish => 'Espagnol';
+
+  @override
+  String get passengerLanguageNameItalian => 'Italien';
+
+  @override
+  String get passengerLanguageNameChinese => 'Chinois';
+
+  @override
+  String get passengerLanguageNameRussian => 'Russe';
+
+  @override
+  String get passengerLanguageRegionGlobal => 'Monde';
+
+  @override
+  String get passengerLanguageRegionEurope => 'Europe';
+
+  @override
+  String get passengerLanguageRegionMena => 'Moyen-Orient et Afrique du Nord';
+
+  @override
+  String get passengerLanguageRegionAsia => 'Asie';
+
+  @override
   String get rolePassenger => 'Passager';
 
   @override

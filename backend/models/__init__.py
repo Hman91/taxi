@@ -5,6 +5,7 @@ from .b2b_tenant import B2BTenant
 from .b2b_booking import B2BBooking
 from .conversation import Conversation
 from .driver import Driver
+from .driver_availability_slot import DriverAvailabilitySlot
 from .driver_pin_account import DriverPinAccount
 from .fare_route import FareRoute
 from .message import Message
@@ -18,6 +19,7 @@ from .user import User
 __all__ = [
     "User",
     "Driver",
+    "DriverAvailabilitySlot",
     "FareRoute",
     "Ride",
     "RideDispatchCandidate",

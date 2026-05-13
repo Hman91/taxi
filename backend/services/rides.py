@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from .. import db as db_module
@@ -15,6 +16,10 @@ _FALLBACK_BASE_FARE_DT = 70.0
 _REQUIRED_TOPUP_DT = 100.0
 _OWNER_COMMISSION_RATE = 0.10
 _B2B_EXTRA_COMMISSION_RATE = 0.05
+_SCHEDULE_MIN_LEAD_MINUTES = 30
+_SCHEDULE_MAX_HORIZON_DAYS = 30
+_SCHEDULE_PICKUP_WINDOW_MINUTES = 30
+_SCHEDULE_START_GRACE_MINUTES = 45
 
 _ZONE_COORDS: Dict[str, tuple[float, float]] = {
     "مطار قرطاج": (36.8508, 10.2272),
@@ -76,27 +81,89 @@ def _select_top5_driver_user_ids_for_pickup(pickup_zone: str) -> List[int]:
     return [uid for _, uid in scored[:5]]
 
 
+def _parse_scheduled_pickup_at(raw: Any) -> tuple[datetime | None, str | None]:
+    if raw in (None, ""):
+        return None, None
+    if isinstance(raw, datetime):
+        dt = raw
+    elif isinstance(raw, str):
+        value = raw.strip()
+        if value.endswith("Z"):
+            value = value[:-1] + "+00:00"
+        try:
+            dt = datetime.fromisoformat(value)
+        except ValueError:
+            return None, "invalid_scheduled_pickup_at"
+    else:
+        return None, "invalid_scheduled_pickup_at"
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    dt = dt.astimezone(timezone.utc)
+    now = datetime.now(timezone.utc)
+    if dt < now + timedelta(minutes=_SCHEDULE_MIN_LEAD_MINUTES):
+        return None, "scheduled_pickup_too_soon"
+    if dt > now + timedelta(days=_SCHEDULE_MAX_HORIZON_DAYS):
+        return None, "scheduled_pickup_too_far"
+    return dt, None
+
+
+def _select_scheduled_driver_user_ids(pickup_zone: str, pickup_at: datetime) -> List[int]:
+    eligible = set(
+        db_module.driver_user_ids_available_for_scheduled_pickup(
+            pickup_at,
+            window_minutes=_SCHEDULE_PICKUP_WINDOW_MINUTES,
+        )
+    )
+    if not eligible:
+        return _select_top5_driver_user_ids_for_pickup(pickup_zone)
+    ordered_now = _select_top5_driver_user_ids_for_pickup(pickup_zone)
+    ordered = [uid for uid in ordered_now if uid in eligible]
+    for uid in sorted(eligible):
+        if uid not in ordered:
+            ordered.append(uid)
+    return ordered[:5]
+
+
 def request_ride(
     user_id: int,
     pickup: str,
     destination: str,
     *,
     enforce_single_active: bool = True,
+    scheduled_pickup_at: Any = None,
 ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     pickup = pickup.strip()
     destination = destination.strip()
     if not pickup or not destination:
         return None, "pickup_destination_required"
+    scheduled_dt, schedule_err = _parse_scheduled_pickup_at(scheduled_pickup_at)
+    if schedule_err:
+        return None, schedule_err
     if enforce_single_active and db_module.user_has_active_ride(user_id):
         return None, "active_ride_exists"
-    ride = db_module.ride_insert(user_id=user_id, pickup=pickup, destination=destination)
+    is_scheduled = scheduled_dt is not None
+    ride = db_module.ride_insert(
+        user_id=user_id,
+        pickup=pickup,
+        destination=destination,
+        scheduled_pickup_at=scheduled_dt,
+        reservation_status="searching" if is_scheduled else None,
+    )
     if ride is not None:
-        top5 = _select_top5_driver_user_ids_for_pickup(pickup)
+        top5 = (
+            _select_scheduled_driver_user_ids(pickup, scheduled_dt)
+            if scheduled_dt is not None
+            else _select_top5_driver_user_ids_for_pickup(pickup)
+        )
         db_module.ride_dispatch_set_candidates(int(ride["id"]), top5)
         realtime_broadcast.broadcast_ride_update(
             ride,
-            event="ride_request_sent",
-            message="Your ride request was sent.",
+            event="scheduled_ride_searching" if is_scheduled else "ride_request_sent",
+            message=(
+                "Searching for an available driver for your scheduled ride."
+                if is_scheduled
+                else "Your ride request was sent."
+            ),
         )
         realtime_broadcast.notify_dispatch_offer(ride, top5)
     return ride, None
@@ -273,6 +340,40 @@ def set_driver_availability(driver_user_id: int, is_available: bool) -> None:
     )
 
 
+def list_driver_availability(driver_user_id: int) -> List[Dict[str, Any]]:
+    return db_module.driver_availability_slots_for_user(driver_user_id)
+
+
+def create_driver_availability_slot(
+    driver_user_id: int,
+    starts_at: Any,
+    ends_at: Any,
+) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    start, start_err = _parse_scheduled_pickup_at(starts_at)
+    if start_err:
+        return None, "invalid_starts_at" if start_err == "invalid_scheduled_pickup_at" else start_err
+    end, end_err = _parse_scheduled_pickup_at(ends_at)
+    if end_err:
+        return None, "invalid_ends_at" if end_err == "invalid_scheduled_pickup_at" else end_err
+    assert start is not None and end is not None
+    if end <= start:
+        return None, "invalid_availability_window"
+    if end - start > timedelta(hours=12):
+        return None, "availability_window_too_long"
+    slot = db_module.driver_availability_slot_insert(
+        driver_user_id=driver_user_id,
+        starts_at=start,
+        ends_at=end,
+    )
+    if slot is None:
+        return None, "not_a_driver"
+    return slot, None
+
+
+def delete_driver_availability_slot(driver_user_id: int, slot_id: int) -> bool:
+    return db_module.driver_availability_slot_delete(driver_user_id, slot_id)
+
+
 def list_for_app_user(user_id: int, role: str) -> List[Dict[str, Any]]:
     if role == "user":
         return db_module.rides_for_user(user_id)
@@ -287,9 +388,12 @@ def list_for_app_user(user_id: int, role: str) -> List[Dict[str, Any]]:
             db_module.driver_set_availability_by_user_id(user_id, False)
             is_available = False
         pending: List[Dict[str, Any]] = []
-        # Depleted/unavailable drivers must not see dispatch offers.
-        if is_available and not depleted:
+        # Depleted drivers must not see offers. Offline drivers can still see
+        # scheduled offers that match their future availability calendar.
+        if not depleted:
             pending = db_module.ride_dispatch_pending_for_driver_user(user_id)
+            if not is_available:
+                pending = [r for r in pending if r.get("scheduled_pickup_at")]
         if d is None:
             return pending
         mine = db_module.rides_for_driver(int(d["id"]))
@@ -305,11 +409,12 @@ def accept_ride(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[str, A
     if _wallet_depleted_or_missing_for_driver(driver_user_id):
         db_module.driver_set_availability_by_user_id(driver_user_id, False)
         return None, "wallet_depleted"
-    if not bool(int(d.get("is_available", 0))):
-        return None, "driver_unavailable"
     row = db_module.ride_get(ride_id)
     if row is None:
         return None, "not_found"
+    scheduled_raw = row.get("scheduled_pickup_at")
+    if not scheduled_raw and not bool(int(d.get("is_available", 0))):
+        return None, "driver_unavailable"
     if row["status"] != "pending":
         return None, "invalid_status"
     allowed_driver_users = set(db_module.ride_dispatch_candidates_for_ride(ride_id))
@@ -317,15 +422,35 @@ def accept_ride(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[str, A
         return None, "not_in_dispatch_top5"
     if row["driver_id"] is not None:
         return None, "already_assigned"
+    scheduled_dt, schedule_err = _parse_scheduled_pickup_at(scheduled_raw)
+    if scheduled_raw and schedule_err == "scheduled_pickup_too_soon":
+        scheduled_dt = datetime.fromisoformat(str(scheduled_raw).replace("Z", "+00:00"))
+        if scheduled_dt.tzinfo is None:
+            scheduled_dt = scheduled_dt.replace(tzinfo=timezone.utc)
+        scheduled_dt = scheduled_dt.astimezone(timezone.utc)
+    if scheduled_dt is not None and db_module.driver_has_scheduled_overlap(
+        int(d["id"]),
+        scheduled_dt,
+        window_minutes=60,
+        exclude_ride_id=ride_id,
+    ):
+        return None, "driver_schedule_conflict"
     updated = db_module.ride_update(
-        ride_id, driver_id=int(d["id"]), status="accepted"
+        ride_id,
+        driver_id=int(d["id"]),
+        status="accepted",
+        reservation_status="reserved" if scheduled_dt is not None else None,
     )
     if updated is not None:
         chat_service.ensure_conversation_for_ride(ride_id)
         realtime_broadcast.broadcast_ride_update(
             updated,
-            event="ride_accepted",
-            message="A driver accepted your request.",
+            event="scheduled_ride_reserved" if scheduled_dt is not None else "ride_accepted",
+            message=(
+                "Your scheduled ride is reserved."
+                if scheduled_dt is not None
+                else "A driver accepted your request."
+            ),
         )
         other_candidates = [uid for uid in allowed_driver_users if uid != driver_user_id]
         if other_candidates:
@@ -349,8 +474,9 @@ def reject_or_release(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[
         return None, "forbidden"
     if row["status"] not in ("accepted", "ongoing"):
         return None, "invalid_status"
+    next_reservation_status = "searching" if row.get("scheduled_pickup_at") else None
     updated = db_module.ride_update(
-        ride_id, clear_driver=True, status="pending"
+        ride_id, clear_driver=True, status="pending", reservation_status=next_reservation_status
     )
     if updated is not None:
         realtime_broadcast.broadcast_ride_update(updated, event="ride_released")
@@ -366,7 +492,15 @@ def start_ride(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[str, An
         return None, "not_found"
     if row["driver_id"] != int(d["id"]) or row["status"] != "accepted":
         return None, "invalid_status"
-    updated = db_module.ride_update(ride_id, status="ongoing")
+    scheduled_raw = row.get("scheduled_pickup_at")
+    if scheduled_raw:
+        scheduled_dt = datetime.fromisoformat(str(scheduled_raw).replace("Z", "+00:00"))
+        if scheduled_dt.tzinfo is None:
+            scheduled_dt = scheduled_dt.replace(tzinfo=timezone.utc)
+        scheduled_dt = scheduled_dt.astimezone(timezone.utc)
+        if datetime.now(timezone.utc) < scheduled_dt - timedelta(minutes=_SCHEDULE_START_GRACE_MINUTES):
+            return None, "scheduled_pickup_not_ready"
+    updated = db_module.ride_update(ride_id, status="ongoing", reservation_status="in_progress")
     if updated is not None:
         realtime_broadcast.broadcast_ride_update(updated, event="ride_started")
     return updated, None
@@ -381,7 +515,7 @@ def complete_ride(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[str,
         return None, "not_found"
     if row["driver_id"] != int(d["id"]) or row["status"] != "ongoing":
         return None, "invalid_status"
-    updated = db_module.ride_update(ride_id, status="completed")
+    updated = db_module.ride_update(ride_id, status="completed", reservation_status="completed")
     if updated is not None:
         _apply_wallet_on_complete(driver_user_id, row)
         realtime_broadcast.broadcast_ride_update(updated, event="ride_completed")
@@ -397,7 +531,12 @@ def cancel_ride(ride_id: int, user_id: int) -> Tuple[Optional[Dict[str, Any]], O
     if row["status"] in ("completed", "cancelled"):
         return None, "invalid_status"
     candidate_driver_users = db_module.ride_dispatch_candidates_for_ride(ride_id)
-    updated = db_module.ride_update(ride_id, status="cancelled", clear_driver=True)
+    updated = db_module.ride_update(
+        ride_id,
+        status="cancelled",
+        clear_driver=True,
+        reservation_status="cancelled" if row.get("scheduled_pickup_at") else None,
+    )
     if updated is not None:
         realtime_broadcast.broadcast_ride_update(updated, event="ride_cancelled")
         if candidate_driver_users:

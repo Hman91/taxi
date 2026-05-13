@@ -19,6 +19,7 @@ import '../services/session_store.dart';
 import '../services/taxi_app_service.dart';
 import '../theme/taxi_app_theme.dart';
 import '../widgets/locale_popup_menu.dart';
+import '../widgets/management_platform_ui.dart';
 import '../widgets/voom_logo.dart';
 import 'unified_login_screen.dart';
 
@@ -27,7 +28,7 @@ class _C {
   static const yellowSoft = Color(0xFFFFF8E0);
   static const yellowDeep = Color(0xFFE6A800);
   static const charcoal = Color(0xFF1A1A1A);
-  static const bgWarm = Color(0xFFFAF8F2);
+  static const bgWarm = Color(0xFFF8F5EC);
   static const surface = Color(0xFFFFFFFF);
   static const surfaceAlt = Color(0xFFF5F1E8);
   static const border = Color(0xFFDDD8C8);
@@ -36,24 +37,77 @@ class _C {
   static const textSoft = Color(0xFF5C5C5C);
   static const danger = Color(0xFFB91C1C);
   static const dangerBg = Color(0xFFFFE4E4);
+  static const successBg = Color(0xFFD4EDDA);
   static const info = Color(0xFF1D4ED8);
+  static const infoBg = Color(0xFFDEEBFF);
   static const success = Color(0xFF15803D);
 }
 
+const int _operatorInitialRideRows = 18;
+const int _operatorInitialB2bBookingRows = 18;
+const int _operatorListPageStep = 18;
+
+Color _operatorRideStatusColor(String status) {
+  switch (status.trim().toLowerCase()) {
+    case 'accepted':
+    case 'scheduled':
+    case 'requested':
+    case 'pending':
+      return _C.yellowDeep;
+    case 'ongoing':
+    case 'in_progress':
+      return _C.info;
+    case 'completed':
+    case 'done':
+      return _C.success;
+    case 'refused':
+    case 'rejected':
+    case 'cancelled':
+    case 'canceled':
+      return _C.danger;
+    default:
+      return _C.textSoft;
+  }
+}
+
+IconData _operatorRideStatusIcon(String status) {
+  switch (status.trim().toLowerCase()) {
+    case 'accepted':
+    case 'scheduled':
+    case 'requested':
+      return Icons.verified_rounded;
+    case 'pending':
+      return Icons.hourglass_top_rounded;
+    case 'ongoing':
+    case 'in_progress':
+      return Icons.route_rounded;
+    case 'completed':
+    case 'done':
+      return Icons.check_circle_rounded;
+    case 'refused':
+    case 'rejected':
+    case 'cancelled':
+    case 'canceled':
+      return Icons.block_rounded;
+    default:
+      return Icons.radio_button_checked_rounded;
+  }
+}
+
 InputDecoration _fd(String label, {Widget? suffixIcon}) => InputDecoration(
-  labelText: label,
-  suffixIcon: suffixIcon,
-  filled: true,
-  fillColor: _C.surfaceAlt,
-  enabledBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: const BorderSide(color: _C.border, width: 1.4),
-  ),
-  focusedBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: const BorderSide(color: _C.yellow, width: 2),
-  ),
-);
+      labelText: label,
+      suffixIcon: suffixIcon,
+      filled: true,
+      fillColor: _C.surfaceAlt,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _C.border, width: 1.4),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _C.yellow, width: 2),
+      ),
+    );
 
 class _Module extends StatelessWidget {
   const _Module({required this.child, this.accent = false});
@@ -61,31 +115,74 @@ class _Module extends StatelessWidget {
   final bool accent;
 
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: _C.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: accent ? _C.yellowDeep : _C.border, width: accent ? 2 : 1),
-          boxShadow: [BoxShadow(color: _C.charcoal.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 3))],
-        ),
-        child: Padding(padding: const EdgeInsets.all(16), child: child),
+  Widget build(BuildContext context) => ManagementModuleCard(
+        accent: accent,
+        child: child,
       );
 }
 
-Widget _kpiChip({required IconData icon, required String label}) => Container(
-  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-  decoration: BoxDecoration(
-    color: _C.yellowSoft,
-    borderRadius: BorderRadius.circular(20),
-    border: Border.all(color: _C.yellowDeep),
-  ),
-  child: Row(mainAxisSize: MainAxisSize.min, children: [
-    Icon(icon, size: 16, color: _C.charcoal),
-    const SizedBox(width: 6),
-    Text(label, style: const TextStyle(color: _C.charcoal, fontWeight: FontWeight.w700, fontSize: 12)),
-  ]),
-);
+class _DarkButton extends StatelessWidget {
+  const _DarkButton({
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.small = false,
+    this.fullWidth = true,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final bool small;
+  final bool fullWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = onPressed == null;
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        height: small ? 38 : 48,
+        width: fullWidth ? double.infinity : null,
+        padding: fullWidth ? null : const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: disabled ? const Color(0xFFCCCCCC) : _C.charcoal,
+          borderRadius: BorderRadius.circular(50),
+          boxShadow: disabled
+              ? []
+              : [
+                  BoxShadow(
+                    color: _C.charcoal.withOpacity(0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+        ),
+        child: Center(
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (icon != null) ...[
+              Icon(icon, color: Colors.white, size: small ? 14 : 18),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: small ? 12 : 14,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+Widget _kpiChip({required IconData icon, required String label}) =>
+    ManagementStatusPill(
+        label: label, color: _C.charcoal, background: _C.yellowSoft);
 
 class _StatChip extends StatelessWidget {
   const _StatChip({
@@ -101,42 +198,11 @@ class _StatChip extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withOpacity(0.2)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: color.withOpacity(0.7),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+  Widget build(BuildContext context) => ManagementMetricPill(
+        label: label,
+        value: value,
+        icon: icon,
+        color: color,
       );
 }
 
@@ -147,47 +213,18 @@ Widget _rowInfoCard({
   Color iconBg = _C.surfaceAlt,
   Color iconColor = _C.charcoal,
 }) =>
-    Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: _C.surfaceAlt,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _C.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: iconBg,
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: _C.border),
-            ),
-            child: Icon(icon, color: iconColor, size: 16),
-          ),
-          const SizedBox(width: 10),
-          Expanded(child: content),
-          if (trailing != null) ...[const SizedBox(width: 8), trailing],
-        ],
-      ),
+    ManagementInfoRowCard(
+      icon: icon,
+      content: content,
+      trailing: trailing,
+      iconBg: iconBg,
+      iconColor: iconColor,
     );
 
-Widget _b2bStatusPill({required bool enabled}) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: enabled ? _C.yellowSoft : _C.dangerBg,
-        borderRadius: BorderRadius.circular(50),
-      ),
-      child: Text(
-        enabled ? 'Active' : 'Paused',
-        style: TextStyle(
-          color: enabled ? _C.charcoal : _C.danger,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
+Widget _b2bStatusPill({required bool enabled}) => ManagementStatusPill(
+      label: enabled ? 'Active' : 'Paused',
+      color: enabled ? _C.charcoal : _C.danger,
+      background: enabled ? _C.yellowSoft : _C.dangerBg,
     );
 
 class _SectionHead extends StatelessWidget {
@@ -197,25 +234,276 @@ class _SectionHead extends StatelessWidget {
   final Widget? trailing;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Row(
-          children: [
-            Container(width: 4, height: 20, decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(4))),
-            const SizedBox(width: 10),
+  Widget build(BuildContext context) => ManagementSectionHeader(
+        title,
+        subtitle: subtitle,
+        trailing: trailing,
+      );
+}
+
+class _OperatorRideCard extends StatelessWidget {
+  const _OperatorRideCard({
+    required this.route,
+    required this.status,
+    required this.statusLabel,
+    required this.riderType,
+    required this.riderName,
+    required this.driverName,
+    required this.distance,
+    required this.price,
+    required this.createdAt,
+    required this.isB2b,
+  });
+
+  final String route;
+  final String status;
+  final String statusLabel;
+  final String riderType;
+  final String riderName;
+  final String driverName;
+  final String distance;
+  final String price;
+  final String createdAt;
+  final bool isB2b;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _operatorRideStatusColor(status);
+    return RepaintBoundary(
+      child: ManagementModuleCard(
+        padding: 14,
+        margin: const EdgeInsets.only(bottom: 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color.withOpacity(0.16), Colors.white],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: color.withOpacity(0.20)),
+              ),
+              child:
+                  Icon(_operatorRideStatusIcon(status), color: color, size: 21),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(color: _C.textStrong, fontWeight: FontWeight.w800, fontSize: 15)),
-                  if (subtitle != null) Text(subtitle!, style: const TextStyle(color: _C.textSoft, fontSize: 12)),
+                  Text(
+                    route,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: _C.textStrong,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 7),
+                  Wrap(spacing: 6, runSpacing: 6, children: [
+                    ManagementStatusPill(
+                      label: statusLabel,
+                      color: color,
+                      background: color.withOpacity(0.10),
+                    ),
+                    ManagementStatusPill(
+                      label: isB2b ? 'B2B' : riderType,
+                      color: isB2b ? _C.info : _C.charcoal,
+                      background: isB2b ? _C.infoBg : _C.yellowSoft,
+                    ),
+                    ManagementStatusPill(
+                      label: price,
+                      color: _C.success,
+                      background: _C.successBg,
+                    ),
+                  ]),
                 ],
               ),
             ),
-            if (trailing != null) trailing!,
-          ],
+          ]),
+          const SizedBox(height: 12),
+          ManagementResponsiveWrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _OperatorRideInfoTile(
+                icon: Icons.person_outline_rounded,
+                label: riderType,
+                value: riderName.isEmpty ? '-' : riderName,
+              ),
+              _OperatorRideInfoTile(
+                icon: Icons.local_taxi_outlined,
+                label: 'Driver',
+                value: driverName.isEmpty ? '-' : driverName,
+              ),
+              _OperatorRideInfoTile(
+                icon: Icons.route_rounded,
+                label: 'Distance',
+                value: distance,
+              ),
+              _OperatorRideInfoTile(
+                icon: Icons.payments_outlined,
+                label: 'Price',
+                value: price,
+              ),
+              _OperatorRideInfoTile(
+                icon: Icons.schedule_rounded,
+                label: 'Created',
+                value: createdAt.isEmpty ? '-' : createdAt,
+              ),
+            ],
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _OperatorRideInfoTile extends StatelessWidget {
+  const _OperatorRideInfoTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+      decoration: BoxDecoration(
+        color: _C.surfaceAlt.withOpacity(0.78),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _C.border.withOpacity(0.78)),
+      ),
+      child: Row(children: [
+        Icon(icon, color: _C.textSoft, size: 16),
+        const SizedBox(width: 8),
+        Expanded(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _C.textSoft,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _C.textStrong,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ]),
         ),
-      );
+      ]),
+    );
+  }
+}
+
+class _OperatorB2bBookingCard extends StatelessWidget {
+  const _OperatorB2bBookingCard({
+    required this.route,
+    required this.guestName,
+    required this.room,
+    required this.fare,
+    required this.status,
+    required this.statusLabel,
+    required this.createdAt,
+    required this.sourceCode,
+  });
+
+  final String route;
+  final String guestName;
+  final String room;
+  final String fare;
+  final String status;
+  final String statusLabel;
+  final String createdAt;
+  final String sourceCode;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _operatorRideStatusColor(status);
+    return RepaintBoundary(
+      child: ManagementInfoRowCard(
+        icon: Icons.hotel_rounded,
+        iconBg: color.withOpacity(0.12),
+        iconColor: color,
+        content:
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(
+              child: Text(
+                route,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13,
+                  color: _C.textStrong,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            ManagementStatusPill(
+              label: statusLabel,
+              color: color,
+              background: color.withOpacity(0.10),
+            ),
+          ]),
+          const SizedBox(height: 8),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            ManagementStatusPill(
+              label: guestName.isEmpty ? '-' : guestName,
+              color: _C.charcoal,
+              background: _C.yellowSoft,
+            ),
+            ManagementStatusPill(
+              label: 'Room ${room.isEmpty ? '-' : room}',
+              color: _C.textMid,
+              background: _C.surfaceAlt,
+            ),
+            ManagementStatusPill(
+              label: '$fare DT',
+              color: _C.success,
+              background: _C.successBg,
+            ),
+            if (sourceCode.isNotEmpty)
+              ManagementStatusPill(
+                label: sourceCode,
+                color: _C.info,
+                background: _C.infoBg,
+              ),
+            if (createdAt.isNotEmpty)
+              ManagementStatusPill(
+                label: createdAt,
+                color: _C.textSoft,
+                background: _C.surfaceAlt,
+              ),
+          ]),
+        ]),
+      ),
+    );
+  }
 }
 
 class OperatorScreen extends StatefulWidget {
@@ -257,6 +545,9 @@ class _OperatorScreenState extends State<OperatorScreen>
   List<Map<String, dynamic>> _pendingApprovals = [];
   String _rideStatusFilter = 'all';
   String _b2bApprovalFilter = 'all';
+  String _b2bBookingStatusFilter = 'all';
+  int _visibleRideRows = _operatorInitialRideRows;
+  int _visibleB2bBookingRows = _operatorInitialB2bBookingRows;
   int? _topUpAccountId;
   bool _busy = false;
   Future<void> _goToHome() async {
@@ -300,20 +591,36 @@ class _OperatorScreenState extends State<OperatorScreen>
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: emailCtrl, decoration: _fd('New email (optional)', suffixIcon: const Icon(Icons.email_outlined, size: 18))),
+              TextField(
+                  controller: emailCtrl,
+                  decoration: _fd('New email (optional)',
+                      suffixIcon: const Icon(Icons.email_outlined, size: 18))),
               const SizedBox(height: 8),
-              TextField(controller: newPasswordCtrl, obscureText: true, decoration: _fd('New password (optional)', suffixIcon: const Icon(Icons.lock_outline_rounded, size: 18))),
+              TextField(
+                  controller: newPasswordCtrl,
+                  obscureText: true,
+                  decoration: _fd('New password (optional)',
+                      suffixIcon:
+                          const Icon(Icons.lock_outline_rounded, size: 18))),
               const SizedBox(height: 8),
-              TextField(controller: currentPasswordCtrl, obscureText: true, decoration: _fd('Current password', suffixIcon: const Icon(Icons.password_rounded, size: 18))),
+              TextField(
+                  controller: currentPasswordCtrl,
+                  obscureText: true,
+                  decoration: _fd('Current password',
+                      suffixIcon:
+                          const Icon(Icons.password_rounded, size: 18))),
               if (error != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: Text(error!, style: const TextStyle(color: Colors.red)),
+                  child:
+                      Text(error!, style: const TextStyle(color: Colors.red)),
                 ),
             ],
           ),
           actions: [
-            TextButton(onPressed: busy ? null : () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+            TextButton(
+                onPressed: busy ? null : () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel')),
             FilledButton(
               onPressed: busy
                   ? null
@@ -326,8 +633,12 @@ class _OperatorScreenState extends State<OperatorScreen>
                         await _api.patchMyAccount(
                           token: t,
                           currentPassword: currentPasswordCtrl.text,
-                          email: emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
-                          password: newPasswordCtrl.text.trim().isEmpty ? null : newPasswordCtrl.text,
+                          email: emailCtrl.text.trim().isEmpty
+                              ? null
+                              : emailCtrl.text.trim(),
+                          password: newPasswordCtrl.text.trim().isEmpty
+                              ? null
+                              : newPasswordCtrl.text,
                         );
                         if (ctx.mounted) Navigator.of(ctx).pop(true);
                       } catch (e) {
@@ -358,7 +669,7 @@ class _OperatorScreenState extends State<OperatorScreen>
       );
 
   int _countByStatus(String status) => _adminRides
-      .where((r) => (r['status'] ?? '').toString().trim() == status)
+      .where((r) => _rideStatusBucket((r['status'] ?? '').toString()) == status)
       .length;
 
   double get _tripVaultRevenue => _trips.fold<double>(
@@ -400,27 +711,55 @@ class _OperatorScreenState extends State<OperatorScreen>
     return '-';
   }
 
-  Widget _rideMiniChip({
-    required IconData icon,
-    required String text,
-    Color color = _C.textSoft,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: _C.surfaceAlt,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: _C.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 4),
-          Text(text, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
+  String _rideStatusBucket(String raw) {
+    final status = raw.trim().toLowerCase();
+    if (status == 'completed' || status == 'done') return 'completed';
+    if (status == 'ongoing' || status == 'in_progress') return 'ongoing';
+    if (status == 'refused' ||
+        status == 'rejected' ||
+        status == 'cancelled' ||
+        status == 'canceled') {
+      return 'refused';
+    }
+    return 'accepted';
+  }
+
+  String _operatorRideStatusLabel(AppLocalizations l, String raw) {
+    final bucket = _rideStatusBucket(raw);
+    if (bucket == 'completed') return localizedRideStatusLabel(l, 'completed');
+    if (bucket == 'ongoing') return localizedRideStatusLabel(l, 'ongoing');
+    if (bucket == 'refused') {
+      return _uiText(
+          en: 'Refused',
+          ar: 'مرفوض',
+          fr: 'Refuse',
+          es: 'Rechazado',
+          de: 'Abgelehnt',
+          it: 'Rifiutato',
+          ru: 'Отклонено',
+          zh: '已拒绝');
+    }
+    return _uiText(
+        en: 'Accepted',
+        ar: 'مقبول',
+        fr: 'Accepte',
+        es: 'Aceptado',
+        de: 'Akzeptiert',
+        it: 'Accettato',
+        ru: 'Принято',
+        zh: '已接受');
+  }
+
+  bool _matchesRideFilter(Map<String, dynamic> row) {
+    if (_rideStatusFilter == 'all') return true;
+    return _rideStatusBucket((row['status'] ?? '').toString()) ==
+        _rideStatusFilter;
+  }
+
+  bool _matchesB2bBookingFilter(Map<String, dynamic> row) {
+    if (_b2bBookingStatusFilter == 'all') return true;
+    return _rideStatusBucket((row['status'] ?? '').toString()) ==
+        _b2bBookingStatusFilter;
   }
 
   String _b2bApprovalStatus(Map<String, dynamic> row) {
@@ -475,21 +814,7 @@ class _OperatorScreenState extends State<OperatorScreen>
                 ru: 'Отклонено',
                 zh: '已拒绝',
               ));
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(50),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: fg,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
+    return ManagementStatusPill(label: label, color: fg, background: bg);
   }
 
   Widget _b2bFilterChip({
@@ -511,6 +836,33 @@ class _OperatorScreenState extends State<OperatorScreen>
     );
   }
 
+  Widget _bookingStatusChip({
+    required String label,
+    required String status,
+    required int count,
+  }) {
+    final selected = _b2bBookingStatusFilter == status;
+    final color =
+        status == 'all' ? _C.charcoal : _operatorRideStatusColor(status);
+    return ChoiceChip(
+      label: Text('$label · $count'),
+      selected: selected,
+      onSelected: _busy
+          ? null
+          : (_) => setState(() {
+                _b2bBookingStatusFilter = status;
+                _visibleB2bBookingRows = _operatorInitialB2bBookingRows;
+              }),
+      selectedColor: color.withOpacity(0.14),
+      backgroundColor: _C.surface,
+      side: BorderSide(color: selected ? color : _C.border),
+      labelStyle: TextStyle(
+        color: selected ? color : _C.textStrong,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+
   Map<String, dynamic>? _findManagedDriverForRow({
     required String name,
     required String phone,
@@ -527,10 +879,12 @@ class _OperatorScreenState extends State<OperatorScreen>
   }
 
   List<Map<String, dynamic>> _visibleDriverRatings() => _driverRatings
-      .where((r) => _findManagedDriverForRow(
+      .where((r) =>
+          _findManagedDriverForRow(
             name: (r['driver_name'] ?? '').toString(),
             phone: (r['phone'] ?? '').toString(),
-          ) != null)
+          ) !=
+          null)
       .toList();
 
   Future<void> _login() async {
@@ -592,7 +946,8 @@ class _OperatorScreenState extends State<OperatorScreen>
       final driverPins = results[2] as List<dynamic>?;
       final b2bTenants = results[3] as List<dynamic>?;
       final b2bBookings = results[4] as List<dynamic>?;
-      final fr = results[5] as ({List<Map<String, dynamic>> flights, String? source})?;
+      final fr =
+          results[5] as ({List<Map<String, dynamic>> flights, String? source})?;
       final ratings = results[6] as List<dynamic>?;
       final pendingApprovals = results[7] as List<dynamic>?;
       final appUsers = results[8] as List<dynamic>?;
@@ -606,7 +961,8 @@ class _OperatorScreenState extends State<OperatorScreen>
           ratings == null ||
           pendingApprovals == null ||
           appUsers == null) {
-        setState(() => _message = 'Cannot reach API server. Check backend IP/network.');
+        setState(() =>
+            _message = 'Cannot reach API server. Check backend IP/network.');
         return;
       }
       setState(() {
@@ -625,6 +981,8 @@ class _OperatorScreenState extends State<OperatorScreen>
         _driverPinAccounts = driverPins.cast<Map<String, dynamic>>();
         _adminB2b = b2bTenants.cast<Map<String, dynamic>>();
         _adminB2bBookings = b2bBookings.cast<Map<String, dynamic>>();
+        _visibleRideRows = _operatorInitialRideRows;
+        _visibleB2bBookingRows = _operatorInitialB2bBookingRows;
         _flightArrivals = fr.flights;
         _flightDataSource = fr.source;
         _driverRatings = ratings.cast<Map<String, dynamic>>();
@@ -637,15 +995,13 @@ class _OperatorScreenState extends State<OperatorScreen>
             .cast<Map<String, dynamic>>()
             .toList();
         _managedDriverUsers = appDriverUsers;
-        _managedB2bUsers = appUsersTyped
-            .where((u) => (u['role'] ?? '') == 'b2b')
-            .toList();
+        _managedB2bUsers =
+            appUsersTyped.where((u) => (u['role'] ?? '') == 'b2b').toList();
         final ids = driverPins
             .map((e) => (e['id'] as num?)?.toInt())
             .whereType<int>()
             .toList();
-        if (_topUpAccountId != null &&
-            !ids.contains(_topUpAccountId)) {
+        if (_topUpAccountId != null && !ids.contains(_topUpAccountId)) {
           _topUpAccountId = null;
         }
         _topUpAccountId ??= ids.isEmpty ? null : ids.first;
@@ -747,9 +1103,12 @@ class _OperatorScreenState extends State<OperatorScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete driver account?'),
-        content: Text('This will permanently remove ${(row['display_name'] ?? row['email'] ?? 'this driver').toString()}.'),
+        content: Text(
+            'This will permanently remove ${(row['display_name'] ?? row['email'] ?? 'this driver').toString()}.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: _C.danger),
@@ -777,19 +1136,27 @@ class _OperatorScreenState extends State<OperatorScreen>
     final t = _token;
     final id = (row['id'] as num?)?.toInt();
     if (t == null || id == null) return;
-    final emailCtrl = TextEditingController(text: (row['email'] ?? '').toString());
-    final nameCtrl = TextEditingController(text: (row['display_name'] ?? '').toString());
-    final phoneCtrl = TextEditingController(text: (row['phone'] ?? '').toString());
+    final emailCtrl =
+        TextEditingController(text: (row['email'] ?? '').toString());
+    final nameCtrl =
+        TextEditingController(text: (row['display_name'] ?? '').toString());
+    final phoneCtrl =
+        TextEditingController(text: (row['phone'] ?? '').toString());
     final passCtrl = TextEditingController();
-    final modelCtrl = TextEditingController(text: (row['car_model'] ?? '').toString());
-    final colorCtrl = TextEditingController(text: (row['car_color'] ?? '').toString());
+    final modelCtrl =
+        TextEditingController(text: (row['car_model'] ?? '').toString());
+    final colorCtrl =
+        TextEditingController(text: (row['car_color'] ?? '').toString());
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Edit Driver'),
         content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: emailCtrl, decoration: _fd('Email', suffixIcon: const Icon(Icons.email_outlined, size: 18))),
+            TextField(
+                controller: emailCtrl,
+                decoration: _fd('Email',
+                    suffixIcon: const Icon(Icons.email_outlined, size: 18))),
             TextField(
               controller: passCtrl,
               obscureText: true,
@@ -798,20 +1165,40 @@ class _OperatorScreenState extends State<OperatorScreen>
                 suffixIcon: const Icon(Icons.lock_outline_rounded, size: 18),
               ),
             ),
-            TextField(controller: nameCtrl, decoration: _fd('Name', suffixIcon: const Icon(Icons.badge_outlined, size: 18))),
-            TextField(controller: phoneCtrl, decoration: _fd('Phone', suffixIcon: const Icon(Icons.phone_outlined, size: 18))),
-            TextField(controller: modelCtrl, decoration: _fd('Car type', suffixIcon: const Icon(Icons.directions_car_outlined, size: 18))),
-            TextField(controller: colorCtrl, decoration: _fd('Car color', suffixIcon: const Icon(Icons.palette_outlined, size: 18))),
+            TextField(
+                controller: nameCtrl,
+                decoration: _fd('Name',
+                    suffixIcon: const Icon(Icons.badge_outlined, size: 18))),
+            TextField(
+                controller: phoneCtrl,
+                decoration: _fd('Phone',
+                    suffixIcon: const Icon(Icons.phone_outlined, size: 18))),
+            TextField(
+                controller: modelCtrl,
+                decoration: _fd('Car type',
+                    suffixIcon:
+                        const Icon(Icons.directions_car_outlined, size: 18))),
+            TextField(
+                controller: colorCtrl,
+                decoration: _fd('Car color',
+                    suffixIcon: const Icon(Icons.palette_outlined, size: 18))),
           ]),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save')),
         ],
       ),
     );
     if (ok != true) return;
-    setState(() { _busy = true; _message = null; });
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
     try {
       await _api.patchAdminAppUserProfile(
         token: t,
@@ -837,9 +1224,12 @@ class _OperatorScreenState extends State<OperatorScreen>
     final t = _token;
     final id = (row['id'] as num?)?.toInt();
     if (t == null || id == null) return;
-    final emailCtrl = TextEditingController(text: (row['email'] ?? '').toString());
-    final nameCtrl = TextEditingController(text: (row['display_name'] ?? '').toString());
-    final phoneCtrl = TextEditingController(text: (row['phone'] ?? '').toString());
+    final emailCtrl =
+        TextEditingController(text: (row['email'] ?? '').toString());
+    final nameCtrl =
+        TextEditingController(text: (row['display_name'] ?? '').toString());
+    final phoneCtrl =
+        TextEditingController(text: (row['phone'] ?? '').toString());
     final passCtrl = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
@@ -847,20 +1237,40 @@ class _OperatorScreenState extends State<OperatorScreen>
         title: const Text('Edit B2B Account'),
         content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: emailCtrl, decoration: _fd('Email', suffixIcon: const Icon(Icons.email_outlined, size: 18))),
-            TextField(controller: passCtrl, decoration: _fd('Password (optional)', suffixIcon: const Icon(Icons.lock_outline_rounded, size: 18))),
-            TextField(controller: nameCtrl, decoration: _fd('Name', suffixIcon: const Icon(Icons.badge_outlined, size: 18))),
-            TextField(controller: phoneCtrl, decoration: _fd('Phone', suffixIcon: const Icon(Icons.phone_outlined, size: 18))),
+            TextField(
+                controller: emailCtrl,
+                decoration: _fd('Email',
+                    suffixIcon: const Icon(Icons.email_outlined, size: 18))),
+            TextField(
+                controller: passCtrl,
+                decoration: _fd('Password (optional)',
+                    suffixIcon:
+                        const Icon(Icons.lock_outline_rounded, size: 18))),
+            TextField(
+                controller: nameCtrl,
+                decoration: _fd('Name',
+                    suffixIcon: const Icon(Icons.badge_outlined, size: 18))),
+            TextField(
+                controller: phoneCtrl,
+                decoration: _fd('Phone',
+                    suffixIcon: const Icon(Icons.phone_outlined, size: 18))),
           ]),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save')),
         ],
       ),
     );
     if (ok != true) return;
-    setState(() { _busy = true; _message = null; });
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
     try {
       await _api.patchAdminAppUserProfile(
         token: t,
@@ -898,98 +1308,106 @@ class _OperatorScreenState extends State<OperatorScreen>
         final loc = AppLocalizations.of(ctx)!;
         return StatefulBuilder(
           builder: (ctx, setSt) => AlertDialog(
-          backgroundColor: _C.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: _C.border)),
-          title: Text(row['driver_name']?.toString() ?? loc.operatorDriverNameLabel),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: modelCtrl,
-                  decoration: _fd(loc.operatorCarModelLabel),
-                ),
-                TextField(
-                  controller: colorCtrl,
-                  decoration: _fd(loc.operatorCarColorLabel),
-                ),
-                const SizedBox(height: 8),
-                if (selectedPhotoData.isNotEmpty)
-                  Builder(
-                    builder: (_) {
-                      final provider = _imageProviderFromString(selectedPhotoData);
-                      if (provider == null) return const SizedBox.shrink();
-                      return Center(
-                        child: SizedBox(
-                          width: 220,
-                          height: 90,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image(
-                              image: provider,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            backgroundColor: _C.surface,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: const BorderSide(color: _C.border)),
+            title: Text(
+                row['driver_name']?.toString() ?? loc.operatorDriverNameLabel),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: modelCtrl,
+                    decoration: _fd(loc.operatorCarModelLabel),
+                  ),
+                  TextField(
+                    controller: colorCtrl,
+                    decoration: _fd(loc.operatorCarColorLabel),
+                  ),
+                  const SizedBox(height: 8),
+                  if (selectedPhotoData.isNotEmpty)
+                    Builder(
+                      builder: (_) {
+                        final provider =
+                            _imageProviderFromString(selectedPhotoData);
+                        if (provider == null) return const SizedBox.shrink();
+                        return Center(
+                          child: SizedBox(
+                            width: 220,
+                            height: 90,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image(
+                                image: provider,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    const SizedBox.shrink(),
+                              ),
                             ),
                           ),
-                        ),
+                        );
+                      },
+                    ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await _imagePicker.pickImage(
+                        source: ImageSource.gallery,
+                        imageQuality: 80,
+                        maxWidth: 1600,
                       );
+                      if (picked == null) return;
+                      final bytes = await picked.readAsBytes();
+                      final name = picked.name.toLowerCase();
+                      final ext =
+                          name.contains('.') ? name.split('.').last : 'jpeg';
+                      final mime = ext == 'png'
+                          ? 'image/png'
+                          : ext == 'webp'
+                              ? 'image/webp'
+                              : 'image/jpeg';
+                      final dataUrl =
+                          'data:$mime;base64,${base64Encode(bytes)}';
+                      if (!mounted) return;
+                      setSt(() {
+                        selectedPhotoData = dataUrl;
+                      });
                     },
+                    icon: const Icon(Icons.photo_library),
+                    label: Text(loc.operatorPickFromGallery),
                   ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final picked = await _imagePicker.pickImage(
-                      source: ImageSource.gallery,
-                      imageQuality: 80,
-                      maxWidth: 1600,
-                    );
-                    if (picked == null) return;
-                    final bytes = await picked.readAsBytes();
-                    final name = picked.name.toLowerCase();
-                    final ext = name.contains('.') ? name.split('.').last : 'jpeg';
-                    final mime = ext == 'png'
-                        ? 'image/png'
-                        : ext == 'webp'
-                            ? 'image/webp'
-                            : 'image/jpeg';
-                    final dataUrl = 'data:$mime;base64,${base64Encode(bytes)}';
-                    if (!mounted) return;
-                    setSt(() {
-                      selectedPhotoData = dataUrl;
-                    });
-                  },
-                  icon: const Icon(Icons.photo_library),
-                  label: Text(loc.operatorPickFromGallery),
-                ),
-                if (selectedPhotoData.isNotEmpty &&
-                    selectedPhotoData.startsWith('data:image/'))
-                  TextButton.icon(
-                    onPressed: () => setSt(() => selectedPhotoData = ''),
-                    icon: const Icon(Icons.delete_outline),
-                    label: Text(loc.operatorRemovePickedImage),
+                  if (selectedPhotoData.isNotEmpty &&
+                      selectedPhotoData.startsWith('data:image/'))
+                    TextButton.icon(
+                      onPressed: () => setSt(() => selectedPhotoData = ''),
+                      icon: const Icon(Icons.delete_outline),
+                      label: Text(loc.operatorRemovePickedImage),
+                    ),
+                  TextField(
+                    controller: photoCtrl,
+                    decoration: _fd(loc.operatorPhotoUrlOptional),
                   ),
-                TextField(
-                  controller: photoCtrl,
-                  decoration: _fd(loc.operatorPhotoUrlOptional),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(loc.operatorCancel),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: _C.yellow,
-                foregroundColor: _C.charcoal,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                ],
               ),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(loc.operatorSave),
             ),
-          ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(loc.operatorCancel),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: _C.yellow,
+                  foregroundColor: _C.charcoal,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50)),
+                ),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(loc.operatorSave),
+              ),
+            ],
           ),
         );
       },
@@ -1072,7 +1490,9 @@ class _OperatorScreenState extends State<OperatorScreen>
       }
       return null;
     }
-    return Uri.tryParse(trimmed)?.hasScheme == true ? NetworkImage(trimmed) : null;
+    return Uri.tryParse(trimmed)?.hasScheme == true
+        ? NetworkImage(trimmed)
+        : null;
   }
 
   Future<void> _pickNewDriverImage() async {
@@ -1105,7 +1525,8 @@ class _OperatorScreenState extends State<OperatorScreen>
   InputDecoration _operatorFieldDecoration(String label) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: _C.textMid, fontWeight: FontWeight.w600),
+      labelStyle:
+          const TextStyle(color: _C.textMid, fontWeight: FontWeight.w600),
       filled: true,
       fillColor: _C.surfaceAlt,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -1129,55 +1550,21 @@ class _OperatorScreenState extends State<OperatorScreen>
     required String title,
     required List<Widget> children,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _C.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _C.border),
-        boxShadow: [BoxShadow(color: _C.charcoal.withOpacity(0.07), blurRadius: 10, offset: const Offset(0, 3))],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: _C.yellowSoft,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _C.yellowDeep),
-                  ),
-                  child: Icon(icon, color: _C.charcoal, size: 22),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: _C.textStrong,
-                      height: 1.25,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            ...children,
-          ],
-        ),
+    return ManagementModuleCard(
+      padding: 16,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ManagementSectionHeader(title, icon: icon),
+          const SizedBox(height: 4),
+          ...children,
+        ],
       ),
     );
   }
 
   Widget _driverPinAccountTile(AppLocalizations l, Map<String, dynamic> d) {
-    final title =
-        '${d['driver_name'] ?? ''} (${d['phone'] ?? ''})'.trim();
+    final title = '${d['driver_name'] ?? ''} (${d['phone'] ?? ''})'.trim();
     final subtitle = () {
       var line = _uiText(
         en: 'Driver profile',
@@ -1202,26 +1589,39 @@ class _OperatorScreenState extends State<OperatorScreen>
         color: _C.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _C.border),
-        boxShadow: [BoxShadow(color: _C.charcoal.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 3))],
+        boxShadow: [
+          BoxShadow(
+              color: _C.charcoal.withOpacity(0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 3))
+        ],
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: _busy ? null : () => _editDriverAccount(d),
         child: Padding(
           padding: const EdgeInsets.all(14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Container(
                 width: 42,
                 height: 42,
-                decoration: BoxDecoration(color: _C.surfaceAlt, borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.border)),
-                child: const Icon(Icons.local_taxi_outlined, color: _C.charcoal, size: 22),
+                decoration: BoxDecoration(
+                    color: _C.surfaceAlt,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _C.border)),
+                child: const Icon(Icons.local_taxi_outlined,
+                    color: _C.charcoal, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   title.isEmpty ? '—' : title,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: _C.textStrong),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: _C.textStrong),
                 ),
               ),
               IconButton(
@@ -1229,8 +1629,11 @@ class _OperatorScreenState extends State<OperatorScreen>
                 icon: Container(
                   width: 32,
                   height: 32,
-                  decoration: BoxDecoration(color: _C.charcoal, borderRadius: BorderRadius.circular(8)),
-                  child: const Icon(Icons.edit_outlined, color: Colors.white, size: 15),
+                  decoration: BoxDecoration(
+                      color: _C.charcoal,
+                      borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.edit_outlined,
+                      color: Colors.white, size: 15),
                 ),
                 padding: EdgeInsets.zero,
               ),
@@ -1238,9 +1641,14 @@ class _OperatorScreenState extends State<OperatorScreen>
             if (subtitle.isNotEmpty) ...[
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(color: _C.surfaceAlt, borderRadius: BorderRadius.circular(10)),
-                child: Text(subtitle, style: const TextStyle(color: _C.textMid, fontSize: 11, height: 1.4)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                    color: _C.surfaceAlt,
+                    borderRadius: BorderRadius.circular(10)),
+                child: Text(subtitle,
+                    style: const TextStyle(
+                        color: _C.textMid, fontSize: 11, height: 1.4)),
               ),
             ],
           ]),
@@ -1261,7 +1669,9 @@ class _OperatorScreenState extends State<OperatorScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _C.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: _C.border)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: _C.border)),
         title: const Text('Create B2B account'),
         content: SingleChildScrollView(
           child: Column(
@@ -1276,12 +1686,15 @@ class _OperatorScreenState extends State<OperatorScreen>
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: _C.yellow,
               foregroundColor: _C.charcoal,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(50)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Create'),
@@ -1325,19 +1738,26 @@ class _OperatorScreenState extends State<OperatorScreen>
     if (t == null) return;
     final id = (row['id'] as num?)?.toInt();
     if (id == null) return;
-    final codeCtrl = TextEditingController(text: (row['code'] ?? '').toString());
-    final labelCtrl = TextEditingController(text: (row['label'] ?? '').toString());
-    final nameCtrl = TextEditingController(text: (row['contact_name'] ?? '').toString());
+    final codeCtrl =
+        TextEditingController(text: (row['code'] ?? '').toString());
+    final labelCtrl =
+        TextEditingController(text: (row['label'] ?? '').toString());
+    final nameCtrl =
+        TextEditingController(text: (row['contact_name'] ?? '').toString());
     final pinCtrl = TextEditingController(text: (row['pin'] ?? '').toString());
-    final phoneCtrl = TextEditingController(text: (row['phone'] ?? '').toString());
-    final hotelCtrl = TextEditingController(text: (row['hotel'] ?? '').toString());
+    final phoneCtrl =
+        TextEditingController(text: (row['phone'] ?? '').toString());
+    final hotelCtrl =
+        TextEditingController(text: (row['hotel'] ?? '').toString());
     bool enabled = row['is_enabled'] == true;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSt) => AlertDialog(
           backgroundColor: _C.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: _C.border)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: const BorderSide(color: _C.border)),
           title: const Text('Edit B2B account'),
           content: SingleChildScrollView(
             child: Column(
@@ -1359,12 +1779,15 @@ class _OperatorScreenState extends State<OperatorScreen>
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
             FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: _C.yellow,
                 foregroundColor: _C.charcoal,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(50)),
               ),
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('Save'),
@@ -1452,7 +1875,20 @@ class _OperatorScreenState extends State<OperatorScreen>
     final normalized = s.replaceFirst(' - ', 'T').replaceFirst(' ', 'T');
     final dt = DateTime.tryParse(normalized) ?? DateTime.tryParse(s);
     if (dt == null) return s;
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     final local = dt.toLocal();
     final day = local.day.toString().padLeft(2, '0');
     final mon = months[local.month - 1];
@@ -1489,9 +1925,10 @@ class _OperatorScreenState extends State<OperatorScreen>
       children: [
         FilledButton(
           style: FilledButton.styleFrom(
-            backgroundColor: _C.charcoal,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+            backgroundColor: _C.yellow,
+            foregroundColor: _C.charcoal,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
           ),
           onPressed: _busy ? null : _refreshAll,
           child: Text(l.adminLoadRidesBtn),
@@ -1512,12 +1949,14 @@ class _OperatorScreenState extends State<OperatorScreen>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline_rounded, color: _C.charcoal, size: 22),
+                  const Icon(Icons.info_outline_rounded,
+                      color: _C.charcoal, size: 22),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       l.flightArrivalsSampleDataBanner,
-                      style: const TextStyle(color: _C.textStrong, fontSize: 13, height: 1.35),
+                      style: const TextStyle(
+                          color: _C.textStrong, fontSize: 13, height: 1.35),
                     ),
                   ),
                 ],
@@ -1530,9 +1969,11 @@ class _OperatorScreenState extends State<OperatorScreen>
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(children: [
-                  const Icon(Icons.flight_land_rounded, size: 40, color: _C.textSoft),
+                  const Icon(Icons.flight_land_rounded,
+                      size: 40, color: _C.textSoft),
                   const SizedBox(height: 8),
-                  Text(l.operatorNoFlightArrivals, style: const TextStyle(color: _C.textSoft)),
+                  Text(l.operatorNoFlightArrivals,
+                      style: const TextStyle(color: _C.textSoft)),
                 ]),
               ),
             ),
@@ -1543,8 +1984,13 @@ class _OperatorScreenState extends State<OperatorScreen>
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 headingRowColor: WidgetStateProperty.all(_C.charcoal),
-                headingTextStyle: const TextStyle(color: _C.yellow, fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 0.5),
-                border: TableBorder(horizontalInside: BorderSide(color: _C.border)),
+                headingTextStyle: const TextStyle(
+                    color: _C.yellow,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    letterSpacing: 0.5),
+                border:
+                    TableBorder(horizontalInside: BorderSide(color: _C.border)),
                 columns: [
                   DataColumn(label: Text(l.operatorColFlightNumber)),
                   const DataColumn(label: Text('Airline')),
@@ -1561,23 +2007,43 @@ class _OperatorScreenState extends State<OperatorScreen>
                 rows: _flightArrivals.map((r) {
                   return DataRow(
                     cells: [
-                      DataCell(Text(r['flight_number']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
-                      DataCell(Text((r['airline'] ?? '').toString(), style: const TextStyle(fontSize: 13))),
-                      DataCell(Text((r['status'] ?? '').toString(), style: const TextStyle(fontSize: 13))),
-                      DataCell(Text((r['aircraft'] ?? '').toString(), style: const TextStyle(fontSize: 13))),
-                      DataCell(Text(_departureAirportLabel(r), style: const TextStyle(fontSize: 13))),
-                      DataCell(Text(r['takeoff_time']?.toString() ?? '', style: const TextStyle(fontSize: 13))),
+                      DataCell(Text(r['flight_number']?.toString() ?? '',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 13))),
+                      DataCell(Text((r['airline'] ?? '').toString(),
+                          style: const TextStyle(fontSize: 13))),
+                      DataCell(Text((r['status'] ?? '').toString(),
+                          style: const TextStyle(fontSize: 13))),
+                      DataCell(Text((r['aircraft'] ?? '').toString(),
+                          style: const TextStyle(fontSize: 13))),
+                      DataCell(Text(_departureAirportLabel(r),
+                          style: const TextStyle(fontSize: 13))),
+                      DataCell(Text(r['takeoff_time']?.toString() ?? '',
+                          style: const TextStyle(fontSize: 13))),
                       DataCell(Text(
                         (() {
-                          final raw = _prettyDateTime(r['expected_arrival']?.toString() ?? '');
+                          final raw = _prettyDateTime(
+                              r['expected_arrival']?.toString() ?? '');
                           return raw.trim().isEmpty ? '-' : raw;
                         })(),
                         style: const TextStyle(fontSize: 13),
                       )),
-                      DataCell(Text(_prettyDateTime(r['last_update']?.toString() ?? ''), style: const TextStyle(fontSize: 13))),
-                      DataCell(Text((r['speed_kmh'] == null) ? '-' : '${r['speed_kmh']} km/h', style: const TextStyle(fontSize: 13))),
-                      DataCell(Text((r['altitude_m'] == null) ? '-' : '${r['altitude_m']} m', style: const TextStyle(fontSize: 13))),
-                      DataCell(Text(_arrivalAirportLabel(r), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
+                      DataCell(Text(
+                          _prettyDateTime(r['last_update']?.toString() ?? ''),
+                          style: const TextStyle(fontSize: 13))),
+                      DataCell(Text(
+                          (r['speed_kmh'] == null)
+                              ? '-'
+                              : '${r['speed_kmh']} km/h',
+                          style: const TextStyle(fontSize: 13))),
+                      DataCell(Text(
+                          (r['altitude_m'] == null)
+                              ? '-'
+                              : '${r['altitude_m']} m',
+                          style: const TextStyle(fontSize: 13))),
+                      DataCell(Text(_arrivalAirportLabel(r),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 13))),
                     ],
                   );
                 }).toList(),
@@ -1589,11 +2055,8 @@ class _OperatorScreenState extends State<OperatorScreen>
   }
 
   Widget _buildLiveOrdersTab(AppLocalizations l) {
-    final filteredRides = _rideStatusFilter == 'all'
-        ? _adminRides
-        : _adminRides
-            .where((r) => (r['status'] ?? '').toString().trim() == _rideStatusFilter)
-            .toList();
+    final filteredRides = _adminRides.where(_matchesRideFilter).toList();
+    final visibleRides = filteredRides.take(_visibleRideRows).toList();
     return RefreshIndicator(
       color: _C.yellow,
       onRefresh: _refreshAll,
@@ -1607,11 +2070,14 @@ class _OperatorScreenState extends State<OperatorScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _SectionHead('Dispatch & monitoring', subtitle: 'Live operational overview'),
+                  _SectionHead('Dispatch & monitoring',
+                      subtitle: 'Live operational overview'),
                   Text(
-                    _adminRides.any((r) => (r['status'] ?? '').toString() == 'pending')
-                        ? 'There are pending requests that need assigning.'
-                        : 'No pending requests right now.',
+                    _adminRides.any((r) =>
+                            _rideStatusBucket((r['status'] ?? '').toString()) ==
+                            'accepted')
+                        ? 'Accepted requests are ready for dispatch monitoring.'
+                        : 'No accepted requests right now.',
                     style: const TextStyle(color: _C.textSoft),
                   ),
                   const SizedBox(height: 10),
@@ -1619,11 +2085,106 @@ class _OperatorScreenState extends State<OperatorScreen>
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      GestureDetector(onTap: () => setState(() => _rideStatusFilter = 'pending'), child: _StatChip(label: _uiText(en: 'Pending', ar: 'قيد الانتظار', fr: 'En attente', es: 'Pendiente', de: 'Ausstehend', it: 'In attesa', ru: 'В ожидании', zh: '待处理'), value: '${_countByStatus('pending')}', icon: Icons.hourglass_top, color: _rideStatusFilter == 'pending' ? _C.yellowDeep : _C.textSoft)),
-                      GestureDetector(onTap: () => setState(() => _rideStatusFilter = 'accepted'), child: _StatChip(label: _uiText(en: 'Accepted', ar: 'مقبول', fr: 'Accepte', es: 'Aceptado', de: 'Akzeptiert', it: 'Accettato', ru: 'Принято', zh: '已接受'), value: '${_countByStatus('accepted')}', icon: Icons.local_taxi, color: _rideStatusFilter == 'accepted' ? _C.charcoal : _C.textSoft)),
-                      GestureDetector(onTap: () => setState(() => _rideStatusFilter = 'ongoing'), child: _StatChip(label: _uiText(en: 'Ongoing', ar: 'جار', fr: 'En cours', es: 'En curso', de: 'Laufend', it: 'In corso', ru: 'В пути', zh: '进行中'), value: '${_countByStatus('ongoing')}', icon: Icons.route, color: _rideStatusFilter == 'ongoing' ? _C.info : _C.textSoft)),
-                      GestureDetector(onTap: () => setState(() => _rideStatusFilter = 'completed'), child: _StatChip(label: _uiText(en: 'Completed', ar: 'مكتمل', fr: 'Termine', es: 'Completado', de: 'Abgeschlossen', it: 'Completato', ru: 'Завершено', zh: '已完成'), value: '${_countByStatus('completed')}', icon: Icons.check_circle, color: _rideStatusFilter == 'completed' ? _C.success : _C.textSoft)),
-                      GestureDetector(onTap: () => setState(() => _rideStatusFilter = 'all'), child: _StatChip(label: _uiText(en: 'All', ar: 'الكل', fr: 'Tous', es: 'Todos', de: 'Alle', it: 'Tutti', ru: 'Все', zh: '全部'), value: '${_adminRides.length}', icon: Icons.list_alt, color: _rideStatusFilter == 'all' ? _C.charcoal : _C.textSoft)),
+                      GestureDetector(
+                          onTap: () => setState(() {
+                                _rideStatusFilter = 'accepted';
+                                _visibleRideRows = _operatorInitialRideRows;
+                              }),
+                          child: _StatChip(
+                              label: _uiText(
+                                  en: 'Accepted',
+                                  ar: 'مقبول',
+                                  fr: 'Accepte',
+                                  es: 'Aceptado',
+                                  de: 'Akzeptiert',
+                                  it: 'Accettato',
+                                  ru: 'Принято',
+                                  zh: '已接受'),
+                              value: '${_countByStatus('accepted')}',
+                              icon: Icons.verified_rounded,
+                              color: _rideStatusFilter == 'accepted'
+                                  ? _C.yellowDeep
+                                  : _C.textSoft)),
+                      GestureDetector(
+                          onTap: () => setState(() {
+                                _rideStatusFilter = 'refused';
+                                _visibleRideRows = _operatorInitialRideRows;
+                              }),
+                          child: _StatChip(
+                              label: _uiText(
+                                  en: 'Refused',
+                                  ar: 'مرفوض',
+                                  fr: 'Refuse',
+                                  es: 'Rechazado',
+                                  de: 'Abgelehnt',
+                                  it: 'Rifiutato',
+                                  ru: 'Отклонено',
+                                  zh: '已拒绝'),
+                              value: '${_countByStatus('refused')}',
+                              icon: Icons.block_rounded,
+                              color: _rideStatusFilter == 'refused'
+                                  ? _C.danger
+                                  : _C.textSoft)),
+                      GestureDetector(
+                          onTap: () => setState(() {
+                                _rideStatusFilter = 'ongoing';
+                                _visibleRideRows = _operatorInitialRideRows;
+                              }),
+                          child: _StatChip(
+                              label: _uiText(
+                                  en: 'Ongoing',
+                                  ar: 'جار',
+                                  fr: 'En cours',
+                                  es: 'En curso',
+                                  de: 'Laufend',
+                                  it: 'In corso',
+                                  ru: 'В пути',
+                                  zh: '进行中'),
+                              value: '${_countByStatus('ongoing')}',
+                              icon: Icons.route,
+                              color: _rideStatusFilter == 'ongoing'
+                                  ? _C.info
+                                  : _C.textSoft)),
+                      GestureDetector(
+                          onTap: () => setState(() {
+                                _rideStatusFilter = 'completed';
+                                _visibleRideRows = _operatorInitialRideRows;
+                              }),
+                          child: _StatChip(
+                              label: _uiText(
+                                  en: 'Completed',
+                                  ar: 'مكتمل',
+                                  fr: 'Termine',
+                                  es: 'Completado',
+                                  de: 'Abgeschlossen',
+                                  it: 'Completato',
+                                  ru: 'Завершено',
+                                  zh: '已完成'),
+                              value: '${_countByStatus('completed')}',
+                              icon: Icons.check_circle,
+                              color: _rideStatusFilter == 'completed'
+                                  ? _C.success
+                                  : _C.textSoft)),
+                      GestureDetector(
+                          onTap: () => setState(() {
+                                _rideStatusFilter = 'all';
+                                _visibleRideRows = _operatorInitialRideRows;
+                              }),
+                          child: _StatChip(
+                              label: _uiText(
+                                  en: 'All',
+                                  ar: 'الكل',
+                                  fr: 'Tous',
+                                  es: 'Todos',
+                                  de: 'Alle',
+                                  it: 'Tutti',
+                                  ru: 'Все',
+                                  zh: '全部'),
+                              value: '${_adminRides.length}',
+                              icon: Icons.list_alt,
+                              color: _rideStatusFilter == 'all'
+                                  ? _C.charcoal
+                                  : _C.textSoft)),
                     ],
                   ),
                 ],
@@ -1632,42 +2193,71 @@ class _OperatorScreenState extends State<OperatorScreen>
           ),
           const SizedBox(height: 12),
           _Module(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _SectionHead('App rides', subtitle: '${filteredRides.length} rides'),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              _SectionHead(
+                'Live ride stream',
+                subtitle:
+                    '${visibleRides.length}/${filteredRides.length} rides loaded',
+              ),
               if (filteredRides.isEmpty)
-                Padding(padding: const EdgeInsets.only(top: 4), child: Text(l.adminNoRidesLoaded, style: const TextStyle(color: _C.textSoft)))
+                ManagementEmptyState(
+                  message: l.adminNoRidesLoaded,
+                  icon: Icons.local_taxi_outlined,
+                )
               else
-                ...filteredRides.take(30).map((r) => Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(color: _C.surfaceAlt, borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.border)),
-                  child: Row(children: [
-                    Container(width: 34, height: 34, decoration: BoxDecoration(color: _C.surfaceAlt, borderRadius: BorderRadius.circular(9), border: Border.all(color: _C.border)), child: const Center(child: Icon(Icons.local_taxi_outlined, color: _C.charcoal, size: 16))),
-                    const SizedBox(width: 10),
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(localizedRideRouteRow(l, r['pickup']?.toString() ?? '', r['destination']?.toString() ?? ''), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
-                      const SizedBox(height: 2),
-                      Text(l.operatorRideSubtitleLine('${l.statusLinePrefix}${localizedRideStatusLabel(l, r['status']?.toString())}', ((r['driver_name'] ?? r['driver_id'] ?? '').toString().trim().isEmpty) ? '' : '${l.driverLabelPrefix}${(r['driver_name'] ?? r['driver_id']).toString()}', (r['created_at'] ?? '').toString().trim().isEmpty ? '' : '${l.createdAtLinePrefix}${r['created_at']}'), style: const TextStyle(color: _C.textSoft, fontSize: 11)),
-                      const SizedBox(height: 2),
-                      Wrap(
-                        spacing: 5,
-                        runSpacing: 5,
-                        children: [
-                          _rideMiniChip(icon: Icons.person_outline, text: (r['driver_name'] ?? r['driver_id'] ?? '-').toString(), color: _C.charcoal),
-                          _rideMiniChip(icon: Icons.route, text: '${_rideDistanceKm(r)?.toStringAsFixed(1) ?? '-'} km', color: _C.info),
-                          _rideMiniChip(icon: Icons.schedule, text: (r['created_at'] ?? '-').toString()),
-                          _rideMiniChip(icon: Icons.payments_outlined, text: _ridePrice(r), color: _C.success),
-                        ],
-                      ),
-                    ])),
-                    Text(
-                      (r['is_b2b'] == true)
-                          ? '${l.roleB2b}: ${(r['b2b_guest_name'] ?? r['passenger_name'] ?? r['user_id'] ?? '-').toString()}'
-                          : '${l.rolePassenger}: ${(r['passenger_name'] ?? r['user_id'] ?? '-').toString()}',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                ...visibleRides.map((r) {
+                  final isB2b = r['is_b2b'] == true;
+                  final riderName = (isB2b
+                              ? (r['b2b_guest_name'] ??
+                                  r['passenger_name'] ??
+                                  r['user_id'])
+                              : (r['passenger_name'] ?? r['user_id']))
+                          ?.toString()
+                          .trim() ??
+                      '';
+                  final driverName = (r['driver_name'] ?? r['driver_id'] ?? '')
+                      .toString()
+                      .trim();
+                  final status = (r['status'] ?? '').toString();
+                  return _OperatorRideCard(
+                    route: localizedRideRouteRow(
+                      l,
+                      r['pickup']?.toString() ?? '',
+                      r['destination']?.toString() ?? '',
                     ),
-                  ]),
-                )),
+                    status: status,
+                    statusLabel: _operatorRideStatusLabel(l, status),
+                    riderType: isB2b ? l.roleB2b : l.rolePassenger,
+                    riderName: riderName,
+                    driverName: driverName,
+                    distance:
+                        '${_rideDistanceKm(r)?.toStringAsFixed(1) ?? '-'} km',
+                    price: _ridePrice(r),
+                    createdAt: (r['created_at'] ?? '').toString(),
+                    isB2b: isB2b,
+                  );
+                }),
+              if (visibleRides.length < filteredRides.length)
+                Center(
+                  child: _DarkButton(
+                    label: _uiText(
+                        en: 'Show more rides',
+                        ar: 'عرض رحلات أكثر',
+                        fr: 'Afficher plus de courses',
+                        es: 'Mostrar mas viajes',
+                        de: 'Mehr Fahrten anzeigen',
+                        it: 'Mostra piu corse',
+                        ru: 'Показать больше поездок',
+                        zh: '显示更多行程'),
+                    icon: Icons.expand_more_rounded,
+                    small: true,
+                    fullWidth: false,
+                    onPressed: () => setState(() {
+                      _visibleRideRows += _operatorListPageStep;
+                    }),
+                  ),
+                ),
             ]),
           ),
         ],
@@ -1693,22 +2283,29 @@ class _OperatorScreenState extends State<OperatorScreen>
       return null;
     }
 
-    final filteredB2b = _managedB2bUsers.where(_matchesB2bApprovalFilter).toList();
+    final filteredB2b =
+        _managedB2bUsers.where(_matchesB2bApprovalFilter).toList();
     final enabled = filteredB2b.where((b) => b['is_enabled'] == true).toList();
     final paused = filteredB2b.where((b) => b['is_enabled'] != true).toList();
     final visibleB2bCount = enabled.length + paused.length;
+    final filteredBookings =
+        _adminB2bBookings.where(_matchesB2bBookingFilter).toList();
+    final visibleBookings =
+        filteredBookings.take(_visibleB2bBookingRows).toList();
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _SectionHead(l.operatorCorporateBookingsSection, subtitle: '${_adminB2bBookings.length} bookings'),
+        _SectionHead(l.operatorCorporateBookingsSection,
+            subtitle: '${_adminB2bBookings.length} bookings'),
         Row(
           children: [
             Expanded(
               child: FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: _C.charcoal,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                  backgroundColor: _C.yellow,
+                  foregroundColor: _C.charcoal,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50)),
                 ),
                 onPressed: _busy ? null : _refreshAll,
                 child: Text(l.operatorRefreshCorporateBookings),
@@ -1720,84 +2317,227 @@ class _OperatorScreenState extends State<OperatorScreen>
                 style: FilledButton.styleFrom(
                   backgroundColor: _C.yellow,
                   foregroundColor: _C.charcoal,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50)),
                 ),
                 onPressed: _busy ? null : _createB2bTenant,
                 icon: const Icon(Icons.add_business_outlined),
-                label: const Text('Create B2B account', style: TextStyle(fontWeight: FontWeight.w800)),
+                label: const Text('Create B2B account',
+                    style: TextStyle(fontWeight: FontWeight.w800)),
               ),
             ),
           ],
         ),
         const SizedBox(height: 10),
         _Module(
-          child: _adminB2bBookings.isEmpty
-              ? Text(l.noTripsLoaded, style: const TextStyle(color: _C.textSoft))
-              : Column(
-                  children: _adminB2bBookings
-                      .map(
-                        (b) => _rowInfoCard(
-                          icon: Icons.hotel_rounded,
-                          iconBg: _C.charcoal,
-                          iconColor: _C.yellow,
-                          content: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                b['route']?.toString() ?? '',
-                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                l.adminB2bBookingRowSubtitle(
-                                  b['guest_name']?.toString() ?? '',
-                                  b['room_number']?.toString() ?? '-',
-                                  b['fare']?.toString() ?? '',
-                                ),
-                                style: const TextStyle(color: _C.textSoft, fontSize: 11),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                      .toList(),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            _SectionHead(
+              l.operatorCorporateBookingsSection,
+              subtitle:
+                  '${visibleBookings.length}/${filteredBookings.length} bookings',
+            ),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                _bookingStatusChip(
+                  label: _uiText(
+                      en: 'All',
+                      ar: 'الكل',
+                      fr: 'Tous',
+                      es: 'Todos',
+                      de: 'Alle',
+                      it: 'Tutti',
+                      ru: 'Все',
+                      zh: '全部'),
+                  status: 'all',
+                  count: _adminB2bBookings.length,
                 ),
+                const SizedBox(width: 8),
+                _bookingStatusChip(
+                  label: _uiText(
+                      en: 'Accepted',
+                      ar: 'مقبول',
+                      fr: 'Accepte',
+                      es: 'Aceptado',
+                      de: 'Akzeptiert',
+                      it: 'Accettato',
+                      ru: 'Принято',
+                      zh: '已接受'),
+                  status: 'accepted',
+                  count: _adminB2bBookings
+                      .where((b) =>
+                          _rideStatusBucket((b['status'] ?? '').toString()) ==
+                          'accepted')
+                      .length,
+                ),
+                const SizedBox(width: 8),
+                _bookingStatusChip(
+                  label: _uiText(
+                      en: 'Refused',
+                      ar: 'مرفوض',
+                      fr: 'Refuse',
+                      es: 'Rechazado',
+                      de: 'Abgelehnt',
+                      it: 'Rifiutato',
+                      ru: 'Отклонено',
+                      zh: '已拒绝'),
+                  status: 'refused',
+                  count: _adminB2bBookings
+                      .where((b) =>
+                          _rideStatusBucket((b['status'] ?? '').toString()) ==
+                          'refused')
+                      .length,
+                ),
+                const SizedBox(width: 8),
+                _bookingStatusChip(
+                  label: _uiText(
+                      en: 'Ongoing',
+                      ar: 'جار',
+                      fr: 'En cours',
+                      es: 'En curso',
+                      de: 'Laufend',
+                      it: 'In corso',
+                      ru: 'В пути',
+                      zh: '进行中'),
+                  status: 'ongoing',
+                  count: _adminB2bBookings
+                      .where((b) =>
+                          _rideStatusBucket((b['status'] ?? '').toString()) ==
+                          'ongoing')
+                      .length,
+                ),
+                const SizedBox(width: 8),
+                _bookingStatusChip(
+                  label: _uiText(
+                      en: 'Completed',
+                      ar: 'مكتمل',
+                      fr: 'Termine',
+                      es: 'Completado',
+                      de: 'Abgeschlossen',
+                      it: 'Completato',
+                      ru: 'Завершено',
+                      zh: '已完成'),
+                  status: 'completed',
+                  count: _adminB2bBookings
+                      .where((b) =>
+                          _rideStatusBucket((b['status'] ?? '').toString()) ==
+                          'completed')
+                      .length,
+                ),
+              ]),
+            ),
+            const SizedBox(height: 12),
+            if (filteredBookings.isEmpty)
+              ManagementEmptyState(
+                message: l.noTripsLoaded,
+                icon: Icons.book_outlined,
+              )
+            else
+              ...visibleBookings.map((b) {
+                final status = (b['status'] ?? '').toString();
+                return _OperatorB2bBookingCard(
+                  route: (b['route'] ?? '').toString(),
+                  guestName: (b['guest_name'] ?? '').toString(),
+                  room: (b['room_number'] ?? '').toString(),
+                  fare: (b['fare'] ?? '').toString(),
+                  status: status,
+                  statusLabel: _operatorRideStatusLabel(l, status),
+                  createdAt: (b['created_at'] ?? '').toString(),
+                  sourceCode: (b['source_code'] ?? '').toString(),
+                );
+              }),
+            if (visibleBookings.length < filteredBookings.length)
+              Center(
+                child: _DarkButton(
+                  label: _uiText(
+                      en: 'Show more orders',
+                      ar: 'عرض طلبات أكثر',
+                      fr: 'Afficher plus de commandes',
+                      es: 'Mostrar mas pedidos',
+                      de: 'Mehr Auftraege anzeigen',
+                      it: 'Mostra piu ordini',
+                      ru: 'Показать больше заказов',
+                      zh: '显示更多订单'),
+                  icon: Icons.expand_more_rounded,
+                  small: true,
+                  fullWidth: false,
+                  onPressed: () => setState(() {
+                    _visibleB2bBookingRows += _operatorListPageStep;
+                  }),
+                ),
+              ),
+          ]),
         ),
-        _SectionHead(_uiText(
-          en: 'Hostel Accounts (B2B)',
-          ar: 'حسابات الفنادق (B2B)',
-          fr: 'Comptes hôtels (B2B)',
-          es: 'Cuentas de hotel (B2B)',
-          de: 'Hotelkonten (B2B)',
-          it: 'Account hotel (B2B)',
-          ru: 'Аккаунты отелей (B2B)',
-          zh: '酒店账户 (B2B)',
-        ), subtitle: '$visibleB2bCount accounts'),
+        _SectionHead(
+            _uiText(
+              en: 'Hostel Accounts (B2B)',
+              ar: 'حسابات الفنادق (B2B)',
+              fr: 'Comptes hôtels (B2B)',
+              es: 'Cuentas de hotel (B2B)',
+              de: 'Hotelkonten (B2B)',
+              it: 'Account hotel (B2B)',
+              ru: 'Аккаунты отелей (B2B)',
+              zh: '酒店账户 (B2B)',
+            ),
+            subtitle: '$visibleB2bCount accounts'),
         const SizedBox(height: 6),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
               _b2bFilterChip(
-                label: _uiText(en: 'All', ar: 'الكل', fr: 'Tous', es: 'Todos', de: 'Alle', it: 'Tutti', ru: 'Все', zh: '全部'),
+                label: _uiText(
+                    en: 'All',
+                    ar: 'الكل',
+                    fr: 'Tous',
+                    es: 'Todos',
+                    de: 'Alle',
+                    it: 'Tutti',
+                    ru: 'Все',
+                    zh: '全部'),
                 selected: _b2bApprovalFilter == 'all',
                 onTap: () => setState(() => _b2bApprovalFilter = 'all'),
               ),
               const SizedBox(width: 8),
               _b2bFilterChip(
-                label: _uiText(en: 'Approved', ar: 'موافق عليه', fr: 'Approuve', es: 'Aprobado', de: 'Genehmigt', it: 'Approvato', ru: 'Одобрено', zh: '已批准'),
+                label: _uiText(
+                    en: 'Approved',
+                    ar: 'موافق عليه',
+                    fr: 'Approuve',
+                    es: 'Aprobado',
+                    de: 'Genehmigt',
+                    it: 'Approvato',
+                    ru: 'Одобрено',
+                    zh: '已批准'),
                 selected: _b2bApprovalFilter == 'approved',
                 onTap: () => setState(() => _b2bApprovalFilter = 'approved'),
               ),
               const SizedBox(width: 8),
               _b2bFilterChip(
-                label: _uiText(en: 'Pending', ar: 'قيد الانتظار', fr: 'En attente', es: 'Pendiente', de: 'Ausstehend', it: 'In attesa', ru: 'В ожидании', zh: '待处理'),
+                label: _uiText(
+                    en: 'Pending',
+                    ar: 'قيد الانتظار',
+                    fr: 'En attente',
+                    es: 'Pendiente',
+                    de: 'Ausstehend',
+                    it: 'In attesa',
+                    ru: 'В ожидании',
+                    zh: '待处理'),
                 selected: _b2bApprovalFilter == 'pending',
                 onTap: () => setState(() => _b2bApprovalFilter = 'pending'),
               ),
               const SizedBox(width: 8),
               _b2bFilterChip(
-                label: _uiText(en: 'Rejected', ar: 'مرفوض', fr: 'Refuse', es: 'Rechazado', de: 'Abgelehnt', it: 'Rifiutato', ru: 'Отклонено', zh: '已拒绝'),
+                label: _uiText(
+                    en: 'Rejected',
+                    ar: 'مرفوض',
+                    fr: 'Refuse',
+                    es: 'Rechazado',
+                    de: 'Abgelehnt',
+                    it: 'Rifiutato',
+                    ru: 'Отклонено',
+                    zh: '已拒绝'),
                 selected: _b2bApprovalFilter == 'rejected',
                 onTap: () => setState(() => _b2bApprovalFilter = 'rejected'),
               ),
@@ -1806,7 +2546,8 @@ class _OperatorScreenState extends State<OperatorScreen>
         ),
         const SizedBox(height: 8),
         if (visibleB2bCount == 0)
-          const Text('No B2B accounts yet', style: TextStyle(color: _C.textSoft))
+          const Text('No B2B accounts yet',
+              style: TextStyle(color: _C.textSoft))
         else ...[
           if (enabled.isNotEmpty) ...[
             _SectionHead(
@@ -1820,13 +2561,17 @@ class _OperatorScreenState extends State<OperatorScreen>
                 ru: 'Активные отели',
                 zh: '活跃酒店',
               ),
-              subtitle: '${enabled.length} ${_uiText(en: 'accounts', ar: 'حسابات', fr: 'comptes', es: 'cuentas', de: 'Konten', it: 'account', ru: 'аккаунтов', zh: '个账户')}',
+              subtitle:
+                  '${enabled.length} ${_uiText(en: 'accounts', ar: 'حسابات', fr: 'comptes', es: 'cuentas', de: 'Konten', it: 'account', ru: 'аккаунтов', zh: '个账户')}',
             ),
             ...enabled.take(80).map((b) {
               final tenant = _tenantForManagedUser(b);
-              final label = ((tenant?['label'] ?? b['display_name']) ?? '').toString();
+              final label =
+                  ((tenant?['label'] ?? b['display_name']) ?? '').toString();
               final code = (tenant?['code'] ?? '').toString();
-              final contact = ((tenant?['contact_name'] ?? b['display_name']) ?? '').toString();
+              final contact =
+                  ((tenant?['contact_name'] ?? b['display_name']) ?? '')
+                      .toString();
               final pin = (tenant?['pin'] ?? '').toString();
               final email = (b['email'] ?? '').toString();
               final phone = ((tenant?['phone'] ?? b['phone']) ?? '').toString();
@@ -1840,11 +2585,18 @@ class _OperatorScreenState extends State<OperatorScreen>
                         Container(
                           width: 34,
                           height: 34,
-                          decoration: BoxDecoration(color: _C.charcoal, borderRadius: BorderRadius.circular(9)),
-                          child: const Icon(Icons.hotel_rounded, color: _C.yellow, size: 16),
+                          decoration: BoxDecoration(
+                              color: _C.charcoal,
+                              borderRadius: BorderRadius.circular(9)),
+                          child: const Icon(Icons.hotel_rounded,
+                              color: _C.yellow, size: 16),
                         ),
                         const SizedBox(width: 10),
-                        Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14))),
+                        Expanded(
+                            child: Text(label,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14))),
                         const SizedBox(width: 8),
                         _b2bApprovalChip(_b2bApprovalStatus(b)),
                         const SizedBox(width: 8),
@@ -1852,23 +2604,41 @@ class _OperatorScreenState extends State<OperatorScreen>
                       ],
                     ),
                     const SizedBox(height: 8),
-                    if (code.isNotEmpty) Text('Code: $code', style: const TextStyle(color: _C.textSoft, fontSize: 11)),
+                    if (code.isNotEmpty)
+                      Text('Code: $code',
+                          style: const TextStyle(
+                              color: _C.textSoft, fontSize: 11)),
                     if (contact.isNotEmpty || pin.isNotEmpty)
-                      Text('Name: ${contact.isEmpty ? '-' : contact} | PIN: ${pin.isEmpty ? '-' : pin}', style: const TextStyle(color: _C.textSoft, fontSize: 11)),
-                    Text('Email: $email', style: const TextStyle(color: _C.textSoft, fontSize: 11)),
-                    Text('Phone: $phone', style: const TextStyle(color: _C.textSoft, fontSize: 11)),
-                    if (hotel.isNotEmpty) Text('Hotel: $hotel', style: const TextStyle(color: _C.textSoft, fontSize: 11)),
+                      Text(
+                          'Name: ${contact.isEmpty ? '-' : contact} | PIN: ${pin.isEmpty ? '-' : pin}',
+                          style: const TextStyle(
+                              color: _C.textSoft, fontSize: 11)),
+                    Text('Email: $email',
+                        style:
+                            const TextStyle(color: _C.textSoft, fontSize: 11)),
+                    Text('Phone: $phone',
+                        style:
+                            const TextStyle(color: _C.textSoft, fontSize: 11)),
+                    if (hotel.isNotEmpty)
+                      Text('Hotel: $hotel',
+                          style: const TextStyle(
+                              color: _C.textSoft, fontSize: 11)),
                     const SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
                           child: FilledButton.icon(
                             style: FilledButton.styleFrom(
-                              backgroundColor: _C.charcoal,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                              backgroundColor: _C.yellow,
+                              foregroundColor: _C.charcoal,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(50)),
                             ),
-                            onPressed: _busy ? null : () => tenant != null ? _editB2bTenant(tenant) : _editManagedB2b(b),
+                            onPressed: _busy
+                                ? null
+                                : () => tenant != null
+                                    ? _editB2bTenant(tenant)
+                                    : _editManagedB2b(b),
                             icon: const Icon(Icons.edit_outlined),
                             label: const Text('Edit'),
                           ),
@@ -1879,13 +2649,19 @@ class _OperatorScreenState extends State<OperatorScreen>
                             style: FilledButton.styleFrom(
                               backgroundColor: _C.dangerBg,
                               foregroundColor: _C.danger,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(50)),
                             ),
                             onPressed: _busy
                                 ? null
                                 : () => tenant != null
                                     ? _setB2bEnabled(tenant, false)
-                                    : _api.setAdminUserEnabled(token: _token!, userId: (b['id'] as num).toInt(), isEnabled: false).then((_) => _refreshAll()),
+                                    : _api
+                                        .setAdminUserEnabled(
+                                            token: _token!,
+                                            userId: (b['id'] as num).toInt(),
+                                            isEnabled: false)
+                                        .then((_) => _refreshAll()),
                             child: const Text('Pause'),
                           ),
                         ),
@@ -1909,13 +2685,17 @@ class _OperatorScreenState extends State<OperatorScreen>
                 ru: 'Приостановленные отели',
                 zh: '暂停酒店',
               ),
-              subtitle: '${paused.length} ${_uiText(en: 'accounts', ar: 'حسابات', fr: 'comptes', es: 'cuentas', de: 'Konten', it: 'account', ru: 'аккаунтов', zh: '个账户')}',
+              subtitle:
+                  '${paused.length} ${_uiText(en: 'accounts', ar: 'حسابات', fr: 'comptes', es: 'cuentas', de: 'Konten', it: 'account', ru: 'аккаунтов', zh: '个账户')}',
             ),
             ...paused.take(80).map((b) {
               final tenant = _tenantForManagedUser(b);
-              final label = ((tenant?['label'] ?? b['display_name']) ?? '').toString();
+              final label =
+                  ((tenant?['label'] ?? b['display_name']) ?? '').toString();
               final code = (tenant?['code'] ?? '').toString();
-              final contact = ((tenant?['contact_name'] ?? b['display_name']) ?? '').toString();
+              final contact =
+                  ((tenant?['contact_name'] ?? b['display_name']) ?? '')
+                      .toString();
               final pin = (tenant?['pin'] ?? '').toString();
               final email = (b['email'] ?? '').toString();
               final phone = ((tenant?['phone'] ?? b['phone']) ?? '').toString();
@@ -1929,11 +2709,19 @@ class _OperatorScreenState extends State<OperatorScreen>
                         Container(
                           width: 34,
                           height: 34,
-                          decoration: BoxDecoration(color: _C.surfaceAlt, borderRadius: BorderRadius.circular(9), border: Border.all(color: _C.border)),
-                          child: const Icon(Icons.hotel_rounded, color: _C.charcoal, size: 16),
+                          decoration: BoxDecoration(
+                              color: _C.surfaceAlt,
+                              borderRadius: BorderRadius.circular(9),
+                              border: Border.all(color: _C.border)),
+                          child: const Icon(Icons.hotel_rounded,
+                              color: _C.charcoal, size: 16),
                         ),
                         const SizedBox(width: 10),
-                        Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14))),
+                        Expanded(
+                            child: Text(label,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14))),
                         const SizedBox(width: 8),
                         _b2bApprovalChip(_b2bApprovalStatus(b)),
                         const SizedBox(width: 8),
@@ -1941,23 +2729,41 @@ class _OperatorScreenState extends State<OperatorScreen>
                       ],
                     ),
                     const SizedBox(height: 8),
-                    if (code.isNotEmpty) Text('Code: $code', style: const TextStyle(color: _C.textSoft, fontSize: 11)),
+                    if (code.isNotEmpty)
+                      Text('Code: $code',
+                          style: const TextStyle(
+                              color: _C.textSoft, fontSize: 11)),
                     if (contact.isNotEmpty || pin.isNotEmpty)
-                      Text('Name: ${contact.isEmpty ? '-' : contact} | PIN: ${pin.isEmpty ? '-' : pin}', style: const TextStyle(color: _C.textSoft, fontSize: 11)),
-                    Text('Email: $email', style: const TextStyle(color: _C.textSoft, fontSize: 11)),
-                    Text('Phone: $phone', style: const TextStyle(color: _C.textSoft, fontSize: 11)),
-                    if (hotel.isNotEmpty) Text('Hotel: $hotel', style: const TextStyle(color: _C.textSoft, fontSize: 11)),
+                      Text(
+                          'Name: ${contact.isEmpty ? '-' : contact} | PIN: ${pin.isEmpty ? '-' : pin}',
+                          style: const TextStyle(
+                              color: _C.textSoft, fontSize: 11)),
+                    Text('Email: $email',
+                        style:
+                            const TextStyle(color: _C.textSoft, fontSize: 11)),
+                    Text('Phone: $phone',
+                        style:
+                            const TextStyle(color: _C.textSoft, fontSize: 11)),
+                    if (hotel.isNotEmpty)
+                      Text('Hotel: $hotel',
+                          style: const TextStyle(
+                              color: _C.textSoft, fontSize: 11)),
                     const SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
                           child: FilledButton.icon(
                             style: FilledButton.styleFrom(
-                              backgroundColor: _C.charcoal,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                              backgroundColor: _C.yellow,
+                              foregroundColor: _C.charcoal,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(50)),
                             ),
-                            onPressed: _busy ? null : () => tenant != null ? _editB2bTenant(tenant) : _editManagedB2b(b),
+                            onPressed: _busy
+                                ? null
+                                : () => tenant != null
+                                    ? _editB2bTenant(tenant)
+                                    : _editManagedB2b(b),
                             icon: const Icon(Icons.edit_outlined),
                             label: const Text('Edit'),
                           ),
@@ -1968,13 +2774,19 @@ class _OperatorScreenState extends State<OperatorScreen>
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFFD4EDDA),
                               foregroundColor: _C.charcoal,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(50)),
                             ),
                             onPressed: _busy
                                 ? null
                                 : () => tenant != null
                                     ? _setB2bEnabled(tenant, true)
-                                    : _api.setAdminUserEnabled(token: _token!, userId: (b['id'] as num).toInt(), isEnabled: true).then((_) => _refreshAll()),
+                                    : _api
+                                        .setAdminUserEnabled(
+                                            token: _token!,
+                                            userId: (b['id'] as num).toInt(),
+                                            isEnabled: true)
+                                        .then((_) => _refreshAll()),
                             child: const Text('Activate'),
                           ),
                         ),
@@ -2003,105 +2815,117 @@ class _OperatorScreenState extends State<OperatorScreen>
         children: [
           _Module(
             accent: true,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _SectionHead(
-                _uiText(
-                  en: 'Driver management',
-                  ar: 'إدارة السائقين',
-                  fr: 'Gestion des chauffeurs',
-                  es: 'Gestion de conductores',
-                  de: 'Fahrerverwaltung',
-                  it: 'Gestione autisti',
-                  ru: 'Управление водителями',
-                  zh: '司机管理',
-                ),
-                subtitle: 'Profiles overview',
-                trailing: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _C.charcoal,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-                  ),
-                  onPressed: _busy ? null : _refreshAll,
-                  icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text('Refresh'),
-                ),
-              ),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _StatChip(label: 'Profiles', value: '${_driverPinAccounts.length}', icon: Icons.badge_outlined, color: _C.info),
-                  _StatChip(label: 'Ratings', value: '${_driverRatings.length}', icon: Icons.star_outline_rounded, color: _C.yellowDeep),
+                  _StatChip(
+                      label: 'Profiles',
+                      value: '${_driverPinAccounts.length}',
+                      icon: Icons.badge_outlined,
+                      color: _C.info),
+                  _StatChip(
+                      label: 'Ratings',
+                      value: '${_driverRatings.length}',
+                      icon: Icons.star_outline_rounded,
+                      color: _C.yellowDeep),
                 ],
               ),
               const SizedBox(height: 12),
-              _SectionHead('App User Requests', subtitle: '${_pendingApprovals.length} pending'),
+              _SectionHead('App User Requests',
+                  subtitle: '${_pendingApprovals.length} pending'),
               if (_pendingApprovals.isEmpty)
-                const Text('No pending Driver/B2B requests.', style: TextStyle(color: _C.textSoft))
+                const Text('No pending Driver/B2B requests.',
+                    style: TextStyle(color: _C.textSoft))
               else
                 ..._pendingApprovals.map((u) => Container(
-                  margin: const EdgeInsets.only(top: 8),
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: _C.surfaceAlt, borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.border)),
-                  child: Row(children: [
-                    Expanded(
-                      child: Text(
-                        '${u['role']} · ${u['email'] ?? ''}\n'
-                        'name: ${u['display_name'] ?? ''} | phone: ${u['phone'] ?? ''}'
-                        '${(u['car_model'] ?? '').toString().isNotEmpty ? '\ncar: ${u['car_model']} / ${u['car_color'] ?? ''}' : ''}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                    OutlinedButton(
-                      onPressed: _busy
-                          ? null
-                          : () async {
-                              final ok = await showDialog<bool>(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  title: const Text('Review Request'),
-                                  content: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Role: ${u['role'] ?? ''}'),
-                                      Text('Email: ${u['email'] ?? ''}'),
-                                      Text('Name: ${u['display_name'] ?? ''}'),
-                                      Text('Phone: ${u['phone'] ?? ''}'),
-                                      if ((u['car_model'] ?? '').toString().isNotEmpty) Text('Car type: ${u['car_model']}'),
-                                      if ((u['car_color'] ?? '').toString().isNotEmpty) Text('Car color: ${u['car_color']}'),
-                                      Text('Created at: ${u['created_at'] ?? ''}'),
-                                    ],
-                                  ),
-                                  actions: [
-                                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Decline')),
-                                    FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Accept')),
-                                  ],
-                                ),
-                              );
-                              if (ok == null) return;
-                              await _setApproval(u, ok);
-                            },
-                      child: const Text('Review'),
-                    ),
-                  ]),
-                )),
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                          color: _C.surfaceAlt,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _C.border)),
+                      child: Row(children: [
+                        Expanded(
+                          child: Text(
+                            '${u['role']} · ${u['email'] ?? ''}\n'
+                            'name: ${u['display_name'] ?? ''} | phone: ${u['phone'] ?? ''}'
+                            '${(u['car_model'] ?? '').toString().isNotEmpty ? '\ncar: ${u['car_model']} / ${u['car_color'] ?? ''}' : ''}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        OutlinedButton(
+                          onPressed: _busy
+                              ? null
+                              : () async {
+                                  final ok = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Review Request'),
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Role: ${u['role'] ?? ''}'),
+                                          Text('Email: ${u['email'] ?? ''}'),
+                                          Text(
+                                              'Name: ${u['display_name'] ?? ''}'),
+                                          Text('Phone: ${u['phone'] ?? ''}'),
+                                          if ((u['car_model'] ?? '')
+                                              .toString()
+                                              .isNotEmpty)
+                                            Text('Car type: ${u['car_model']}'),
+                                          if ((u['car_color'] ?? '')
+                                              .toString()
+                                              .isNotEmpty)
+                                            Text(
+                                                'Car color: ${u['car_color']}'),
+                                          Text(
+                                              'Created at: ${u['created_at'] ?? ''}'),
+                                        ],
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(ctx, false),
+                                            child: const Text('Decline')),
+                                        FilledButton(
+                                            onPressed: () =>
+                                                Navigator.pop(ctx, true),
+                                            child: const Text('Accept')),
+                                      ],
+                                    ),
+                                  );
+                                  if (ok == null) return;
+                                  await _setApproval(u, ok);
+                                },
+                          child: const Text('Review'),
+                        ),
+                      ]),
+                    )),
               const SizedBox(height: 8),
-              _SectionHead('Driver account tools', subtitle: 'Create and manage driver login accounts'),
+              _SectionHead('Driver account tools',
+                  subtitle: 'Create and manage driver login accounts'),
             ]),
           ),
           const SizedBox(height: 4),
           _Module(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               ExpansionTile(
                 tilePadding: EdgeInsets.zero,
                 leading: Container(
                   width: 36,
                   height: 36,
-                  decoration: BoxDecoration(color: _C.yellowSoft, borderRadius: BorderRadius.circular(10), border: Border.all(color: _C.yellowDeep)),
-                  child: const Icon(Icons.person_add_alt_1_outlined, color: _C.charcoal, size: 18),
+                  decoration: BoxDecoration(
+                      color: _C.yellowSoft,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _C.yellowDeep)),
+                  child: const Icon(Icons.person_add_alt_1_outlined,
+                      color: _C.charcoal, size: 18),
                 ),
                 title: Text(
                   _uiText(
@@ -2114,7 +2938,8 @@ class _OperatorScreenState extends State<OperatorScreen>
                     ru: 'Создать аккаунт водителя',
                     zh: '创建司机账户',
                   ),
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 14),
                 ),
                 childrenPadding: const EdgeInsets.only(top: 8),
                 children: [
@@ -2204,7 +3029,8 @@ class _OperatorScreenState extends State<OperatorScreen>
                         ru: 'Модель авто',
                         zh: '车辆型号',
                       ),
-                      suffixIcon: const Icon(Icons.directions_car_outlined, size: 18),
+                      suffixIcon:
+                          const Icon(Icons.directions_car_outlined, size: 18),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -2240,13 +3066,17 @@ class _OperatorScreenState extends State<OperatorScreen>
                         zh: '从图库选择图片',
                       ),
                     ),
-                    style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)), side: const BorderSide(color: _C.border)),
+                    style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(50)),
+                        side: const BorderSide(color: _C.border)),
                   ),
                   if (_newDriverPhotoData.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Builder(
                       builder: (_) {
-                        final provider = _imageProviderFromString(_newDriverPhotoData);
+                        final provider =
+                            _imageProviderFromString(_newDriverPhotoData);
                         if (provider == null) return const SizedBox.shrink();
                         return ClipRRect(
                           borderRadius: BorderRadius.circular(8),
@@ -2254,7 +3084,8 @@ class _OperatorScreenState extends State<OperatorScreen>
                             image: provider,
                             height: 90,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                            errorBuilder: (_, __, ___) =>
+                                const SizedBox.shrink(),
                           ),
                         );
                       },
@@ -2267,7 +3098,8 @@ class _OperatorScreenState extends State<OperatorScreen>
                       style: FilledButton.styleFrom(
                         backgroundColor: _C.yellow,
                         foregroundColor: _C.charcoal,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(50)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       onPressed: _busy ? null : _createDriverAccount,
@@ -2292,8 +3124,10 @@ class _OperatorScreenState extends State<OperatorScreen>
           ),
           const SizedBox(height: 4),
           _Module(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _SectionHead('${l.roleDriver} (${_managedDriverUsers.length})', subtitle: 'Managed driver accounts'),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              _SectionHead('${l.roleDriver} (${_managedDriverUsers.length})',
+                  subtitle: 'Managed driver accounts'),
               if (_managedDriverUsers.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20),
@@ -2323,25 +3157,34 @@ class _OperatorScreenState extends State<OperatorScreen>
                 )
               else
                 ..._managedDriverUsers.take(80).map((d) => Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: _C.surfaceAlt, borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.border)),
-                  child: Row(children: [
-                    Expanded(child: Text('${d['display_name'] ?? '-'}\n${d['email'] ?? ''}\n${d['phone'] ?? ''}', style: const TextStyle(fontSize: 12))),
-                    IconButton(
-                      onPressed: _busy
-                          ? null
-                          : () => _editManagedDriver(d),
-                      icon: const Icon(Icons.edit_outlined),
-                    ),
-                    IconButton(onPressed: _busy ? null : () => _deleteManagedDriver(d), icon: const Icon(Icons.delete_outline, color: _C.danger)),
-                  ]),
-                )),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                          color: _C.surfaceAlt,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _C.border)),
+                      child: Row(children: [
+                        Expanded(
+                            child: Text(
+                                '${d['display_name'] ?? '-'}\n${d['email'] ?? ''}\n${d['phone'] ?? ''}',
+                                style: const TextStyle(fontSize: 12))),
+                        IconButton(
+                          onPressed: _busy ? null : () => _editManagedDriver(d),
+                          icon: const Icon(Icons.edit_outlined),
+                        ),
+                        IconButton(
+                            onPressed:
+                                _busy ? null : () => _deleteManagedDriver(d),
+                            icon: const Icon(Icons.delete_outline,
+                                color: _C.danger)),
+                      ]),
+                    )),
             ]),
           ),
           const SizedBox(height: 4),
           _Module(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               _SectionHead(
                 _uiText(
                   en: 'Driver ratings',
@@ -2375,21 +3218,51 @@ class _OperatorScreenState extends State<OperatorScreen>
                     phone: (row['phone'] ?? '').toString(),
                   );
                   return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(color: _C.surfaceAlt, borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.border)),
-                  child: Row(children: [
-                    Container(width: 34, height: 34, decoration: BoxDecoration(color: _C.yellowSoft, borderRadius: BorderRadius.circular(9), border: Border.all(color: _C.yellowDeep)), child: const Center(child: Icon(Icons.star_rounded, color: _C.charcoal, size: 18))),
-                    const SizedBox(width: 10),
-                    Expanded(child: Text((row['driver_name'] ?? '').toString(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
-                    Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                      Text('${row['rating_average']}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: _C.charcoal)),
-                      Text('${row['rating_count']} ${_uiText(en: 'ratings', ar: 'تقييمات', fr: 'notes', es: 'califs.', de: 'Bewert.', it: 'valut.', ru: 'оценок', zh: '评分')}', style: const TextStyle(color: _C.textSoft, fontSize: 10)),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                        color: _C.surfaceAlt,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _C.border)),
+                    child: Row(children: [
+                      Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                              color: _C.yellowSoft,
+                              borderRadius: BorderRadius.circular(9),
+                              border: Border.all(color: _C.yellowDeep)),
+                          child: const Center(
+                              child: Icon(Icons.star_rounded,
+                                  color: _C.charcoal, size: 18))),
+                      const SizedBox(width: 10),
+                      Expanded(
+                          child: Text((row['driver_name'] ?? '').toString(),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 13))),
+                      Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text('${row['rating_average']}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 16,
+                                    color: _C.charcoal)),
+                            Text(
+                                '${row['rating_count']} ${_uiText(en: 'ratings', ar: 'تقييمات', fr: 'notes', es: 'califs.', de: 'Bewert.', it: 'valut.', ru: 'оценок', zh: '评分')}',
+                                style: const TextStyle(
+                                    color: _C.textSoft, fontSize: 10)),
+                          ]),
+                      if (managed != null)
+                        IconButton(
+                            onPressed: _busy
+                                ? null
+                                : () => _deleteManagedDriver(managed),
+                            icon: const Icon(Icons.delete_outline,
+                                color: _C.danger)),
                     ]),
-                    if (managed != null)
-                      IconButton(onPressed: _busy ? null : () => _deleteManagedDriver(managed), icon: const Icon(Icons.delete_outline, color: _C.danger)),
-                  ]),
-                );
+                  );
                 }),
             ]),
           ),
@@ -2402,14 +3275,20 @@ class _OperatorScreenState extends State<OperatorScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _SectionHead(l.operatorTripVaultHeading, subtitle: '${_trips.length} trips'),
+        _SectionHead(l.operatorTripVaultHeading,
+            subtitle: '${_trips.length} trips'),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
-            _kpiChip(icon: Icons.list_alt, label: l.operatorTripVaultTripsChip(_trips.length)),
-            _kpiChip(icon: Icons.payments, label: l.operatorTripVaultRevenueChip(_tripVaultRevenue.toStringAsFixed(3))),
+            _kpiChip(
+                icon: Icons.list_alt,
+                label: l.operatorTripVaultTripsChip(_trips.length)),
+            _kpiChip(
+                icon: Icons.payments,
+                label: l.operatorTripVaultRevenueChip(
+                    _tripVaultRevenue.toStringAsFixed(3))),
           ],
         ),
         const SizedBox(height: 12),
@@ -2417,9 +3296,10 @@ class _OperatorScreenState extends State<OperatorScreen>
           width: double.infinity,
           child: FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: _C.charcoal,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+              backgroundColor: _C.yellow,
+              foregroundColor: _C.charcoal,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(50)),
             ),
             onPressed: _busy ? null : _refreshAll,
             child: Text(l.loginLoadTrips),
@@ -2428,7 +3308,8 @@ class _OperatorScreenState extends State<OperatorScreen>
         const SizedBox(height: 8),
         _Module(
           child: _trips.isEmpty
-              ? Text(l.noTripsLoaded, style: const TextStyle(color: _C.textSoft))
+              ? Text(l.noTripsLoaded,
+                  style: const TextStyle(color: _C.textSoft))
               : Column(
                   children: _trips
                       .map(
@@ -2441,7 +3322,8 @@ class _OperatorScreenState extends State<OperatorScreen>
                             children: [
                               Text(
                                 '${t['route']}',
-                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600, fontSize: 13),
                               ),
                               const SizedBox(height: 2),
                               Text(
@@ -2449,7 +3331,8 @@ class _OperatorScreenState extends State<OperatorScreen>
                                   t['date'] as String,
                                   t['fare'].toString(),
                                 ),
-                                style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                                style: const TextStyle(
+                                    color: _C.textSoft, fontSize: 11),
                               ),
                             ],
                           ),
@@ -2486,12 +3369,17 @@ class _OperatorScreenState extends State<OperatorScreen>
             ru: 'Панель оператора',
             zh: '运营控制台',
           ),
-          style: const TextStyle(color: _C.yellow, fontWeight: FontWeight.w800, fontSize: 16),
+          style: const TextStyle(
+              color: _C.charcoal, fontWeight: FontWeight.w800, fontSize: 16),
         ),
-        backgroundColor: _C.charcoal,
-        foregroundColor: Colors.white,
+        backgroundColor: _C.yellow,
+        foregroundColor: _C.charcoal,
         actions: [
-          LocalePopupMenuButton(authToken: _token, uiRole: AppUiRole.operator),
+          LocalePopupMenuButton(
+            authToken: _token,
+            uiRole: AppUiRole.operator,
+            foregroundColor: _C.charcoal,
+          ),
           if (_token != null)
             IconButton(
               onPressed: _editMyAccount,
@@ -2552,7 +3440,8 @@ class _OperatorScreenState extends State<OperatorScreen>
                                     : Icons.visibility_off,
                               ),
                               onPressed: () => setState(() {
-                                _obscureOperatorPassword = !_obscureOperatorPassword;
+                                _obscureOperatorPassword =
+                                    !_obscureOperatorPassword;
                               }),
                             ),
                           ),
@@ -2564,7 +3453,8 @@ class _OperatorScreenState extends State<OperatorScreen>
                             style: FilledButton.styleFrom(
                               backgroundColor: _C.yellow,
                               foregroundColor: _C.charcoal,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(50)),
                             ),
                             onPressed: _busy ? null : _login,
                             child: Text(
@@ -2587,7 +3477,8 @@ class _OperatorScreenState extends State<OperatorScreen>
                 ),
                 if (_message != null) ...[
                   const SizedBox(height: 12),
-                  Text(_message!, style: const TextStyle(color: Colors.redAccent)),
+                  Text(_message!,
+                      style: const TextStyle(color: Colors.redAccent)),
                 ],
               ],
             )
@@ -2597,13 +3488,16 @@ class _OperatorScreenState extends State<OperatorScreen>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Container(
-                      margin: EdgeInsets.fromLTRB(isPhone ? 12 : 16, 12, isPhone ? 12 : 16, 0),
+                      margin: EdgeInsets.fromLTRB(
+                          isPhone ? 12 : 16, 12, isPhone ? 12 : 16, 0),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Color(0xFFFFC200), Color(0xFFFFD84D)]),
+                        gradient: const LinearGradient(
+                            colors: [Color(0xFFFFC200), Color(0xFFFFD84D)]),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: _C.yellowDeep.withOpacity(0.55), width: 1.2),
+                        border: Border.all(
+                            color: _C.yellowDeep.withOpacity(0.55), width: 1.2),
                         boxShadow: [
                           BoxShadow(
                             color: _C.yellow.withOpacity(0.35),
@@ -2639,7 +3533,8 @@ class _OperatorScreenState extends State<OperatorScreen>
                     ),
                     const SizedBox(height: 10),
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: isPhone ? 8 : 12),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: isPhone ? 8 : 12),
                       child: Container(
                         decoration: BoxDecoration(
                           color: _C.charcoal,
@@ -2652,23 +3547,32 @@ class _OperatorScreenState extends State<OperatorScreen>
                           indicatorWeight: 3,
                           labelColor: _C.yellow,
                           unselectedLabelColor: Colors.white38,
-                          labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 0.3),
-                          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+                          labelStyle: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                              letterSpacing: 0.3),
+                          unselectedLabelStyle: const TextStyle(
+                              fontWeight: FontWeight.w500, fontSize: 12),
                           tabs: [
                             Tab(
-                              text: '✈️  ${_uiText(en: "Today's arrivals", ar: "وصولات اليوم", fr: "Arrivees du jour", es: "Llegadas de hoy", de: "Heutige Ankuenfte", it: "Arrivi di oggi", ru: "Прилеты сегодня", zh: "今日到达")}',
+                              text:
+                                  '✈️  ${_uiText(en: "Today's arrivals", ar: "وصولات اليوم", fr: "Arrivees du jour", es: "Llegadas de hoy", de: "Heutige Ankuenfte", it: "Arrivi di oggi", ru: "Прилеты сегодня", zh: "今日到达")}',
                             ),
                             Tab(
-                              text: '💸 ${_uiText(en: "Live orders", ar: "طلبات مباشرة", fr: "Commandes en direct", es: "Pedidos en vivo", de: "Live-Auftraege", it: "Ordini live", ru: "Заказы онлайн", zh: "实时订单")}',
+                              text:
+                                  '💸 ${_uiText(en: "Live orders", ar: "طلبات مباشرة", fr: "Commandes en direct", es: "Pedidos en vivo", de: "Live-Auftraege", it: "Ordini live", ru: "Заказы онлайн", zh: "实时订单")}',
                             ),
                             Tab(
-                              text: '👤 ${_uiText(en: "Driver management", ar: "إدارة السائقين", fr: "Gestion des chauffeurs", es: "Gestion de conductores", de: "Fahrerverwaltung", it: "Gestione autisti", ru: "Управление водителями", zh: "司机管理")}',
+                              text:
+                                  '👤 ${_uiText(en: "Driver management", ar: "إدارة السائقين", fr: "Gestion des chauffeurs", es: "Gestion de conductores", de: "Fahrerverwaltung", it: "Gestione autisti", ru: "Управление водителями", zh: "司机管理")}',
                             ),
                             Tab(
-                              text: '🏨 ${_uiText(en: "Hostel Accounts (B2B)", ar: "حسابات الفنادق (B2B)", fr: "Comptes hôtels (B2B)", es: "Cuentas de hotel (B2B)", de: "Hotelkonten (B2B)", it: "Account hotel (B2B)", ru: "Аккаунты отелей (B2B)", zh: "酒店账户 (B2B)")}',
+                              text:
+                                  '🏨 ${_uiText(en: "Hostel Accounts (B2B)", ar: "حسابات الفنادق (B2B)", fr: "Comptes hôtels (B2B)", es: "Cuentas de hotel (B2B)", de: "Hotelkonten (B2B)", it: "Account hotel (B2B)", ru: "Аккаунты отелей (B2B)", zh: "酒店账户 (B2B)")}',
                             ),
                             Tab(
-                              text: '🗒️ ${_uiText(en: "Trip history", ar: "سجل الرحلات", fr: "Historique des courses", es: "Historial de viajes", de: "Fahrtenverlauf", it: "Storico viaggi", ru: "История поездок", zh: "行程历史")}',
+                              text:
+                                  '🗒️ ${_uiText(en: "Trip history", ar: "سجل الرحلات", fr: "Historique des courses", es: "Historial de viajes", de: "Fahrtenverlauf", it: "Storico viaggi", ru: "История поездок", zh: "行程历史")}',
                             ),
                           ],
                         ),
@@ -2689,7 +3593,8 @@ class _OperatorScreenState extends State<OperatorScreen>
                     if (_message != null)
                       Container(
                         margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
                           color: _C.dangerBg,
                           borderRadius: BorderRadius.circular(12),
@@ -2697,9 +3602,13 @@ class _OperatorScreenState extends State<OperatorScreen>
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.error_outline_rounded, color: _C.danger, size: 16),
+                            const Icon(Icons.error_outline_rounded,
+                                color: _C.danger, size: 16),
                             const SizedBox(width: 8),
-                            Expanded(child: Text(_message!, style: const TextStyle(color: _C.danger, fontSize: 13))),
+                            Expanded(
+                                child: Text(_message!,
+                                    style: const TextStyle(
+                                        color: _C.danger, fontSize: 13))),
                           ],
                         ),
                       ),

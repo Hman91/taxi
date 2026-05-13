@@ -13,7 +13,7 @@ class _C {
   static const surface = Color(0xFFFFFFFF);
   static const surfaceAlt = Color(0xFFF5F1E8);
   static const border = Color(0xFFE6E6E6);
-  static const accent = Color(0xFF28D7E5);
+  static const accent = yellow;
 }
 
 class PassengerForgotPasswordScreen extends StatefulWidget {

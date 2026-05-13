@@ -140,6 +140,51 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get language;
 
+  /// Title shown in the passenger first-launch language reminder.
+  String get passengerLanguageReminderTitle;
+
+  /// Subtitle shown in the passenger first-launch language reminder.
+  String get passengerLanguageReminderSubtitle;
+
+  /// Primary action in the passenger language reminder.
+  String get passengerLanguageReminderContinue;
+
+  /// Localized label for English in the passenger language reminder.
+  String get passengerLanguageNameEnglish;
+
+  /// Localized label for French in the passenger language reminder.
+  String get passengerLanguageNameFrench;
+
+  /// Localized label for Arabic in the passenger language reminder.
+  String get passengerLanguageNameArabic;
+
+  /// Localized label for German in the passenger language reminder.
+  String get passengerLanguageNameGerman;
+
+  /// Localized label for Spanish in the passenger language reminder.
+  String get passengerLanguageNameSpanish;
+
+  /// Localized label for Italian in the passenger language reminder.
+  String get passengerLanguageNameItalian;
+
+  /// Localized label for Chinese in the passenger language reminder.
+  String get passengerLanguageNameChinese;
+
+  /// Localized label for Russian in the passenger language reminder.
+  String get passengerLanguageNameRussian;
+
+  /// Localized global region label in the passenger language reminder.
+  String get passengerLanguageRegionGlobal;
+
+  /// Localized Europe region label in the passenger language reminder.
+  String get passengerLanguageRegionEurope;
+
+  /// Localized MENA region label in the passenger language reminder.
+  String get passengerLanguageRegionMena;
+
+  /// Localized Asia region label in the passenger language reminder.
+  String get passengerLanguageRegionAsia;
+
   /// No description provided for @rolePassenger.
   ///
   /// In en, this message translates to:

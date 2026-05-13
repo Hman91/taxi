@@ -530,6 +530,7 @@ class TaxiApiClient {
     required String roomNumber,
     required double fare,
     required String sourceCode,
+    DateTime? scheduledPickupAt,
   }) async {
     final r = await _http.post(
       _u('/api/b2b/bookings'),
@@ -543,6 +544,8 @@ class TaxiApiClient {
         'room_number': roomNumber,
         'fare': fare,
         'source_code': sourceCode,
+        if (scheduledPickupAt != null)
+          'scheduled_pickup_at': scheduledPickupAt.toUtc().toIso8601String(),
       }),
     );
     if (r.statusCode != 201) {
@@ -949,11 +952,18 @@ class TaxiApiClient {
     required String token,
     required String pickup,
     required String destination,
+    DateTime? scheduledPickupAt,
   }) async {
+    final payload = <String, dynamic>{
+      'pickup': pickup,
+      'destination': destination,
+      if (scheduledPickupAt != null)
+        'scheduled_pickup_at': scheduledPickupAt.toUtc().toIso8601String(),
+    };
     final r = await _http.post(
       _u('/api/rides'),
       headers: _jsonHeaders(bearer: token),
-      body: jsonEncode({'pickup': pickup, 'destination': destination}),
+      body: jsonEncode(payload),
     );
     if (r.statusCode != 201) {
       throw TaxiApiException(r.body, r.statusCode);
@@ -1080,5 +1090,51 @@ class TaxiApiClient {
     }
     final body = jsonDecode(r.body) as Map<String, dynamic>;
     return Map<String, dynamic>.from(body['gains'] as Map);
+  }
+
+  Future<List<Map<String, dynamic>>> listDriverAvailability(String token) async {
+    final r = await _http.get(
+      _u('/api/rides/driver/availability'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(_errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    final list = body['slots'] as List<dynamic>;
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<Map<String, dynamic>> createDriverAvailability({
+    required String token,
+    required DateTime startsAt,
+    required DateTime endsAt,
+  }) async {
+    final r = await _http.post(
+      _u('/api/rides/driver/availability'),
+      headers: _jsonHeaders(bearer: token),
+      body: jsonEncode({
+        'starts_at': startsAt.toUtc().toIso8601String(),
+        'ends_at': endsAt.toUtc().toIso8601String(),
+      }),
+    );
+    if (r.statusCode != 201) {
+      throw TaxiApiException(_errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return Map<String, dynamic>.from(body['slot'] as Map);
+  }
+
+  Future<void> deleteDriverAvailability({
+    required String token,
+    required int slotId,
+  }) async {
+    final r = await _http.delete(
+      _u('/api/rides/driver/availability/$slotId'),
+      headers: _jsonHeaders(bearer: token),
+    );
+    if (r.statusCode != 200) {
+      throw TaxiApiException(_errorCodeFromBody(r.body) ?? r.body, r.statusCode);
+    }
   }
 }

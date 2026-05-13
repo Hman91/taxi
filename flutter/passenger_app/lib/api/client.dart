@@ -765,11 +765,18 @@ class TaxiApiClient {
     required String token,
     required String pickup,
     required String destination,
+    DateTime? scheduledPickupAt,
   }) async {
+    final payload = <String, dynamic>{
+      'pickup': pickup,
+      'destination': destination,
+      if (scheduledPickupAt != null)
+        'scheduled_pickup_at': scheduledPickupAt.toUtc().toIso8601String(),
+    };
     final r = await _http.post(
       _u('/api/rides'),
       headers: _jsonHeaders(bearer: token),
-      body: jsonEncode({'pickup': pickup, 'destination': destination}),
+      body: jsonEncode(payload),
     );
     if (r.statusCode != 201) {
       throw TaxiApiException(r.body, r.statusCode);

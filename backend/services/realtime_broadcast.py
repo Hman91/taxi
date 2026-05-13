@@ -149,15 +149,22 @@ def broadcast_ride_update(
 
 
 def notify_dispatch_offer(ride: Dict[str, Any], driver_user_ids: Iterable[int]) -> None:
+    scheduled = bool(ride.get("scheduled_pickup_at"))
     payload = {
-        "event": "ride_request_sent",
+        "event": "scheduled_ride_offer" if scheduled else "ride_request_sent",
         "ride": ride,
-        "message": "Passenger sent a new ride request.",
+        "message": (
+            "Passenger sent a scheduled ride request."
+            if scheduled
+            else "Passenger sent a new ride request."
+        ),
     }
     for uid in driver_user_ids:
         uid_int = int(uid)
         d = db_module.driver_by_user_id(uid_int)
-        if d is None or not bool(int(d.get("is_available", 0))):
+        if d is None:
+            continue
+        if not scheduled and not bool(int(d.get("is_available", 0))):
             continue
         acct = db_module.driver_pin_account_by_user_id(uid_int)
         if acct is None or float(acct.get("wallet_balance") or 0.0) <= 0.0:

@@ -89,9 +89,14 @@ class TaxiAppService {
     required String token,
     required String pickup,
     required String destination,
+    DateTime? scheduledPickupAt,
   }) =>
       _client.createRide(
-          token: token, pickup: pickup, destination: destination);
+        token: token,
+        pickup: pickup,
+        destination: destination,
+        scheduledPickupAt: scheduledPickupAt,
+      );
 
   Future<GuestRideCreateResponse> createGuestRide({
     required String pickup,
@@ -130,6 +135,26 @@ class TaxiAppService {
 
   Future<Map<String, dynamic>> driverGains(String token) =>
       _client.driverGains(token);
+
+  Future<List<Map<String, dynamic>>> listDriverAvailability(String token) =>
+      _client.listDriverAvailability(token);
+
+  Future<Map<String, dynamic>> createDriverAvailability({
+    required String token,
+    required DateTime startsAt,
+    required DateTime endsAt,
+  }) =>
+      _client.createDriverAvailability(
+        token: token,
+        startsAt: startsAt,
+        endsAt: endsAt,
+      );
+
+  Future<void> deleteDriverAvailability({
+    required String token,
+    required int slotId,
+  }) =>
+      _client.deleteDriverAvailability(token: token, slotId: slotId);
 
   Future<Trip> createTrip({
     required String token,
@@ -256,6 +281,7 @@ class TaxiAppService {
     required String roomNumber,
     required double fare,
     required String sourceCode,
+    DateTime? scheduledPickupAt,
   }) =>
       _client.createB2bBooking(
         token: token,
@@ -267,6 +293,7 @@ class TaxiAppService {
         roomNumber: roomNumber,
         fare: fare,
         sourceCode: sourceCode,
+        scheduledPickupAt: scheduledPickupAt,
       );
 
   Future<Map<String, dynamic>> getB2bMe(String token) => _client.getB2bMe(token);

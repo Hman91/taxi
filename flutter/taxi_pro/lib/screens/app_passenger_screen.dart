@@ -40,7 +40,7 @@ class _C {
   static const yellowSoft  = Color(0xFFFFF8E0);
   static const yellowDeep  = Color(0xFFE6A800);
   static const charcoal    = Color(0xFF1A1A1A);
-  static const bgWarm      = Color(0xFFFAF8F2);
+  static const bgWarm      = Color(0xFFF8F5EC);
   static const surface     = Color(0xFFFFFFFF);
   static const surfaceAlt  = Color(0xFFF5F1E8);
   static const border      = Color(0xFFDDD8C8);
@@ -53,15 +53,16 @@ class _C {
   static const successBg   = Color(0xFFD4EDDA);
   static const info        = Color(0xFF1E3A8A);
   static const amber       = Color(0xFFB45309);
+  static const neonBlue    = Color(0xFFFFC200);
 }
 
 InputDecoration _fd(String label, {IconData? icon}) => InputDecoration(
-  labelText: label, labelStyle: const TextStyle(color: _C.textMid, fontSize: 13),
-  prefixIcon: icon != null ? Icon(icon, color: _C.charcoal, size: 18) : null,
-  filled: true, fillColor: _C.surfaceAlt,
-  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _C.border, width: 1.5)),
-  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _C.yellow, width: 2)),
-  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  labelText: label, labelStyle: const TextStyle(color: _C.textSoft, fontSize: 12, fontWeight: FontWeight.w700),
+  prefixIcon: icon != null ? Icon(icon, color: _C.info, size: 18) : null,
+  filled: true, fillColor: Colors.white.withOpacity(0.82),
+  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: Colors.white.withOpacity(0.9), width: 1.2)),
+  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: _C.neonBlue, width: 2)),
+  contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
 );
 
 class _YellowButton extends StatelessWidget {
@@ -78,8 +79,10 @@ class _YellowButton extends StatelessWidget {
         child: Container(
           height: small ? 38 : 50,
           decoration: BoxDecoration(
-            color: _C.yellow, borderRadius: BorderRadius.circular(50),
-            boxShadow: disabled ? [] : [BoxShadow(color: _C.yellow.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
+            gradient: disabled ? null : const LinearGradient(colors: [_C.yellowLight, _C.yellow, _C.yellowDeep]),
+            color: disabled ? _C.border : null,
+            borderRadius: BorderRadius.circular(50),
+            boxShadow: disabled ? [] : [BoxShadow(color: _C.yellowDeep.withOpacity(0.34), blurRadius: 22, offset: const Offset(0, 10))],
           ),
           child: Center(child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (icon != null) ...[Icon(icon, color: _C.charcoal, size: small ? 14 : 18), const SizedBox(width: 6)],
@@ -105,12 +108,14 @@ class _DarkButton extends StatelessWidget {
         child: Container(
           height: small ? 38 : 50,
           decoration: BoxDecoration(
-            color: _C.charcoal, borderRadius: BorderRadius.circular(50),
-            boxShadow: disabled ? [] : [BoxShadow(color: _C.charcoal.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 4))],
+            color: _C.yellowSoft,
+            borderRadius: BorderRadius.circular(50),
+            border: Border.all(color: _C.yellowDeep.withOpacity(0.55)),
+            boxShadow: disabled ? [] : [BoxShadow(color: _C.yellowDeep.withOpacity(0.18), blurRadius: 10, offset: const Offset(0, 4))],
           ),
           child: Center(child: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (icon != null) ...[Icon(icon, color: Colors.white, size: small ? 14 : 18), const SizedBox(width: 6)],
-            Text(label, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: small ? 12 : 14, letterSpacing: 0.3)),
+            if (icon != null) ...[Icon(icon, color: _C.charcoal, size: small ? 14 : 18), const SizedBox(width: 6)],
+            Text(label, style: TextStyle(color: _C.charcoal, fontWeight: FontWeight.w800, fontSize: small ? 12 : 14, letterSpacing: 0.3)),
           ])),
         ),
       ),
@@ -124,11 +129,23 @@ class _TaxiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 10),
+    margin: const EdgeInsets.only(bottom: 14),
     decoration: BoxDecoration(
-      color: color ?? _C.surface, borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: accent ? _C.yellowDeep : _C.border, width: accent ? 2 : 1),
-      boxShadow: [BoxShadow(color: _C.charcoal.withOpacity(0.07), blurRadius: 10, offset: const Offset(0, 3))],
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: color != null
+            ? [color!, color!]
+            : accent
+                ? [Colors.white.withOpacity(0.96), _C.yellowSoft.withOpacity(0.86)]
+                : [Colors.white.withOpacity(0.92), Colors.white.withOpacity(0.72)],
+      ),
+      borderRadius: BorderRadius.circular(28),
+      border: Border.all(color: accent ? _C.yellow.withOpacity(0.72) : Colors.white.withOpacity(0.92), width: 1.4),
+      boxShadow: [
+        BoxShadow(color: _C.info.withOpacity(0.08), blurRadius: 30, offset: const Offset(0, 14)),
+        BoxShadow(color: Colors.white.withOpacity(0.65), blurRadius: 0, offset: const Offset(0, 1)),
+      ],
     ),
     child: Padding(padding: EdgeInsets.all(padding), child: child),
   );
@@ -240,6 +257,13 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   }
 
   Future<void> _bootstrapFromSession(AppLoginResponse r) async {
+    if (r.role != 'user') {
+      await SessionStore.clear();
+      if (mounted) {
+        setState(() => _message = 'Please sign in with a passenger account.');
+      }
+      return;
+    }
     await SessionStore.saveAppPassenger(r);
     if (!userChoseLocaleThisSession.value) applyPreferredLanguageToApp(r.preferredLanguage);
     else { try { await _api.patchPreferredLanguage(token: r.accessToken, preferredLanguage: appLocale.value.languageCode); } catch (_) {} }
@@ -600,6 +624,12 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     setState(() { _busy = true; _message = null; });
     try {
       final r = await _api.loginApp(email: email, password: password);
+      if (r.role != 'user') {
+        await SessionStore.clear();
+        if (!mounted) return;
+        setState(() => _message = 'Please sign in with a passenger account.');
+        return;
+      }
       if (!userChoseLocaleThisSession.value) applyPreferredLanguageToApp(r.preferredLanguage);
       else { try { await _api.patchPreferredLanguage(token: r.accessToken, preferredLanguage: appLocale.value.languageCode); } catch (_) {} }
       rememberCurrentLocaleForRole(AppUiRole.passenger);
@@ -943,13 +973,17 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         onTap: _busy ? null : () => _openChat(ride),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          decoration: BoxDecoration(color: _C.charcoal, borderRadius: BorderRadius.circular(20)),
+          decoration: BoxDecoration(
+            color: _C.yellowSoft,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: _C.yellowDeep.withOpacity(0.55)),
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 14),
+              const Icon(Icons.chat_bubble_rounded, color: _C.charcoal, size: 14),
               const SizedBox(width: 5),
-              Text(l.openChatButton, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+              Text(l.openChatButton, style: const TextStyle(color: _C.charcoal, fontWeight: FontWeight.w700, fontSize: 12)),
             ],
           ),
         ),
@@ -975,7 +1009,8 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     return Scaffold(
       backgroundColor: _C.bgWarm,
       appBar: AppBar(
-        backgroundColor: _C.charcoal,
+        backgroundColor: _C.yellow,
+        foregroundColor: _C.charcoal,
         centerTitle: true,
         leading: IconButton(
           onPressed: _goBack,
@@ -984,7 +1019,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         ),
         title: Text(
           l.rolePassenger,
-          style: const TextStyle(color: _C.yellow, fontWeight: FontWeight.w800, fontSize: 16),
+          style: const TextStyle(color: _C.charcoal, fontWeight: FontWeight.w800, fontSize: 16),
         ),
         actions: [
           LocalePopupMenuButton(authToken: _token, uiRole: AppUiRole.passenger),
@@ -992,7 +1027,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
             IconButton(
               onPressed: _showNotifications,
               icon: Stack(clipBehavior: Clip.none, children: [
-                const Icon(Icons.notifications_rounded, color: _C.yellow),
+                const Icon(Icons.notifications_rounded, color: _C.charcoal),
                 if (_unreadCount > 0) Positioned(right: -4, top: -4, child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                   decoration: BoxDecoration(color: _C.danger, borderRadius: BorderRadius.circular(10)),
@@ -1000,13 +1035,13 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                 )),
               ]),
             ),
-            IconButton(onPressed: _busy ? null : _refreshRides, icon: const Icon(Icons.refresh_rounded, color: Colors.white70)),
+            IconButton(onPressed: _busy ? null : _refreshRides, icon: const Icon(Icons.refresh_rounded, color: _C.charcoal)),
             GestureDetector(
               onTap: _logout,
               child: Container(
                 margin: const EdgeInsets.only(right: 12),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(50), border: Border.all(color: Colors.white24)),
+                decoration: BoxDecoration(color: Colors.white.withOpacity(0.75), borderRadius: BorderRadius.circular(50), border: Border.all(color: _C.yellow.withOpacity(0.65))),
                 child: Text(l.logoutApp, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
               ),
             ),
@@ -1109,28 +1144,74 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                 TextButton.icon(onPressed: () => setState(() => _signupPhotoData = ''), icon: const Icon(Icons.delete_outline, size: 16, color: _C.danger), label: Text(l.operatorRemovePickedImage, style: const TextStyle(color: _C.danger))),
               ],
               const SizedBox(height: 14),
-              _DarkButton(label: l.registerAppAccount, icon: Icons.person_add_rounded, onPressed: _busy ? null : _registerPassengerAccount),
+              _YellowButton(label: l.registerAppAccount, icon: Icons.person_add_rounded, onPressed: _busy ? null : _registerPassengerAccount),
             ])),
           ] else ...[
             // Stats
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(18), boxShadow: [BoxShadow(color: _C.yellow.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))]),
-              child: Row(children: [
-                const VoomLogo(height: 24),
-                const SizedBox(width: 10),
-                Text(l.passengerDispatchPanelTitle, style: const TextStyle(color: _C.charcoal, fontWeight: FontWeight.w800, fontSize: 14)),
-                const Spacer(),
-                _statBadge('${activeCount} ${l.passengerActiveRidesChip(activeCount).split(' ').last}', _C.success),
-                const SizedBox(width: 6),
-                _statBadge('${_rides.length} total', _C.charcoal),
-              ]),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 350),
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(34),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFFFFFF), Color(0xFFFFF8E0), Color(0xFFFFD84D)],
+                ),
+                boxShadow: [
+                  BoxShadow(color: _C.yellowDeep.withOpacity(0.20), blurRadius: 38, offset: const Offset(0, 18)),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.78),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: _C.yellow.withOpacity(0.65)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.auto_awesome_rounded, color: _C.yellowDeep, size: 14),
+                            SizedBox(width: 6),
+                            Text('NEXT-GEN TRANSFER', style: TextStyle(color: _C.charcoal, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.3)),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      const VoomLogo(height: 26),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  const Text('Your premium ride, ready when you are.', style: TextStyle(color: _C.charcoal, fontSize: 25, height: 1.08, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                  const SizedBox(height: 8),
+                  Text(
+                    (_locationPlaceName ?? '').trim().isEmpty
+                        ? 'Choose an airport transfer or reserve a driver ahead of time.'
+                        : 'Pickup intelligence locked on ${localizedPlaceName(l, _locationPlaceName)}.',
+                    style: const TextStyle(color: _C.textMid, fontSize: 13, height: 1.35, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(child: _statBadge('$activeCount ${l.passengerActiveRidesChip(activeCount).split(' ').last}', _C.neonBlue)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _statBadge('${_rides.length} total', _C.yellow)),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
             // Location
             _TaxiCard(padding: 0, child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              leading: Container(width: 36, height: 36, decoration: BoxDecoration(color: _C.yellowSoft, borderRadius: BorderRadius.circular(10), border: Border.all(color: _C.yellowDeep)), child: const Icon(Icons.my_location_rounded, color: _C.charcoal, size: 18)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              leading: Container(width: 44, height: 44, decoration: BoxDecoration(gradient: const LinearGradient(colors: [_C.yellowLight, _C.yellowDeep]), borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.my_location_rounded, color: _C.charcoal, size: 20)),
               title: Text(_locationPlaceName != null ? localizedPlaceName(l, _locationPlaceName) : l.passengerLocationCurrent, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1160,14 +1241,18 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
               trailing: IconButton(onPressed: _locating ? null : _detectPassengerLocation, icon: const Icon(Icons.refresh_rounded, color: _C.textMid, size: 18)),
             )),
             // Book
-            _TaxiCard(accent: true, child: Row(children: [
-              Container(width: 42, height: 42, decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.flight_takeoff_rounded, color: _C.charcoal, size: 22)),
-              const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(l.passengerBookingSectionTitle, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                const Text('Airport transfer', style: TextStyle(color: _C.textSoft, fontSize: 12)),
-              ])),
-              _YellowButton(label: l.requestRideButton, icon: Icons.add_rounded, onPressed: _busy || hasActiveRide ? null : _requestRide, small: true),
+            _TaxiCard(accent: true, padding: 18, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(width: 54, height: 54, decoration: BoxDecoration(gradient: const LinearGradient(colors: [_C.yellowLight, _C.yellowDeep]), borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: _C.yellowDeep.withOpacity(0.28), blurRadius: 22, offset: const Offset(0, 10))]), child: const Icon(Icons.flight_takeoff_rounded, color: _C.charcoal, size: 25)),
+                const SizedBox(width: 14),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(l.passengerBookingSectionTitle, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: -0.2)),
+                  const SizedBox(height: 3),
+                  const Text('Airport transfer • instant or scheduled', style: TextStyle(color: _C.textSoft, fontSize: 12, fontWeight: FontWeight.w700)),
+                ])),
+              ]),
+              const SizedBox(height: 16),
+              _YellowButton(label: hasActiveRide ? 'Ride already active' : 'Reserve premium ride', icon: Icons.bolt_rounded, onPressed: _busy || hasActiveRide ? null : _requestRide),
             ])),
             const SizedBox(height: 16),
             Row(children: [

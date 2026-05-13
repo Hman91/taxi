@@ -11,6 +11,7 @@ from .models import (
     B2BBooking,
     B2BTenant,
     Driver,
+    DriverAvailabilitySlot,
     DriverPinAccount,
     FareRoute,
     Rating,
@@ -78,6 +79,7 @@ def _ride_dict(r: Ride) -> Dict[str, Any]:
     ).first()
     passenger_name = None
     passenger_phone = None
+    passenger_photo_url = None
     u = db.session.get(User, int(r.user_id))
     if u is not None:
         display = (u.display_name or "").strip()
@@ -88,6 +90,7 @@ def _ride_dict(r: Ride) -> Dict[str, Any]:
             if email:
                 passenger_name = email.split("@", 1)[0]
         passenger_phone = (u.phone or "").strip() or None
+        passenger_photo_url = (u.photo_url or "").strip() or None
     if b2b_booking is not None:
         passenger_name = b2b_booking.guest_name or passenger_name
         room_blob = (b2b_booking.room_number or "").strip()
@@ -121,6 +124,8 @@ def _ride_dict(r: Ride) -> Dict[str, Any]:
         "status": r.status,
         "pickup": r.pickup,
         "destination": r.destination,
+        "scheduled_pickup_at": _dt(r.scheduled_pickup_at),
+        "reservation_status": r.reservation_status,
         "driver_name": driver_name,
         "driver_vehicle": driver_vehicle,
         "driver_phone": driver_phone,
@@ -130,6 +135,7 @@ def _ride_dict(r: Ride) -> Dict[str, Any]:
         "driver_current_zone": driver_current_zone,
         "passenger_name": passenger_name,
         "passenger_phone": passenger_phone,
+        "passenger_photo_url": passenger_photo_url,
         "is_rated": rating_exists_for_ride(int(r.id)),
         "is_b2b": b2b_booking is not None,
         "b2b_guest_name": b2b_booking.guest_name if b2b_booking is not None else None,
@@ -181,6 +187,13 @@ def _driver_pin_account_dict(r: DriverPinAccount) -> Dict[str, Any]:
 
 
 def _b2b_booking_dict(r: B2BBooking) -> Dict[str, Any]:
+    scheduled_pickup_at = None
+    reservation_status = None
+    if r.ride_id is not None:
+        ride = db.session.get(Ride, int(r.ride_id))
+        if ride is not None:
+            scheduled_pickup_at = _dt(ride.scheduled_pickup_at)
+            reservation_status = ride.reservation_status
     return {
         "id": int(r.id),
         "tenant_id": int(r.tenant_id) if r.tenant_id is not None else None,
@@ -193,6 +206,20 @@ def _b2b_booking_dict(r: B2BBooking) -> Dict[str, Any]:
         "status": r.status,
         "source_code": r.source_code,
         "ride_id": int(r.ride_id) if r.ride_id is not None else None,
+        "scheduled_pickup_at": scheduled_pickup_at,
+        "reservation_status": reservation_status,
+        "created_at": _dt(r.created_at),
+    }
+
+
+def _driver_availability_slot_dict(r: DriverAvailabilitySlot) -> Dict[str, Any]:
+    return {
+        "id": int(r.id),
+        "driver_id": int(r.driver_id),
+        "driver_user_id": int(r.driver.user_id) if r.driver is not None else None,
+        "starts_at": _dt(r.starts_at),
+        "ends_at": _dt(r.ends_at),
+        "status": r.status,
         "created_at": _dt(r.created_at),
     }
 
@@ -722,11 +749,13 @@ def driver_by_id(driver_pk: int) -> Optional[Dict[str, Any]]:
 
 
 def user_has_active_ride(user_id: int) -> bool:
+    now = datetime.now(timezone.utc)
     stmt = (
         select(Ride.id)
         .where(
             Ride.user_id == user_id,
             Ride.status.in_(("pending", "accepted", "ongoing")),
+            (Ride.scheduled_pickup_at.is_(None)) | (Ride.scheduled_pickup_at <= now + timedelta(hours=2)),
         )
         .limit(1)
     )
@@ -739,6 +768,8 @@ def ride_insert(
     pickup: str,
     destination: str,
     status: str = "pending",
+    scheduled_pickup_at: datetime | None = None,
+    reservation_status: str | None = None,
 ) -> Dict[str, Any]:
     now = datetime.now(timezone.utc)
     r = Ride(
@@ -746,6 +777,8 @@ def ride_insert(
         pickup=pickup,
         destination=destination,
         status=status,
+        scheduled_pickup_at=scheduled_pickup_at,
+        reservation_status=reservation_status,
         created_at=now,
         updated_at=now,
     )
@@ -772,6 +805,7 @@ def ride_update(
     *,
     driver_id: Optional[int] = None,
     status: Optional[str] = None,
+    reservation_status: Optional[str] = None,
     clear_driver: bool = False,
 ) -> Optional[Dict[str, Any]]:
     r = db.session.get(Ride, ride_id)
@@ -785,6 +819,8 @@ def ride_update(
     new_status = status if status is not None else r.status
     r.driver_id = new_driver
     r.status = new_status
+    if reservation_status is not None:
+        r.reservation_status = reservation_status
     r.updated_at = datetime.now(timezone.utc)
     db.session.commit()
     db.session.refresh(r)
@@ -895,9 +931,97 @@ def driver_current_zone_by_user_id(user_id: int) -> Optional[str]:
     return zone or None
 
 
+def driver_availability_slots_for_user(driver_user_id: int) -> List[Dict[str, Any]]:
+    d = db.session.scalars(select(Driver).where(Driver.user_id == driver_user_id)).first()
+    if d is None:
+        return []
+    rows = db.session.scalars(
+        select(DriverAvailabilitySlot)
+        .where(
+            DriverAvailabilitySlot.driver_id == int(d.id),
+            DriverAvailabilitySlot.ends_at >= datetime.now(timezone.utc),
+        )
+        .order_by(DriverAvailabilitySlot.starts_at.asc())
+    ).all()
+    return [_driver_availability_slot_dict(x) for x in rows]
+
+
+def driver_availability_slot_insert(
+    *,
+    driver_user_id: int,
+    starts_at: datetime,
+    ends_at: datetime,
+    status: str = "open",
+) -> Optional[Dict[str, Any]]:
+    d = db.session.scalars(select(Driver).where(Driver.user_id == driver_user_id)).first()
+    if d is None:
+        return None
+    row = DriverAvailabilitySlot(
+        driver_id=int(d.id),
+        starts_at=starts_at,
+        ends_at=ends_at,
+        status=status,
+    )
+    db.session.add(row)
+    db.session.commit()
+    db.session.refresh(row)
+    return _driver_availability_slot_dict(row)
+
+
+def driver_availability_slot_delete(driver_user_id: int, slot_id: int) -> bool:
+    d = db.session.scalars(select(Driver).where(Driver.user_id == driver_user_id)).first()
+    if d is None:
+        return False
+    row = db.session.get(DriverAvailabilitySlot, int(slot_id))
+    if row is None or int(row.driver_id) != int(d.id):
+        return False
+    db.session.delete(row)
+    db.session.commit()
+    return True
+
+
+def driver_user_ids_available_for_scheduled_pickup(
+    pickup_at: datetime,
+    *,
+    window_minutes: int = 30,
+) -> List[int]:
+    # A driver slot represents the time window the driver is willing to work.
+    # If the pickup moment is inside that slot, the driver can receive the offer.
+    rows = db.session.scalars(
+        select(Driver)
+        .join(DriverAvailabilitySlot, DriverAvailabilitySlot.driver_id == Driver.id)
+        .where(
+            DriverAvailabilitySlot.status == "open",
+            DriverAvailabilitySlot.starts_at <= pickup_at,
+            DriverAvailabilitySlot.ends_at >= pickup_at,
+        )
+        .order_by(Driver.id.asc())
+    ).all()
+    return [int(x.user_id) for x in rows]
+
+
+def driver_has_scheduled_overlap(
+    driver_pk: int,
+    pickup_at: datetime,
+    *,
+    window_minutes: int = 60,
+    exclude_ride_id: int | None = None,
+) -> bool:
+    start = pickup_at - timedelta(minutes=max(15, window_minutes))
+    end = pickup_at + timedelta(minutes=max(15, window_minutes))
+    stmt = select(Ride.id).where(
+        Ride.driver_id == int(driver_pk),
+        Ride.scheduled_pickup_at.is_not(None),
+        Ride.status.in_(("accepted", "ongoing")),
+        Ride.scheduled_pickup_at >= start,
+        Ride.scheduled_pickup_at <= end,
+    )
+    if exclude_ride_id is not None:
+        stmt = stmt.where(Ride.id != int(exclude_ride_id))
+    return db.session.scalars(stmt.limit(1)).first() is not None
+
+
 def ride_dispatch_set_candidates(ride_id: int, driver_user_ids: List[int]) -> None:
-    if not driver_user_ids:
-        return
     db.session.execute(
         RideDispatchCandidate.__table__.delete().where(
             RideDispatchCandidate.ride_id == ride_id
@@ -931,7 +1055,7 @@ def ride_dispatch_pending_for_driver_user(driver_user_id: int) -> List[Dict[str,
             Ride.status == "pending",
             RideDispatchCandidate.driver_user_id == driver_user_id,
         )
-        .order_by(Ride.id.desc())
+        .order_by(Ride.scheduled_pickup_at.asc().nulls_last(), Ride.id.desc())
     )
     rows = db.session.scalars(stmt).all()
     return [_ride_dict(x) for x in rows]

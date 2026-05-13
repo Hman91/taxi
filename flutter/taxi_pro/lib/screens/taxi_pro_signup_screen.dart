@@ -153,9 +153,13 @@ class _TaxiProSignupScreenState extends State<TaxiProSignupScreen> {
         backgroundColor: _C.yellow,
         foregroundColor: _C.charcoal,
         centerTitle: true,
-        title: Text(
-          _uiText(en: 'Sign Up', ar: 'إنشاء حساب', fr: 'Inscription', es: 'Registrarse', de: 'Registrieren', it: 'Registrati', ru: 'Регистрация', zh: '注册'),
-          style: const TextStyle(fontWeight: FontWeight.w900, color: _C.charcoal),
+        title: const Text(
+          'Voom',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            color: _C.charcoal,
+            fontSize: 20,
+          ),
         ),
         actions: const [LocalePopupMenuButton(uiRole: AppUiRole.home)],
       ),

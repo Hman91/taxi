@@ -5,7 +5,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
 import '../services/taxi_app_service.dart';
 
-/// Dark ride-offer card (pickup / destination, fare chips, accept / reject).
+/// Premium ride-offer card (pickup / destination, fare chips, accept / reject).
 class DriverRideOfferCard extends StatefulWidget {
   const DriverRideOfferCard({
     super.key,
@@ -22,10 +22,13 @@ class DriverRideOfferCard extends StatefulWidget {
   final VoidCallback onReject;
   final bool busy;
 
-  static const Color _bg = Color(0xFF12192B);
-  static const Color _pageBg = Color(0xFF0A0F1B);
-  static const Color _borderGold = Color(0xFFE8C547);
-  static const Color _titleGold = Color(0xFFFFD666);
+  static const Color _bg = Color(0xFFFFFFFF);
+  static const Color _pageBg = Color(0xFFF8F5EC);
+  static const Color _borderGold = Color(0xFFE6A800);
+  static const Color _titleGold = Color(0xFF1A1A1A);
+  static const Color _textSoft = Color(0xFF5C5C5C);
+  static const Color _surfaceAlt = Color(0xFFF5F1E8);
+  static const Color _yellowSoft = Color(0xFFFFF8E0);
   static const Color _accentGreen = Color(0xFF28A745);
   static const Color _accentRed = Color(0xFFDC3545);
 
@@ -65,6 +68,13 @@ class _DriverRideOfferCardState extends State<DriverRideOfferCard> {
   int _etaMinutes(double distanceKm) =>
       (distanceKm * 2.52).round().clamp(1, 999);
 
+  String _scheduledLabel(String raw) {
+    final dt = DateTime.tryParse(raw)?.toLocal();
+    if (dt == null) return 'Scheduled pickup';
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${two(dt.day)}/${two(dt.month)} ${two(dt.hour)}:${two(dt.minute)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
@@ -85,16 +95,21 @@ class _DriverRideOfferCardState extends State<DriverRideOfferCard> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: DriverRideOfferCard._bg,
-          borderRadius: BorderRadius.circular(14),
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFFFFFF), Color(0xFFFFF8E0)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(28),
           border: Border.all(
             color: DriverRideOfferCard._borderGold,
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: DriverRideOfferCard._pageBg.withOpacity(0.6),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: DriverRideOfferCard._titleGold.withOpacity(0.10),
+              blurRadius: 26,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
@@ -104,7 +119,22 @@ class _DriverRideOfferCardState extends State<DriverRideOfferCard> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Text('🚨', style: TextStyle(fontSize: 22)),
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: DriverRideOfferCard._yellowSoft,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: DriverRideOfferCard._borderGold.withOpacity(0.36),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.bolt_rounded,
+                    color: DriverRideOfferCard._titleGold,
+                    size: 20,
+                  ),
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -151,20 +181,53 @@ class _DriverRideOfferCardState extends State<DriverRideOfferCard> {
             if (widget.ride.isB2b == true) ...[
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1F2937),
-                  borderRadius: BorderRadius.circular(10),
+                  color: DriverRideOfferCard._surfaceAlt,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                      color: DriverRideOfferCard._borderGold.withOpacity(0.18)),
                 ),
                 child: Text(
                   'B2B: ${widget.ride.b2bGuestName ?? '-'}'
                   ' • Room ${widget.ride.b2bRoomNumber ?? '-'}'
                   ' • ${widget.ride.b2bSourceCode ?? '-'}',
                   style: const TextStyle(
-                    color: Colors.white70,
+                    color: DriverRideOfferCard._textSoft,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
+                ),
+              ),
+            ],
+            if ((widget.ride.scheduledPickupAt ?? '').isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: DriverRideOfferCard._yellowSoft,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                      color: DriverRideOfferCard._borderGold.withOpacity(0.55)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.event_available_rounded,
+                        color: DriverRideOfferCard._titleGold, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Scheduled • ${_scheduledLabel(widget.ride.scheduledPickupAt!)}',
+                        style: const TextStyle(
+                          color: DriverRideOfferCard._titleGold,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -175,7 +238,7 @@ class _DriverRideOfferCardState extends State<DriverRideOfferCard> {
                 'Passenger: ${(widget.ride.passengerName ?? '').trim().isEmpty ? '-' : widget.ride.passengerName}'
                 ' • ${(widget.ride.passengerPhone ?? '').trim().isEmpty ? '-' : widget.ride.passengerPhone}',
                 style: const TextStyle(
-                  color: Colors.white70,
+                  color: DriverRideOfferCard._textSoft,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -300,9 +363,9 @@ class _LocationBlock extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.45),
+            color: DriverRideOfferCard._textSoft,
             fontSize: 12,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 6),
@@ -318,7 +381,7 @@ class _LocationBlock extends StatelessWidget {
               child: Text(
                 place,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: DriverRideOfferCard._titleGold,
                   fontWeight: FontWeight.w700,
                   fontSize: 15,
                   height: 1.25,
@@ -354,8 +417,8 @@ class _OfferChips extends StatelessWidget {
         if (fareText != null)
           Expanded(
             child: _Pill(
-              background: const Color(0xFF2C3038),
-              foreground: const Color(0xFFFFD666),
+              background: DriverRideOfferCard._yellowSoft,
+              foreground: DriverRideOfferCard._titleGold,
               text: fareText!,
               icon: const Text('💰', style: TextStyle(fontSize: 13)),
             ),
@@ -365,28 +428,27 @@ class _OfferChips extends StatelessWidget {
         if (distanceText != null)
           Expanded(
             child: _Pill(
-              background: const Color(0xFF1E3A5C),
-              foreground: const Color(0xFF7EC8FF),
+              background: const Color(0xFFDEEBFF),
+              foreground: const Color(0xFF1E3A8A),
               text: distanceText!,
               icon: const Icon(
                 Icons.straighten_rounded,
                 size: 15,
-                color: Color(0xFF7EC8FF),
+                color: Color(0xFF1E3A8A),
               ),
             ),
           ),
-        if (distanceText != null && timeText != null)
-          const SizedBox(width: 8),
+        if (distanceText != null && timeText != null) const SizedBox(width: 8),
         if (timeText != null)
           Expanded(
             child: _Pill(
-              background: const Color(0xFF1A3D2E),
-              foreground: const Color(0xFF6EE7A0),
+              background: const Color(0xFFD4EDDA),
+              foreground: const Color(0xFF1A7A4A),
               text: timeText!,
               icon: const Icon(
                 Icons.schedule_rounded,
                 size: 15,
-                color: Color(0xFF6EE7A0),
+                color: Color(0xFF1A7A4A),
               ),
             ),
           ),

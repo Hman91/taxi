@@ -33,16 +33,24 @@ def list_rides(**kwargs: Any) -> Tuple[Any, int]:
 
 
 @bp.post("")
-@require_jwt_with_uid("user")
+@require_jwt_with_uid("user", "b2b")
 def create_ride(**kwargs: Any) -> Tuple[Any, int]:
     uid = kwargs["_uid"]
+    role = str(kwargs.get("_role") or "").strip().lower()
     bad = _guard_enabled(uid)
     if bad:
         return bad
     body = request.get_json(silent=True) or {}
     pickup = (body.get("pickup") or "").strip()
     destination = (body.get("destination") or "").strip()
-    ride, err = rides_service.request_ride(uid, pickup, destination)
+    scheduled_pickup_at = body.get("scheduled_pickup_at") or body.get("scheduledPickupAt")
+    ride, err = rides_service.request_ride(
+        uid,
+        pickup,
+        destination,
+        enforce_single_active=(role != "b2b"),
+        scheduled_pickup_at=scheduled_pickup_at,
+    )
     if err:
         code = 400 if err != "active_ride_exists" else 409
         return jsonify({"error": err}), code
@@ -182,6 +190,46 @@ def driver_location(**kwargs: Any) -> Tuple[Any, int]:
         lat=lat,
         lng=lng,
     )
+    return jsonify({"ok": True}), 200
+
+
+@bp.get("/driver/availability")
+@require_jwt_with_uid("driver")
+def driver_availability(**kwargs: Any) -> Tuple[Any, int]:
+    uid = kwargs["_uid"]
+    bad = _guard_enabled(uid)
+    if bad:
+        return bad
+    return jsonify({"slots": rides_service.list_driver_availability(uid)}), 200
+
+
+@bp.post("/driver/availability")
+@require_jwt_with_uid("driver")
+def create_driver_availability(**kwargs: Any) -> Tuple[Any, int]:
+    uid = kwargs["_uid"]
+    bad = _guard_enabled(uid)
+    if bad:
+        return bad
+    body = request.get_json(silent=True) or {}
+    slot, err = rides_service.create_driver_availability_slot(
+        uid,
+        body.get("starts_at") or body.get("startsAt"),
+        body.get("ends_at") or body.get("endsAt"),
+    )
+    if err:
+        return jsonify({"error": err}), 400
+    return jsonify({"slot": slot}), 201
+
+
+@bp.delete("/driver/availability/<int:slot_id>")
+@require_jwt_with_uid("driver")
+def delete_driver_availability(slot_id: int, **kwargs: Any) -> Tuple[Any, int]:
+    uid = kwargs["_uid"]
+    bad = _guard_enabled(uid)
+    if bad:
+        return bad
+    if not rides_service.delete_driver_availability_slot(uid, slot_id):
+        return jsonify({"error": "not_found"}), 404
     return jsonify({"ok": True}), 200
 
 

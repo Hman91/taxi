@@ -83,9 +83,14 @@ class TaxiAppService {
     required String token,
     required String pickup,
     required String destination,
+    DateTime? scheduledPickupAt,
   }) =>
       _client.createRide(
-          token: token, pickup: pickup, destination: destination);
+        token: token,
+        pickup: pickup,
+        destination: destination,
+        scheduledPickupAt: scheduledPickupAt,
+      );
 
   Future<GuestRideCreateResponse> createGuestRide({
     required String pickup,

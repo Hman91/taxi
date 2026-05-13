@@ -6,13 +6,14 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../api/models.dart';
-import '../app_locale.dart' show
-    AppUiRole,
-    applyPreferredLanguageToApp,
-    appLocale,
-    rememberCurrentLocaleForRole,
-    restoreUiRoleLocale,
-    userChoseLocaleThisSession;
+import '../app_locale.dart'
+    show
+        AppUiRole,
+        applyPreferredLanguageToApp,
+        appLocale,
+        rememberCurrentLocaleForRole,
+        restoreUiRoleLocale,
+        userChoseLocaleThisSession;
 import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
 import '../l10n/ride_status_localization.dart';
@@ -25,6 +26,7 @@ import '../services/session_store.dart';
 import '../services/taxi_app_service.dart';
 import '../theme/taxi_app_theme.dart';
 import '../widgets/locale_popup_menu.dart';
+import '../widgets/management_platform_ui.dart';
 import '../utils/chat_unread_poll.dart'
     show
         cachedOrFetchConversationId,
@@ -39,50 +41,61 @@ import 'unified_login_screen.dart';
 
 // ── Design tokens (mirrors owner_screen._C) ──────────────────
 class _C {
-  static const yellow      = Color(0xFFFFC200);
+  static const yellow = Color(0xFFFFC200);
   static const yellowLight = Color(0xFFFFD84D);
-  static const yellowSoft  = Color(0xFFFFF8E0);
-  static const yellowDeep  = Color(0xFFE6A800);
-  static const charcoal    = Color(0xFF1A1A1A);
+  static const yellowSoft = Color(0xFFFFF8E0);
+  static const yellowDeep = Color(0xFFE6A800);
+  static const charcoal = Color(0xFF1A1A1A);
   static const charcoalMid = Color(0xFF2C2C2C);
-  static const bgWarm      = Color(0xFFFAF8F2);
-  static const surface     = Color(0xFFFFFFFF);
-  static const surfaceAlt  = Color(0xFFF5F1E8);
-  static const border      = Color(0xFFDDD8C8);
-  static const textStrong  = Color(0xFF111111);
-  static const textMid     = Color(0xFF3F3F3F);
-  static const textSoft    = Color(0xFF5C5C5C);
-  static const danger      = Color(0xFFB91C1C);
-  static const dangerBg    = Color(0xFFFFE4E4);
-  static const success     = Color(0xFF1A7A4A);
-  static const successBg   = Color(0xFFD4EDDA);
-  static const info        = Color(0xFF1E3A8A);
-  static const infoBg      = Color(0xFFDEEBFF);
+  static const bgWarm = Color(0xFFF8F5EC);
+  static const surface = Color(0xFFFFFFFF);
+  static const surfaceAlt = Color(0xFFF5F1E8);
+  static const border = Color(0xFFDDD8C8);
+  static const textStrong = Color(0xFF111111);
+  static const textMid = Color(0xFF3F3F3F);
+  static const textSoft = Color(0xFF5C5C5C);
+  static const danger = Color(0xFFB91C1C);
+  static const dangerBg = Color(0xFFFFE4E4);
+  static const success = Color(0xFF1A7A4A);
+  static const successBg = Color(0xFFD4EDDA);
+  static const info = Color(0xFF1E3A8A);
+  static const infoBg = Color(0xFFDEEBFF);
 }
 
 // ── Shared UI helpers (mirrors owner_screen) ─────────────────
 
-InputDecoration _fd(String label, {IconData? icon, String? suffix}) => InputDecoration(
-  labelText: label,
-  labelStyle: const TextStyle(color: _C.textMid, fontSize: 13),
-  prefixIcon: icon != null ? Icon(icon, color: _C.charcoal, size: 18) : null,
-  suffixText: suffix,
-  filled: true,
-  fillColor: _C.surfaceAlt,
-  enabledBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: const BorderSide(color: _C.border, width: 1.4),
-  ),
-  focusedBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: const BorderSide(color: _C.yellow, width: 2),
-  ),
-  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-);
+InputDecoration _fd(String label, {IconData? icon, String? suffix}) =>
+    InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: _C.textMid, fontSize: 13),
+      prefixIcon:
+          icon != null ? Icon(icon, color: _C.charcoal, size: 18) : null,
+      suffixText: suffix,
+      filled: true,
+      fillColor: _C.surfaceAlt,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _C.border, width: 1.4),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _C.yellow, width: 2),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
 
 class _YellowButton extends StatelessWidget {
-  const _YellowButton({required this.label, required this.onPressed, this.icon, this.small = false, this.fullWidth = true});
-  final String label; final VoidCallback? onPressed; final IconData? icon; final bool small; final bool fullWidth;
+  const _YellowButton(
+      {required this.label,
+      required this.onPressed,
+      this.icon,
+      this.small = false,
+      this.fullWidth = true});
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final bool small;
+  final bool fullWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -96,11 +109,27 @@ class _YellowButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: disabled ? _C.yellowSoft : _C.yellow,
           borderRadius: BorderRadius.circular(50),
-          boxShadow: disabled ? [] : [BoxShadow(color: _C.yellow.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))],
+          boxShadow: disabled
+              ? []
+              : [
+                  BoxShadow(
+                      color: _C.yellow.withOpacity(0.4),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4))
+                ],
         ),
-        child: Center(child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (icon != null) ...[Icon(icon, color: _C.charcoal, size: small ? 14 : 18), const SizedBox(width: 6)],
-          Text(label, style: TextStyle(color: _C.charcoal, fontWeight: FontWeight.w900, fontSize: small ? 12 : 14, letterSpacing: 0.2)),
+        child: Center(
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (icon != null) ...[
+            Icon(icon, color: _C.charcoal, size: small ? 14 : 18),
+            const SizedBox(width: 6)
+          ],
+          Text(label,
+              style: TextStyle(
+                  color: _C.charcoal,
+                  fontWeight: FontWeight.w900,
+                  fontSize: small ? 12 : 14,
+                  letterSpacing: 0.2)),
         ])),
       ),
     );
@@ -108,8 +137,17 @@ class _YellowButton extends StatelessWidget {
 }
 
 class _DarkButton extends StatelessWidget {
-  const _DarkButton({required this.label, required this.onPressed, this.icon, this.small = false, this.fullWidth = true});
-  final String label; final VoidCallback? onPressed; final IconData? icon; final bool small; final bool fullWidth;
+  const _DarkButton(
+      {required this.label,
+      required this.onPressed,
+      this.icon,
+      this.small = false,
+      this.fullWidth = true});
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final bool small;
+  final bool fullWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -123,11 +161,27 @@ class _DarkButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: disabled ? const Color(0xFFCCCCCC) : _C.charcoal,
           borderRadius: BorderRadius.circular(50),
-          boxShadow: disabled ? [] : [BoxShadow(color: _C.charcoal.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 3))],
+          boxShadow: disabled
+              ? []
+              : [
+                  BoxShadow(
+                      color: _C.charcoal.withOpacity(0.25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3))
+                ],
         ),
-        child: Center(child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (icon != null) ...[Icon(icon, color: Colors.white, size: small ? 14 : 18), const SizedBox(width: 6)],
-          Text(label, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: small ? 12 : 14, letterSpacing: 0.2)),
+        child: Center(
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (icon != null) ...[
+            Icon(icon, color: Colors.white, size: small ? 14 : 18),
+            const SizedBox(width: 6)
+          ],
+          Text(label,
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: small ? 12 : 14,
+                  letterSpacing: 0.2)),
         ])),
       ),
     );
@@ -135,62 +189,53 @@ class _DarkButton extends StatelessWidget {
 }
 
 class _Module extends StatelessWidget {
-  const _Module({required this.child, this.padding = 16.0, this.accent = false});
-  final Widget child; final double padding; final bool accent;
+  const _Module(
+      {required this.child, this.padding = 16.0, this.accent = false});
+  final Widget child;
+  final double padding;
+  final bool accent;
 
   @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 14),
-    decoration: BoxDecoration(
-      color: _C.surface,
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: accent ? _C.yellowDeep : _C.border, width: accent ? 2 : 1),
-      boxShadow: [BoxShadow(color: _C.charcoal.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 3))],
-    ),
-    child: Padding(padding: EdgeInsets.all(padding), child: child),
-  );
+  Widget build(BuildContext context) => ManagementModuleCard(
+        padding: padding,
+        accent: accent,
+        child: child,
+      );
 }
 
 class _SectionHead extends StatelessWidget {
   const _SectionHead(this.title, {this.subtitle, this.trailing});
-  final String title; final String? subtitle; final Widget? trailing;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-      Container(width: 4, height: 20, decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(4))),
-      const SizedBox(width: 10),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: const TextStyle(color: _C.textStrong, fontWeight: FontWeight.w800, fontSize: 15)),
-        if (subtitle != null) Text(subtitle!, style: const TextStyle(color: _C.textSoft, fontSize: 12)),
-      ])),
-      if (trailing != null) trailing!,
-    ]),
-  );
+  Widget build(BuildContext context) => ManagementSectionHeader(
+        title,
+        subtitle: subtitle,
+        trailing: trailing,
+        icon: Icons.auto_awesome_rounded,
+      );
 }
 
 class _StatChip extends StatelessWidget {
-  const _StatChip({required this.label, required this.value, required this.icon, this.color = _C.charcoal});
-  final String label; final String value; final IconData icon; final Color color;
+  const _StatChip(
+      {required this.label,
+      required this.value,
+      required this.icon,
+      this.color = _C.charcoal});
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.08),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: color.withOpacity(0.2)),
-    ),
-    child: Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, color: color, size: 18),
-      const SizedBox(width: 8),
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: TextStyle(color: color.withOpacity(0.7), fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
-        Text(value, style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w900)),
-      ]),
-    ]),
-  );
+  Widget build(BuildContext context) => ManagementMetricPill(
+        label: label,
+        value: value,
+        icon: icon,
+        color: color,
+      );
 }
 
 Widget _rowInfoCard({
@@ -199,25 +244,675 @@ Widget _rowInfoCard({
   Widget? trailing,
   Color iconBg = _C.surfaceAlt,
   Color iconColor = _C.charcoal,
-}) => Container(
-  margin: const EdgeInsets.only(bottom: 8),
-  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-  decoration: BoxDecoration(
-    color: _C.surfaceAlt,
-    borderRadius: BorderRadius.circular(12),
-    border: Border.all(color: _C.border),
-  ),
-  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Container(
-      width: 34, height: 34,
-      decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(9), border: Border.all(color: _C.border)),
-      child: Center(child: Icon(icon, color: iconColor, size: 16)),
-    ),
-    const SizedBox(width: 10),
-    Expanded(child: content),
-    if (trailing != null) ...[const SizedBox(width: 8), trailing],
-  ]),
-);
+}) =>
+    ManagementInfoRowCard(
+      icon: icon,
+      content: content,
+      trailing: trailing,
+      iconBg: iconBg,
+      iconColor: iconColor,
+    );
+
+Color _driverRideStatusColor(String status) {
+  switch (status.trim().toLowerCase()) {
+    case 'ongoing':
+      return _C.info;
+    case 'completed':
+      return _C.success;
+    case 'cancelled':
+    case 'canceled':
+      return _C.danger;
+    case 'accepted':
+    default:
+      return _C.yellowDeep;
+  }
+}
+
+IconData _driverRideStatusIcon(String status) {
+  switch (status.trim().toLowerCase()) {
+    case 'ongoing':
+      return Icons.route_rounded;
+    case 'completed':
+      return Icons.check_circle_rounded;
+    case 'cancelled':
+    case 'canceled':
+      return Icons.block_rounded;
+    case 'accepted':
+    default:
+      return Icons.verified_rounded;
+  }
+}
+
+String _driverInitials(String value) {
+  final parts = value
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((p) => p.trim().isNotEmpty)
+      .toList();
+  if (parts.isEmpty) return '?';
+  String firstChar(String value) => value.isEmpty ? '?' : value[0];
+  if (parts.length == 1) return firstChar(parts.first).toUpperCase();
+  return '${firstChar(parts.first)}${firstChar(parts.last)}'.toUpperCase();
+}
+
+String _driverTwoDigits(int value) => value.toString().padLeft(2, '0');
+
+String _driverPrettyDate(String raw) {
+  final dt = DateTime.tryParse(raw)?.toLocal();
+  if (dt == null) return raw.trim().isEmpty ? '-' : raw;
+  return '${_driverTwoDigits(dt.day)}/${_driverTwoDigits(dt.month)}/${dt.year}';
+}
+
+String _driverPrettyTime(String raw) {
+  final dt = DateTime.tryParse(raw)?.toLocal();
+  if (dt == null) return raw.trim().isEmpty ? '-' : raw;
+  return '${_driverTwoDigits(dt.hour)}:${_driverTwoDigits(dt.minute)}';
+}
+
+ImageProvider<Object>? _driverImageProviderFromString(String? value) {
+  final raw = (value ?? '').trim();
+  if (raw.isEmpty) return null;
+  if (raw.startsWith('data:image/')) {
+    final commaIdx = raw.indexOf(',');
+    if (commaIdx <= 0 || commaIdx + 1 >= raw.length) return null;
+    try {
+      return MemoryImage(base64Decode(raw.substring(commaIdx + 1)));
+    } catch (_) {
+      return null;
+    }
+  }
+  return NetworkImage(raw);
+}
+
+class _DriverTripHistoryCard extends StatelessWidget {
+  const _DriverTripHistoryCard({
+    required this.ride,
+    required this.statusLabel,
+    required this.route,
+    required this.passengerLine,
+    required this.metaLine,
+    required this.actions,
+  });
+
+  final Ride ride;
+  final String statusLabel;
+  final String route;
+  final String passengerLine;
+  final String metaLine;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _driverRideStatusColor(ride.status);
+    final bg = ride.status == 'completed'
+        ? _C.successBg
+        : (ride.status == 'cancelled' || ride.status == 'canceled')
+            ? _C.dangerBg
+            : ride.status == 'ongoing'
+                ? _C.infoBg
+                : _C.yellowSoft;
+    final fare = ride.b2bFare;
+    return RepaintBoundary(
+      child: _Module(
+        padding: 10,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _rowInfoCard(
+            icon: _driverRideStatusIcon(ride.status),
+            iconBg: bg,
+            iconColor: color,
+            trailing: ManagementStatusPill(
+              label: statusLabel,
+              color: color,
+              background: bg,
+            ),
+            content:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                route,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _C.textStrong,
+                  fontSize: 12.5,
+                  height: 1.18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                passengerLine,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _C.textSoft,
+                  fontSize: 10.8,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Wrap(spacing: 5, runSpacing: 4, children: [
+                ManagementStatusPill(
+                  label: metaLine,
+                  color: _C.textSoft,
+                  background: _C.surfaceAlt,
+                ),
+                if (ride.isB2b == true)
+                  ManagementStatusPill(
+                    label: 'B2B',
+                    color: _C.info,
+                    background: _C.infoBg,
+                  ),
+                if (fare != null)
+                  ManagementStatusPill(
+                    label: '${fare.toStringAsFixed(2)} DT',
+                    color: _C.success,
+                    background: _C.successBg,
+                  ),
+              ]),
+            ]),
+          ),
+          if (actions.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Wrap(spacing: 6, runSpacing: 5, children: actions),
+            ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _DriverRideDetailsCard extends StatefulWidget {
+  const _DriverRideDetailsCard({
+    required this.ride,
+    required this.api,
+    required this.busy,
+    required this.onStart,
+    required this.onRelease,
+    required this.onComplete,
+    required this.chatButton,
+  });
+
+  final Ride ride;
+  final TaxiAppService api;
+  final bool busy;
+  final VoidCallback? onStart;
+  final VoidCallback? onRelease;
+  final VoidCallback? onComplete;
+  final Widget? chatButton;
+
+  @override
+  State<_DriverRideDetailsCard> createState() => _DriverRideDetailsCardState();
+}
+
+class _DriverRideDetailsCardState extends State<_DriverRideDetailsCard> {
+  Map<String, dynamic>? _quote;
+  bool _quoteLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadQuote();
+  }
+
+  @override
+  void didUpdateWidget(covariant _DriverRideDetailsCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.ride.id != widget.ride.id ||
+        oldWidget.ride.pickup != widget.ride.pickup ||
+        oldWidget.ride.destination != widget.ride.destination) {
+      _quote = null;
+      _quoteLoading = true;
+      _loadQuote();
+    }
+  }
+
+  Future<void> _loadQuote() async {
+    final key =
+        '${widget.ride.pickup.trim()} $airportRouteKeySeparator ${widget.ride.destination.trim()}';
+    try {
+      final quote = await widget.api.quoteAirport(key);
+      if (!mounted) return;
+      setState(() {
+        _quote = quote;
+        _quoteLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _quote = null;
+        _quoteLoading = false;
+      });
+    }
+  }
+
+  String _amountText(double value) => '${value.toStringAsFixed(2)} DT';
+
+  double? get _fare {
+    if (widget.ride.b2bFare != null) return widget.ride.b2bFare;
+    return (_quote?['final_fare'] as num?)?.toDouble() ??
+        (_quote?['base_fare'] as num?)?.toDouble();
+  }
+
+  double? get _distanceKm => (_quote?['distance_km'] as num?)?.toDouble();
+
+  String get _durationText {
+    final distance = _distanceKm;
+    if (distance == null) return _quoteLoading ? '...' : '-';
+    return '${(distance * 2.52).round().clamp(1, 999)} min';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final ride = widget.ride;
+    final statusColor = _driverRideStatusColor(ride.status);
+    final passengerName = ride.isB2b == true
+        ? ((ride.b2bGuestName ?? '').trim().isEmpty
+            ? ((ride.passengerName ?? '').trim().isEmpty
+                ? l.roleB2b
+                : ride.passengerName!.trim())
+            : ride.b2bGuestName!.trim())
+        : ((ride.passengerName ?? '').trim().isEmpty
+            ? l.rolePassenger
+            : ride.passengerName!.trim());
+    final passengerPhone = (ride.passengerPhone ?? '').trim();
+    final route = localizedRideRouteRow(l, ride.pickup, ride.destination);
+    final dateSource = (ride.scheduledPickupAt ?? ride.createdAt ?? '').trim();
+    final passengerPhoto =
+        _driverImageProviderFromString(ride.passengerPhotoUrl);
+    final fareText =
+        _fare == null ? (_quoteLoading ? '...' : '-') : _amountText(_fare!);
+    final distanceText = _distanceKm == null
+        ? (_quoteLoading ? '...' : '-')
+        : '${_distanceKm!.toStringAsFixed(1)} km';
+
+    return RepaintBoundary(
+      child: ManagementModuleCard(
+        accent: ride.status == 'accepted' || ride.status == 'ongoing',
+        padding: 14,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFD84D), Color(0xFFFFF8E0)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(19),
+                border: Border.all(color: _C.yellowDeep.withOpacity(0.55)),
+                boxShadow: [
+                  BoxShadow(
+                    color: _C.yellow.withOpacity(0.24),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+                image: passengerPhoto == null
+                    ? null
+                    : DecorationImage(image: passengerPhoto, fit: BoxFit.cover),
+              ),
+              child: Center(
+                child: passengerPhoto == null
+                    ? Text(
+                        _driverInitials(passengerName),
+                        style: const TextStyle(
+                          color: _C.charcoal,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      )
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      passengerName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _C.textStrong,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      passengerPhone.isEmpty
+                          ? (ride.isB2b == true
+                              ? '${l.roleB2b} • Room ${ride.b2bRoomNumber ?? '-'}'
+                              : l.rolePassenger)
+                          : passengerPhone,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _C.textSoft,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 6, runSpacing: 6, children: [
+                      ManagementStatusPill(
+                        label: localizedRideStatusLabel(l, ride.status),
+                        color: statusColor,
+                        background: statusColor.withOpacity(0.10),
+                      ),
+                      if (ride.isB2b == true)
+                        ManagementStatusPill(
+                          label: 'B2B',
+                          color: _C.info,
+                          background: _C.infoBg,
+                        ),
+                      ManagementStatusPill(
+                        label: fareText,
+                        color: _C.success,
+                        background: _C.successBg,
+                      ),
+                    ]),
+                  ]),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: statusColor.withOpacity(0.20)),
+              ),
+              child: Icon(_driverRideStatusIcon(ride.status),
+                  color: statusColor, size: 21),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _C.surfaceAlt.withOpacity(0.72),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: _C.border.withOpacity(0.85)),
+            ),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                route,
+                style: const TextStyle(
+                  color: _C.textStrong,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  height: 1.25,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _DriverRouteLine(
+                pickup: localizedPlaceName(l, ride.pickup),
+                destination: localizedPlaceName(l, ride.destination),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 10),
+          ManagementResponsiveWrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _DriverRideMetric(
+                icon: Icons.event_available_rounded,
+                label: 'Ride date',
+                value: _driverPrettyDate(dateSource),
+              ),
+              _DriverRideMetric(
+                icon: Icons.schedule_rounded,
+                label: 'Ride time',
+                value: _driverPrettyTime(dateSource),
+              ),
+              _DriverRideMetric(
+                icon: Icons.payments_outlined,
+                label: 'Ride price',
+                value: fareText,
+              ),
+              _DriverRideMetric(
+                icon: Icons.route_rounded,
+                label: 'Kilometrage',
+                value: distanceText,
+              ),
+              _DriverRideMetric(
+                icon: Icons.timer_outlined,
+                label: 'Estimated duration',
+                value: _durationText,
+              ),
+              _DriverRideMetric(
+                icon: Icons.person_pin_circle_outlined,
+                label: 'Passenger info',
+                value: passengerPhone.isEmpty ? passengerName : passengerPhone,
+              ),
+            ],
+          ),
+          if (ride.isB2b == true) ...[
+            const SizedBox(height: 10),
+            Wrap(spacing: 6, runSpacing: 6, children: [
+              ManagementStatusPill(
+                label: 'Room ${ride.b2bRoomNumber ?? '-'}',
+                color: _C.textMid,
+                background: _C.surfaceAlt,
+              ),
+              if ((ride.b2bSourceCode ?? '').trim().isNotEmpty)
+                ManagementStatusPill(
+                  label: ride.b2bSourceCode!.trim(),
+                  color: _C.info,
+                  background: _C.infoBg,
+                ),
+            ]),
+          ],
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (ride.status == 'accepted')
+                _DarkButton(
+                  label: l.startRide,
+                  icon: Icons.play_arrow_rounded,
+                  onPressed: widget.busy ? null : widget.onStart,
+                  small: true,
+                  fullWidth: false,
+                ),
+              if (ride.status == 'accepted' || ride.status == 'ongoing')
+                GestureDetector(
+                  onTap: widget.busy ? null : widget.onRelease,
+                  child: Container(
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: _C.dangerBg,
+                      borderRadius: BorderRadius.circular(50),
+                      border: Border.all(color: _C.danger.withOpacity(0.3)),
+                    ),
+                    child: Center(
+                      child: Text(
+                        l.cancelRidePassenger,
+                        style: const TextStyle(
+                          color: _C.danger,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (ride.status == 'ongoing')
+                _YellowButton(
+                  label: l.completeRide,
+                  icon: Icons.check_rounded,
+                  onPressed: widget.busy ? null : widget.onComplete,
+                  small: true,
+                  fullWidth: false,
+                ),
+              if (widget.chatButton != null) widget.chatButton!,
+            ],
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _DriverRouteLine extends StatelessWidget {
+  const _DriverRouteLine({required this.pickup, required this.destination});
+
+  final String pickup;
+  final String destination;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      _DriverRoutePoint(
+        icon: Icons.my_location_rounded,
+        label: 'Pickup location',
+        value: pickup,
+        color: _C.danger,
+      ),
+      Padding(
+        padding: const EdgeInsetsDirectional.only(start: 18),
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Container(
+            width: 2,
+            height: 20,
+            color: _C.border,
+          ),
+        ),
+      ),
+      _DriverRoutePoint(
+        icon: Icons.flag_rounded,
+        label: 'Destination',
+        value: destination,
+        color: _C.success,
+      ),
+    ]);
+  }
+}
+
+class _DriverRoutePoint extends StatelessWidget {
+  const _DriverRoutePoint({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.10),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withOpacity(0.20)),
+        ),
+        child: Icon(icon, color: color, size: 18),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: _C.textSoft,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: _C.textStrong,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ]),
+      ),
+    ]);
+  }
+}
+
+class _DriverRideMetric extends StatelessWidget {
+  const _DriverRideMetric({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.88),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _C.border.withOpacity(0.76)),
+        boxShadow: [
+          BoxShadow(
+            color: _C.charcoal.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(children: [
+        Icon(icon, color: _C.textSoft, size: 16),
+        const SizedBox(width: 8),
+        Expanded(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _C.textSoft,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _C.textStrong,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
 
 // ─────────────────────────────────────────────────────────────
 // DRIVER SCREEN
@@ -231,7 +926,8 @@ class DriverScreen extends StatefulWidget {
   State<DriverScreen> createState() => _DriverScreenState();
 }
 
-class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderStateMixin {
+class _DriverScreenState extends State<DriverScreen>
+    with SingleTickerProviderStateMixin {
   final _api = TaxiAppService();
   final _socket = ChatSocketService();
   final _imagePicker = ImagePicker();
@@ -276,6 +972,7 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   bool _busy = false;
   double? _lastWalletSample;
   DateTime? _lastWalletDepletedNotifAt;
+
   /// Dedupes alerts when gains first load while wallet is already 0 (no prev > 0 → 0 transition).
   bool _walletDepletedNotifiedForZero = false;
   bool _obscurePin = true;
@@ -333,8 +1030,10 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
         RegExp(r"""["']car_model["']\s*:\s*["']([^"']+)["']""").firstMatch(src);
     final colorJson =
         RegExp(r"""["']car_color["']\s*:\s*["']([^"']+)["']""").firstMatch(src);
-    final modelEq = RegExp(r'model\s*=\s*([^;,\n]+)', caseSensitive: false).firstMatch(src);
-    final colorEq = RegExp(r'color\s*=\s*([^;,\n]+)', caseSensitive: false).firstMatch(src);
+    final modelEq =
+        RegExp(r'model\s*=\s*([^;,\n]+)', caseSensitive: false).firstMatch(src);
+    final colorEq =
+        RegExp(r'color\s*=\s*([^;,\n]+)', caseSensitive: false).firstMatch(src);
 
     model = (modelJson?.group(1) ?? modelEq?.group(1) ?? '').trim();
     color = (colorJson?.group(1) ?? colorEq?.group(1) ?? '').trim();
@@ -375,7 +1074,8 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     'Borj el Kebir': _ZoneCoord(35.5030, 11.0610),
   };
 
-  ({String? zone, double? distanceMeters}) _nearestZoneFor(double lat, double lng) {
+  ({String? zone, double? distanceMeters}) _nearestZoneFor(
+      double lat, double lng) {
     String? bestZone;
     double? bestDist;
     for (final zone in _locations) {
@@ -467,9 +1167,9 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   }
 
   Widget _appBarHomeLogo() => GestureDetector(
-    onTap: () => unawaited(_goToHome()),
-    child: const VoomLogo(height: 30),
-  );
+        onTap: () => unawaited(_goToHome()),
+        child: const VoomLogo(height: 30),
+      );
 
   @override
   void initState() {
@@ -478,7 +1178,8 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       restoreUiRoleLocale(AppUiRole.driver);
-      final s = widget.initialSession ?? _sessionFromApp(widget.appInitialSession);
+      final s =
+          widget.initialSession ?? _sessionFromApp(widget.appInitialSession);
       if (s != null && _token == null) _bootstrapFromSession(s);
     });
   }
@@ -502,17 +1203,28 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   Future<void> _bootstrapFromSession(DriverPinLoginResponse r) async {
     await SessionStore.saveDriverPin(r);
     final l = AppLocalizations.of(context)!;
-    if (!userChoseLocaleThisSession.value) applyPreferredLanguageToApp(r.preferredLanguage);
+    if (!userChoseLocaleThisSession.value)
+      applyPreferredLanguageToApp(r.preferredLanguage);
     rememberCurrentLocaleForRole(AppUiRole.driver);
     setState(() {
-      _token = r.accessToken; _userId = r.userId; _driverId = r.driverId;
-      _driverName = _resolvedDriverName(primary: r.driverName, fallback: _driverName); _walletBalance = r.walletBalance; _isAvailable = true;
+      _token = r.accessToken;
+      _userId = r.userId;
+      _driverId = r.driverId;
+      _driverName =
+          _resolvedDriverName(primary: r.driverName, fallback: _driverName);
+      _walletBalance = r.walletBalance;
+      _isAvailable = true;
       _driverPhone = r.phone;
       _driverEmail = null;
-      _carModel = r.carModel; _carColor = r.carColor; _photoUrl = r.photoUrl;
-      _unreadChatByRideId.clear(); _rideIdByConversationId.clear();
-      _conversationIdByRideId.clear(); _lastSeenMessageIdByConversationId.clear();
-      _activeChatRideId = null; _message = l.loggedInAs(r.role);
+      _carModel = r.carModel;
+      _carColor = r.carColor;
+      _photoUrl = r.photoUrl;
+      _unreadChatByRideId.clear();
+      _rideIdByConversationId.clear();
+      _conversationIdByRideId.clear();
+      _lastSeenMessageIdByConversationId.clear();
+      _activeChatRideId = null;
+      _message = l.loggedInAs(r.role);
     });
     final fares = await _api.getAirportFares();
     final locations = _startsFromRouteKeys(fares.keys, l);
@@ -526,7 +1238,10 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     await _refreshRides();
     await _refreshArrivals(silent: true);
     await _hydrateDriverProfile();
-    _socket.connect(r.accessToken, onReceiveMessage: _onChatMessage, onRideStatus: _onRideStatusEvent, onDriverWallet: _onDriverWallet);
+    _socket.connect(r.accessToken,
+        onReceiveMessage: _onChatMessage,
+        onRideStatus: _onRideStatusEvent,
+        onDriverWallet: _onDriverWallet);
     _startRidesPolling();
     await _pushDriverLocation();
   }
@@ -549,13 +1264,16 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
       if (!mounted) return;
       setState(() {
         _driverEmail = (user['email'] ?? _driverEmail)?.toString();
-        final name = (user['display_name'] ?? pin['driver_name'] ?? _driverName).toString().trim();
+        final name = (user['display_name'] ?? pin['driver_name'] ?? _driverName)
+            .toString()
+            .trim();
         _driverName = _resolvedDriverName(
           primary: name,
           email: _driverEmail,
           fallback: _driverName,
         );
-        _driverPhone = (user['phone'] ?? pin['phone'] ?? _driverPhone)?.toString();
+        _driverPhone =
+            (user['phone'] ?? pin['phone'] ?? _driverPhone)?.toString();
         final pinModel = (pin['car_model'] ?? '').toString().trim();
         final pinColor = (pin['car_color'] ?? '').toString().trim();
         _carModel = pinModel.isNotEmpty ? pinModel : (v.model ?? _carModel);
@@ -569,7 +1287,8 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     final t = _token;
     if (t == null) return;
     final nameCtrl = TextEditingController(text: (_driverName ?? '').trim());
-    final phoneCtrl = TextEditingController(text: (_driverPhone ?? _phoneController.text).trim());
+    final phoneCtrl = TextEditingController(
+        text: (_driverPhone ?? _phoneController.text).trim());
     final emailCtrl = TextEditingController(text: (_driverEmail ?? '').trim());
     final modelCtrl = TextEditingController(text: (_carModel ?? '').trim());
     final colorCtrl = TextEditingController(text: (_carColor ?? '').trim());
@@ -584,7 +1303,15 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
         builder: (ctx, setLocal) => AlertDialog(
           backgroundColor: _C.surface,
           surfaceTintColor: _C.surface,
-          title: Text(_uiText(en: 'Edit profile', ar: 'تعديل الملف الشخصي', fr: 'Modifier le profil', es: 'Editar perfil', de: 'Profil bearbeiten', it: 'Modifica profilo', ru: 'Редактировать профиль', zh: '编辑资料')),
+          title: Text(_uiText(
+              en: 'Edit profile',
+              ar: 'تعديل الملف الشخصي',
+              fr: 'Modifier le profil',
+              es: 'Editar perfil',
+              de: 'Profil bearbeiten',
+              it: 'Modifica profilo',
+              ru: 'Редактировать профиль',
+              zh: '编辑资料')),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -592,7 +1319,15 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                 TextField(
                   controller: nameCtrl,
                   decoration: _fd(
-                    _uiText(en: 'Name', ar: 'الاسم', fr: 'Nom', es: 'Nombre', de: 'Name', it: 'Nome', ru: 'Имя', zh: '姓名'),
+                    _uiText(
+                        en: 'Name',
+                        ar: 'الاسم',
+                        fr: 'Nom',
+                        es: 'Nombre',
+                        de: 'Name',
+                        it: 'Nome',
+                        ru: 'Имя',
+                        zh: '姓名'),
                     icon: Icons.person_outline_rounded,
                   ).copyWith(hintText: _driverName ?? ''),
                 ),
@@ -600,7 +1335,15 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                   controller: phoneCtrl,
                   keyboardType: TextInputType.phone,
                   decoration: _fd(
-                    _uiText(en: 'Phone', ar: 'الهاتف', fr: 'Telephone', es: 'Telefono', de: 'Telefon', it: 'Telefono', ru: 'Телефон', zh: '电话'),
+                    _uiText(
+                        en: 'Phone',
+                        ar: 'الهاتف',
+                        fr: 'Telephone',
+                        es: 'Telefono',
+                        de: 'Telefon',
+                        it: 'Telefono',
+                        ru: 'Телефон',
+                        zh: '电话'),
                     icon: Icons.phone_outlined,
                   ).copyWith(hintText: _driverPhone ?? ''),
                 ),
@@ -608,21 +1351,45 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                   controller: emailCtrl,
                   keyboardType: TextInputType.emailAddress,
                   decoration: _fd(
-                    _uiText(en: 'Email', ar: 'البريد الإلكتروني', fr: 'Email', es: 'Correo', de: 'E-Mail', it: 'Email', ru: 'Email', zh: '邮箱'),
+                    _uiText(
+                        en: 'Email',
+                        ar: 'البريد الإلكتروني',
+                        fr: 'Email',
+                        es: 'Correo',
+                        de: 'E-Mail',
+                        it: 'Email',
+                        ru: 'Email',
+                        zh: '邮箱'),
                     icon: Icons.alternate_email_rounded,
                   ).copyWith(hintText: _driverEmail ?? ''),
                 ),
                 TextField(
                   controller: modelCtrl,
                   decoration: _fd(
-                    _uiText(en: 'Car model', ar: 'موديل السيارة', fr: 'Modele voiture', es: 'Modelo de coche', de: 'Automodell', it: 'Modello auto', ru: 'Модель авто', zh: '车型'),
+                    _uiText(
+                        en: 'Car model',
+                        ar: 'موديل السيارة',
+                        fr: 'Modele voiture',
+                        es: 'Modelo de coche',
+                        de: 'Automodell',
+                        it: 'Modello auto',
+                        ru: 'Модель авто',
+                        zh: '车型'),
                     icon: Icons.directions_car_outlined,
                   ).copyWith(hintText: _carModel ?? ''),
                 ),
                 TextField(
                   controller: colorCtrl,
                   decoration: _fd(
-                    _uiText(en: 'Car color', ar: 'لون السيارة', fr: 'Couleur voiture', es: 'Color del coche', de: 'Autofarbe', it: 'Colore auto', ru: 'Цвет авто', zh: '车身颜色'),
+                    _uiText(
+                        en: 'Car color',
+                        ar: 'لون السيارة',
+                        fr: 'Couleur voiture',
+                        es: 'Color del coche',
+                        de: 'Autofarbe',
+                        it: 'Colore auto',
+                        ru: 'Цвет авто',
+                        zh: '车身颜色'),
                     icon: Icons.palette_outlined,
                   ).copyWith(hintText: _carColor ?? ''),
                 ),
@@ -630,7 +1397,15 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                   controller: passwordCtrl,
                   obscureText: true,
                   decoration: _fd(
-                    _uiText(en: 'New password (optional)', ar: 'كلمة مرور جديدة (اختياري)', fr: 'Nouveau mot de passe (optionnel)', es: 'Nueva contraseña (opcional)', de: 'Neues Passwort (optional)', it: 'Nuova password (opzionale)', ru: 'Новый пароль (необязательно)', zh: '新密码（可选）'),
+                    _uiText(
+                        en: 'New password (optional)',
+                        ar: 'كلمة مرور جديدة (اختياري)',
+                        fr: 'Nouveau mot de passe (optionnel)',
+                        es: 'Nueva contraseña (opcional)',
+                        de: 'Neues Passwort (optional)',
+                        it: 'Nuova password (opzionale)',
+                        ru: 'Новый пароль (необязательно)',
+                        zh: '新密码（可选）'),
                     icon: Icons.lock_outline_rounded,
                   ),
                 ),
@@ -650,34 +1425,57 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                                 if (picked == null) return;
                                 final bytes = await picked.readAsBytes();
                                 final n = picked.name.toLowerCase();
-                                final ext = n.contains('.') ? n.split('.').last : 'jpeg';
+                                final ext = n.contains('.')
+                                    ? n.split('.').last
+                                    : 'jpeg';
                                 final mime = ext == 'png'
                                     ? 'image/png'
                                     : ext == 'webp'
                                         ? 'image/webp'
                                         : 'image/jpeg';
-                                setLocal(() => photoData = 'data:$mime;base64,${base64Encode(bytes)}');
+                                setLocal(() => photoData =
+                                    'data:$mime;base64,${base64Encode(bytes)}');
                               },
                         icon: const Icon(Icons.photo_library_outlined),
-                        label: Text(_uiText(en: 'Pick photo', ar: 'اختيار صورة', fr: 'Choisir photo', es: 'Elegir foto', de: 'Foto wählen', it: 'Scegli foto', ru: 'Выбрать фото', zh: '选择照片')),
+                        label: Text(_uiText(
+                            en: 'Pick photo',
+                            ar: 'اختيار صورة',
+                            fr: 'Choisir photo',
+                            es: 'Elegir foto',
+                            de: 'Foto wählen',
+                            it: 'Scegli foto',
+                            ru: 'Выбрать фото',
+                            zh: '选择照片')),
                       ),
                     ),
                   ],
                 ),
                 if (localError != null) ...[
                   const SizedBox(height: 8),
-                  Text(localError!, style: const TextStyle(color: _C.danger, fontSize: 12)),
+                  Text(localError!,
+                      style: const TextStyle(color: _C.danger, fontSize: 12)),
                 ],
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: saving ? null : () => Navigator.pop(ctx, false), child: Text(_uiText(en: 'Cancel', ar: 'إلغاء', fr: 'Annuler', es: 'Cancelar', de: 'Abbrechen', it: 'Annulla', ru: 'Отмена', zh: '取消'))),
+            TextButton(
+                onPressed: saving ? null : () => Navigator.pop(ctx, false),
+                child: Text(_uiText(
+                    en: 'Cancel',
+                    ar: 'إلغاء',
+                    fr: 'Annuler',
+                    es: 'Cancelar',
+                    de: 'Abbrechen',
+                    it: 'Annulla',
+                    ru: 'Отмена',
+                    zh: '取消'))),
             FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: _C.yellow,
                 foregroundColor: _C.charcoal,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: saving
                   ? null
@@ -687,12 +1485,16 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                       final email = emailCtrl.text.trim();
                       final model = modelCtrl.text.trim();
                       final color = colorCtrl.text.trim();
-                      setLocal(() { saving = true; localError = null; });
+                      setLocal(() {
+                        saving = true;
+                        localError = null;
+                      });
                       try {
                         String? onlyIfFilled(String v) {
                           final t = v.trim();
                           return t.isEmpty ? null : t;
                         }
+
                         await _api.patchDriverMe(
                           token: t,
                           displayName: onlyIfFilled(name),
@@ -707,10 +1509,21 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                         if (!ctx.mounted) return;
                         Navigator.pop(ctx, true);
                       } catch (e) {
-                        setLocal(() { localError = e.toString(); saving = false; });
+                        setLocal(() {
+                          localError = e.toString();
+                          saving = false;
+                        });
                       }
                     },
-              child: Text(_uiText(en: 'Save', ar: 'حفظ', fr: 'Enregistrer', es: 'Guardar', de: 'Speichern', it: 'Salva', ru: 'Сохранить', zh: '保存')),
+              child: Text(_uiText(
+                  en: 'Save',
+                  ar: 'حفظ',
+                  fr: 'Enregistrer',
+                  es: 'Guardar',
+                  de: 'Speichern',
+                  it: 'Salva',
+                  ru: 'Сохранить',
+                  zh: '保存')),
             ),
           ],
         ),
@@ -721,69 +1534,250 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     if (ok == true) {
       await _hydrateDriverProfile();
       if (!mounted) return;
-      setState(() => _message = _uiText(en: 'Profile updated successfully.', ar: 'تم تحديث الملف الشخصي بنجاح.', fr: 'Profil mis a jour avec succes.', es: 'Perfil actualizado correctamente.', de: 'Profil erfolgreich aktualisiert.', it: 'Profilo aggiornato con successo.', ru: 'Профиль успешно обновлен.', zh: '资料更新成功。'));
+      setState(() => _message = _uiText(
+          en: 'Profile updated successfully.',
+          ar: 'تم تحديث الملف الشخصي بنجاح.',
+          fr: 'Profil mis a jour avec succes.',
+          es: 'Perfil actualizado correctamente.',
+          de: 'Profil erfolgreich aktualisiert.',
+          it: 'Profilo aggiornato con successo.',
+          ru: 'Профиль успешно обновлен.',
+          zh: '资料更新成功。'));
     }
   }
 
-  void _pushNotification({required String title, required String body, String? event, int? rideId}) {
+  void _pushNotification(
+      {required String title,
+      required String body,
+      String? event,
+      int? rideId}) {
     final now = DateTime.now();
     setState(() {
-      _notifications.insert(0, AppNotification(id: '${now.microsecondsSinceEpoch}-${event ?? 'manual'}-${rideId ?? 0}', title: title, body: body, createdAt: now, event: event, rideId: rideId));
-      if (_notifications.length > 60) _notifications.removeRange(60, _notifications.length);
+      _notifications.insert(
+          0,
+          AppNotification(
+              id: '${now.microsecondsSinceEpoch}-${event ?? 'manual'}-${rideId ?? 0}',
+              title: title,
+              body: body,
+              createdAt: now,
+              event: event,
+              rideId: rideId));
+      if (_notifications.length > 60)
+        _notifications.removeRange(60, _notifications.length);
     });
   }
 
   void _showNotifications() {
+    String timeLabel(DateTime dt) =>
+        '${_driverTwoDigits(dt.hour)}:${_driverTwoDigits(dt.minute)}';
+    IconData eventIcon(String? event) {
+      final e = (event ?? '').toLowerCase();
+      if (e.contains('chat')) return Icons.chat_bubble_rounded;
+      if (e.contains('cancel')) return Icons.block_rounded;
+      if (e.contains('wallet')) return Icons.account_balance_wallet_rounded;
+      if (e.contains('ride')) return Icons.local_taxi_rounded;
+      return Icons.notifications_active_rounded;
+    }
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: _C.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => SafeArea(
-        child: SizedBox(
-          height: MediaQuery.of(context).size.height * 0.6,
-          child: Column(children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              decoration: BoxDecoration(
-                color: _C.charcoal,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      backgroundColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => SafeArea(
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.6,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFFFFFFF), Color(0xFFF8F5EC)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
-              child: Row(children: [
-                Container(width: 4, height: 20, decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(4))),
-                const SizedBox(width: 10),
-                const Text('Notifications', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
-              ]),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
             ),
-            Expanded(
-              child: _notifications.isEmpty
-                  ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      const Icon(Icons.notifications_none_rounded, size: 40, color: _C.textSoft),
-                      const SizedBox(height: 8),
-                      Text(AppLocalizations.of(context)!.notificationsEmpty, style: const TextStyle(color: _C.textSoft)),
-                    ]))
-                  : ListView.builder(
-                      itemCount: _notifications.length,
-                      itemBuilder: (context, index) {
-                        final n = _notifications[index];
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: n.isRead ? _C.surfaceAlt : _C.yellowSoft,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: n.isRead ? _C.border : _C.yellowDeep),
-                          ),
-                          child: ListTile(
-                            leading: Container(width: 34, height: 34, decoration: BoxDecoration(color: n.isRead ? _C.surfaceAlt : _C.yellow, borderRadius: BorderRadius.circular(9)), child: Icon(n.isRead ? Icons.notifications_none_rounded : Icons.notifications_active_rounded, color: n.isRead ? _C.textSoft : _C.charcoal, size: 16)),
-                            title: Text(n.title, style: TextStyle(fontWeight: n.isRead ? FontWeight.w500 : FontWeight.w700, fontSize: 13, color: _C.textStrong)),
-                            subtitle: Text(n.body, style: const TextStyle(fontSize: 11, color: _C.textSoft)),
-                            onTap: () { setState(() => n.isRead = true); Navigator.of(context).pop(); },
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ]),
+            child: Column(children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.72),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(30)),
+                ),
+                child: Row(children: [
+                  Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                          color: _C.yellow,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                                color: _C.yellow.withOpacity(0.32),
+                                blurRadius: 16,
+                                offset: const Offset(0, 7))
+                          ]),
+                      child: const Icon(Icons.notifications_rounded,
+                          color: _C.charcoal, size: 20)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Notifications',
+                              style: TextStyle(
+                                  color: _C.textStrong,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 17)),
+                          Text('$_unreadCount unread updates',
+                              style: const TextStyle(
+                                  color: _C.textSoft,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12)),
+                        ]),
+                  ),
+                  ManagementStatusPill(
+                    label: '${_notifications.length}',
+                    color: _C.info,
+                    background: _C.infoBg,
+                  ),
+                ]),
+              ),
+              Expanded(
+                child: _notifications.isEmpty
+                    ? Center(
+                        child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                            const Icon(Icons.notifications_none_rounded,
+                                size: 40, color: _C.textSoft),
+                            const SizedBox(height: 8),
+                            Text(
+                                AppLocalizations.of(context)!
+                                    .notificationsEmpty,
+                                style: const TextStyle(color: _C.textSoft)),
+                          ]))
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(14, 8, 14, 16),
+                        itemCount: _notifications.length,
+                        itemBuilder: (context, index) {
+                          final n = _notifications[index];
+                          final color = n.isRead ? _C.textSoft : _C.yellowDeep;
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOutCubic,
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: n.isRead
+                                    ? [Colors.white, _C.surfaceAlt]
+                                    : [Colors.white, _C.yellowSoft],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(
+                                  color: n.isRead
+                                      ? _C.border
+                                      : _C.yellowDeep.withOpacity(0.55)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _C.charcoal.withOpacity(0.07),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(22),
+                              onTap: () {
+                                setState(() => n.isRead = true);
+                                setSheetState(() {});
+                                Navigator.of(context).pop();
+                              },
+                              child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                        width: 42,
+                                        height: 42,
+                                        decoration: BoxDecoration(
+                                          color: color.withOpacity(0.12),
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                          border: Border.all(
+                                              color: color.withOpacity(0.20)),
+                                        ),
+                                        child: Icon(eventIcon(n.event),
+                                            color: color, size: 19)),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(children: [
+                                              Expanded(
+                                                child: Text(n.title,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                        fontWeight: n.isRead
+                                                            ? FontWeight.w700
+                                                            : FontWeight.w900,
+                                                        fontSize: 13.5,
+                                                        color: _C.textStrong)),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(timeLabel(n.createdAt),
+                                                  style: const TextStyle(
+                                                      color: _C.textSoft,
+                                                      fontSize: 10.5,
+                                                      fontWeight:
+                                                          FontWeight.w700)),
+                                            ]),
+                                            const SizedBox(height: 4),
+                                            Text(n.body,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                    fontSize: 12,
+                                                    height: 1.3,
+                                                    color: _C.textSoft,
+                                                    fontWeight:
+                                                        FontWeight.w600)),
+                                            const SizedBox(height: 7),
+                                            Wrap(spacing: 6, children: [
+                                              ManagementStatusPill(
+                                                label:
+                                                    n.isRead ? 'Read' : 'New',
+                                                color: n.isRead
+                                                    ? _C.textSoft
+                                                    : _C.success,
+                                                background: n.isRead
+                                                    ? _C.surfaceAlt
+                                                    : _C.successBg,
+                                              ),
+                                              if (n.rideId != null)
+                                                ManagementStatusPill(
+                                                  label: '#${n.rideId}',
+                                                  color: _C.info,
+                                                  background: _C.infoBg,
+                                                ),
+                                            ]),
+                                          ]),
+                                    ),
+                                  ]),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ]),
+          ),
         ),
       ),
     );
@@ -791,36 +1785,63 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
 
   Future<void> _login() async {
     final l = AppLocalizations.of(context)!;
-    setState(() { _busy = true; _message = null; });
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
     try {
-      final r = await _api.loginDriverPin(phone: _phoneController.text.trim(), pin: _pinController.text.trim());
+      final r = await _api.loginDriverPin(
+          phone: _phoneController.text.trim(), pin: _pinController.text.trim());
       await SessionStore.saveDriverPin(r);
-      if (!userChoseLocaleThisSession.value) { applyPreferredLanguageToApp(r.preferredLanguage); }
-      else { try { await _api.patchPreferredLanguage(token: r.accessToken, preferredLanguage: appLocale.value.languageCode); } catch (_) {} }
+      if (!userChoseLocaleThisSession.value) {
+        applyPreferredLanguageToApp(r.preferredLanguage);
+      } else {
+        try {
+          await _api.patchPreferredLanguage(
+              token: r.accessToken,
+              preferredLanguage: appLocale.value.languageCode);
+        } catch (_) {}
+      }
       rememberCurrentLocaleForRole(AppUiRole.driver);
       setState(() {
-        _token = r.accessToken; _userId = r.userId; _driverId = r.driverId;
-        _driverName = _resolvedDriverName(primary: r.driverName, fallback: _driverName); _walletBalance = r.walletBalance; _isAvailable = true;
+        _token = r.accessToken;
+        _userId = r.userId;
+        _driverId = r.driverId;
+        _driverName =
+            _resolvedDriverName(primary: r.driverName, fallback: _driverName);
+        _walletBalance = r.walletBalance;
+        _isAvailable = true;
         _driverPhone = r.phone;
         _driverEmail = null;
-        _carModel = r.carModel; _carColor = r.carColor; _photoUrl = r.photoUrl;
-        _unreadChatByRideId.clear(); _rideIdByConversationId.clear();
-        _conversationIdByRideId.clear(); _lastSeenMessageIdByConversationId.clear();
-        _activeChatRideId = null; _message = l.loggedInAs(r.role);
+        _carModel = r.carModel;
+        _carColor = r.carColor;
+        _photoUrl = r.photoUrl;
+        _unreadChatByRideId.clear();
+        _rideIdByConversationId.clear();
+        _conversationIdByRideId.clear();
+        _lastSeenMessageIdByConversationId.clear();
+        _activeChatRideId = null;
+        _message = l.loggedInAs(r.role);
       });
       final fares = await _api.getAirportFares();
       final locations = _startsFromRouteKeys(fares.keys, l);
       setState(() {
         _locations = locations;
-        if (_location.isEmpty || !_locations.contains(_location)) _location = _locations.isNotEmpty ? _locations.first : '';
+        if (_location.isEmpty || !_locations.contains(_location))
+          _location = _locations.isNotEmpty ? _locations.first : '';
       });
       await _detectDriverLocation(push: false);
       await _refreshRides();
       await _refreshArrivals(silent: true);
       await _hydrateDriverProfile();
       final host = Uri.tryParse(apiBaseUrl)?.host.toLowerCase() ?? '';
-      final isWebLocal = kIsWeb && (host == '127.0.0.1' || host == 'localhost' || host == '0.0.0.0');
-      if (!isWebLocal) _socket.connect(r.accessToken, onReceiveMessage: _onChatMessage, onRideStatus: _onRideStatusEvent, onDriverWallet: _onDriverWallet);
+      final isWebLocal = kIsWeb &&
+          (host == '127.0.0.1' || host == 'localhost' || host == '0.0.0.0');
+      if (!isWebLocal)
+        _socket.connect(r.accessToken,
+            onReceiveMessage: _onChatMessage,
+            onRideStatus: _onRideStatusEvent,
+            onDriverWallet: _onDriverWallet);
       _startRidesPolling();
       await _pushDriverLocation();
     } catch (e) {
@@ -831,22 +1852,37 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   }
 
   Future<void> _refreshRides({bool silent = false}) async {
-    final t = _token; if (t == null) return;
-    if (!silent) setState(() { _busy = true; _message = null; });
+    final t = _token;
+    if (t == null) return;
+    if (!silent)
+      setState(() {
+        _busy = true;
+        _message = null;
+      });
     try {
       final previousById = {for (final r in _rides) r.id: r};
       final rides = await _api.listRides(t);
       final walletSafeRides = (_walletBalance <= 0)
           ? rides.where((r) => r.status != 'pending').toList()
           : rides;
-      if (_driverId == null) { for (final r in rides) { if (r.driverId != null) { _driverId = r.driverId; break; } } }
+      if (_driverId == null) {
+        for (final r in rides) {
+          if (r.driverId != null) {
+            _driverId = r.driverId;
+            break;
+          }
+        }
+      }
       setState(() => _rides = walletSafeRides);
       await _syncConversationRideMap(walletSafeRides);
       await _pollChatUnreadFallback();
       await _refreshGains();
       if (mounted) _processRideTransitions(previousById, walletSafeRides);
-    } catch (e) { if (!silent) setState(() => _message = e.toString()); }
-    finally { if (!silent && mounted) setState(() => _busy = false); }
+    } catch (e) {
+      if (!silent) setState(() => _message = e.toString());
+    } finally {
+      if (!silent && mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _refreshGains() async {
@@ -956,8 +1992,10 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   }
 
   Future<void> _syncConversationRideMap(List<Ride> rides) async {
-    final t = _token; if (t == null) return;
-    final candidates = rides.where((r) => rideMayHaveConversation(r.status)).toList();
+    final t = _token;
+    if (t == null) return;
+    final candidates =
+        rides.where((r) => rideMayHaveConversation(r.status)).toList();
     for (final ride in candidates) {
       try {
         final info = await _api.getRideConversation(token: t, rideId: ride.id);
@@ -995,70 +2033,127 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
             token: t, conversationId: conversationId, limit: 20);
         if (msgs.isEmpty) continue;
         final stored = _lastSeenMessageIdByConversationId[conversationId] ?? 0;
-        final delta =
-            computeUnreadChatDelta(msgs: msgs, myUserId: uid, storedWatermark: stored);
+        final delta = computeUnreadChatDelta(
+            msgs: msgs, myUserId: uid, storedWatermark: stored);
         _lastSeenMessageIdByConversationId[conversationId] = delta.newWatermark;
         if (delta.incomingCount > 0) {
           if (!mounted) return;
           final int rid = ride.id;
           setState(() {
-            _unreadChatByRideId[rid] = (_unreadChatByRideId[rid] ?? 0) + delta.incomingCount;
+            _unreadChatByRideId[rid] =
+                (_unreadChatByRideId[rid] ?? 0) + delta.incomingCount;
           });
           final latestIncoming = delta.latestIncoming;
           final body = (latestIncoming?.displayText.trim().isNotEmpty ?? false)
               ? latestIncoming!.displayText
               : l.openChatButton;
           final senderName = (latestIncoming?.senderName ?? '').trim();
-          final title =
-              senderName.isEmpty ? l.openChatButton : '${l.openChatButton} • $senderName';
+          final title = senderName.isEmpty
+              ? l.openChatButton
+              : '${l.openChatButton} • $senderName';
           _pushNotification(
-              title: title, body: body, event: 'chat_message_fallback', rideId: rid);
-          LocalNotificationService.instance.show(title: title, body: body, isChat: true);
+              title: title,
+              body: body,
+              event: 'chat_message_fallback',
+              rideId: rid);
+          LocalNotificationService.instance
+              .show(title: title, body: body, isChat: true);
         }
       } catch (_) {}
     }
   }
 
   void _processRideTransitions(Map<int, Ride> previousById, List<Ride> rides) {
-    if (_socket.isConnected) { _lastPendingRideIds = rides.where((r) => r.status == 'pending').map((r) => r.id).toSet(); return; }
+    if (_socket.isConnected) {
+      _lastPendingRideIds =
+          rides.where((r) => r.status == 'pending').map((r) => r.id).toSet();
+      return;
+    }
     final loc = AppLocalizations.of(context)!;
     final currentById = {for (final r in rides) r.id: r};
-    final currentPendingRideIds = rides.where((r) => r.status == 'pending').map((r) => r.id).toSet();
-    final removedPending = _lastPendingRideIds.difference(currentPendingRideIds);
+    final currentPendingRideIds =
+        rides.where((r) => r.status == 'pending').map((r) => r.id).toSet();
+    final removedPending =
+        _lastPendingRideIds.difference(currentPendingRideIds);
     for (final rideId in removedPending) {
-      if (_selfAcceptedRideIds.contains(rideId)) { _selfAcceptedRideIds.remove(rideId); continue; }
+      if (_selfAcceptedRideIds.contains(rideId)) {
+        _selfAcceptedRideIds.remove(rideId);
+        continue;
+      }
       final stillVisible = currentById[rideId];
-      if (stillVisible != null && _driverId != null && stillVisible.driverId == _driverId) continue;
+      if (stillVisible != null &&
+          _driverId != null &&
+          stillVisible.driverId == _driverId) continue;
       if (_notifiedClosedRideIds.contains(rideId)) continue;
       _notifiedClosedRideIds.add(rideId);
-      _pushNotification(title: loc.driverNotificationRequestClosedTitle, body: loc.driverNotificationRequestClosedBodyOther, event: 'ride_no_longer_visible', rideId: rideId);
+      _pushNotification(
+          title: loc.driverNotificationRequestClosedTitle,
+          body: loc.driverNotificationRequestClosedBodyOther,
+          event: 'ride_no_longer_visible',
+          rideId: rideId);
     }
     _lastPendingRideIds = currentPendingRideIds;
     for (final ride in rides) {
       final prev = previousById[ride.id];
       if (prev == null && ride.status == 'pending') {
         _seenPendingRideIds.add(ride.id);
-        _pushNotification(title: loc.driverNotificationNewRideTitle, body: loc.driverNotificationNewRideBodyDefault, event: 'ride_request_sent', rideId: ride.id);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(loc.snackDriverNewNearbyRide)));
-        LocalNotificationService.instance.show(title: loc.driverNotificationNewRideTitle, body: loc.driverNotificationNewRideBodyDefault);
-      } else if (prev != null && prev.status == 'pending' && ride.status == 'accepted') {
-        if (_selfAcceptedRideIds.contains(ride.id) || (_driverId != null && ride.driverId == _driverId)) { _selfAcceptedRideIds.remove(ride.id); continue; }
+        _pushNotification(
+            title: loc.driverNotificationNewRideTitle,
+            body: loc.driverNotificationNewRideBodyDefault,
+            event: 'ride_request_sent',
+            rideId: ride.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(loc.snackDriverNewNearbyRide)));
+        LocalNotificationService.instance.show(
+            title: loc.driverNotificationNewRideTitle,
+            body: loc.driverNotificationNewRideBodyDefault);
+      } else if (prev != null &&
+          prev.status == 'pending' &&
+          ride.status == 'accepted') {
+        if (_selfAcceptedRideIds.contains(ride.id) ||
+            (_driverId != null && ride.driverId == _driverId)) {
+          _selfAcceptedRideIds.remove(ride.id);
+          continue;
+        }
         _notifiedClosedRideIds.add(ride.id);
-        _pushNotification(title: loc.driverNotificationRequestClosedTitle, body: loc.driverNotificationRequestClosedBodyTaken, event: 'ride_taken_by_other_driver', rideId: ride.id);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(loc.snackDriverRideTakenOther)));
-        LocalNotificationService.instance.show(title: loc.driverNotificationRequestClosedTitle, body: loc.driverNotificationRequestClosedBodyTaken);
-      } else if (prev != null && prev.status != 'cancelled' && ride.status == 'cancelled') {
+        _pushNotification(
+            title: loc.driverNotificationRequestClosedTitle,
+            body: loc.driverNotificationRequestClosedBodyTaken,
+            event: 'ride_taken_by_other_driver',
+            rideId: ride.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(loc.snackDriverRideTakenOther)));
+        LocalNotificationService.instance.show(
+            title: loc.driverNotificationRequestClosedTitle,
+            body: loc.driverNotificationRequestClosedBodyTaken);
+      } else if (prev != null &&
+          prev.status != 'cancelled' &&
+          ride.status == 'cancelled') {
         _notifiedClosedRideIds.add(ride.id);
-        _pushNotification(title: loc.driverNotificationCancelledTitle, body: loc.driverNotificationCancelledBodyDefault, event: 'ride_cancelled_by_passenger', rideId: ride.id);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(loc.snackDriverPassengerCancelled)));
-        LocalNotificationService.instance.show(title: loc.driverNotificationCancelledTitle, body: loc.driverNotificationCancelledBodyDefault);
+        _pushNotification(
+            title: loc.driverNotificationCancelledTitle,
+            body: loc.driverNotificationCancelledBodyDefault,
+            event: 'ride_cancelled_by_passenger',
+            rideId: ride.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(loc.snackDriverPassengerCancelled)));
+        LocalNotificationService.instance.show(
+            title: loc.driverNotificationCancelledTitle,
+            body: loc.driverNotificationCancelledBodyDefault);
       }
       if (ride.status != 'pending') _seenPendingRideIds.remove(ride.id);
     }
     for (final prev in previousById.values) {
-      if (prev.status == 'pending' && !currentById.containsKey(prev.id) && _seenPendingRideIds.contains(prev.id) && !_notifiedClosedRideIds.contains(prev.id)) {
+      if (prev.status == 'pending' &&
+          !currentById.containsKey(prev.id) &&
+          _seenPendingRideIds.contains(prev.id) &&
+          !_notifiedClosedRideIds.contains(prev.id)) {
         _notifiedClosedRideIds.add(prev.id);
-        _pushNotification(title: loc.driverNotificationRequestClosedTitle, body: loc.driverNotificationRequestClosedBodyOther, event: 'ride_no_longer_visible', rideId: prev.id);
+        _pushNotification(
+            title: loc.driverNotificationRequestClosedTitle,
+            body: loc.driverNotificationRequestClosedBodyOther,
+            event: 'ride_no_longer_visible',
+            rideId: prev.id);
         _seenPendingRideIds.remove(prev.id);
       }
     }
@@ -1081,7 +2176,8 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   }
 
   Future<void> _pushDriverLocation() async {
-    final t = _token; if (t == null || _location.isEmpty) return;
+    final t = _token;
+    if (t == null || _location.isEmpty) return;
     try {
       await _api.updateDriverLocation(
         token: t,
@@ -1098,14 +2194,18 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
   }
 
   Future<void> _setAvailability(bool v) async {
-    final t = _token; if (t == null) return;
+    final t = _token;
+    if (t == null) return;
     setState(() => _isAvailable = v);
     try {
-      await _api.updateDriverLocation(token: t, currentZone: _location, isAvailable: v);
+      await _api.updateDriverLocation(
+          token: t, currentZone: _location, isAvailable: v);
       await _refreshGains();
       if (mounted) {
         final l = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${l.statusLinePrefix}${localizedRideStatusLabel(l, v ? 'active' : 'cancelled')}')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                '${l.statusLinePrefix}${localizedRideStatusLabel(l, v ? 'active' : 'cancelled')}')));
       }
     } catch (e) {
       if (!mounted) return;
@@ -1133,16 +2233,23 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     if (event != 'wallet_depleted') return;
     final now = DateTime.now();
     if (_lastWalletDepletedNotifAt != null &&
-        now.difference(_lastWalletDepletedNotifAt!) < const Duration(seconds: 10)) {
+        now.difference(_lastWalletDepletedNotifAt!) <
+            const Duration(seconds: 10)) {
       return;
     }
     _lastWalletDepletedNotifAt = now;
     _walletDepletedNotifiedForZero = true;
     final amount = (data['required_topup_dt'] as num?)?.round() ?? 100;
-    final body = ((data['message'] ?? '').toString().trim().isNotEmpty) ? (data['message'] as String).trim() : loc.driverWalletDepletedBody(amount);
-    _pushNotification(title: loc.driverWalletDepletedTitle, body: body, event: 'wallet_depleted');
+    final body = ((data['message'] ?? '').toString().trim().isNotEmpty)
+        ? (data['message'] as String).trim()
+        : loc.driverWalletDepletedBody(amount);
+    _pushNotification(
+        title: loc.driverWalletDepletedTitle,
+        body: body,
+        event: 'wallet_depleted');
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(body)));
-    LocalNotificationService.instance.show(title: loc.driverWalletDepletedTitle, body: body);
+    LocalNotificationService.instance
+        .show(title: loc.driverWalletDepletedTitle, body: body);
   }
 
   void _onRideStatusEvent(Map<String, dynamic> payload) {
@@ -1151,23 +2258,58 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     final event = (payload['event'] ?? '').toString();
     final serverMessage = (payload['message'] ?? '').toString().trim();
     if (event == 'ride_taken_by_other_driver') {
-      final accepterUserId = (payload['accepted_driver_user_id'] as num?)?.toInt() ?? (payload['driver_id'] as num?)?.toInt();
-      if (accepterUserId != null && _userId != null && accepterUserId == _userId) return;
-      _pushNotification(title: loc.driverNotificationRequestClosedTitle, body: serverMessage.isNotEmpty ? serverMessage : loc.driverNotificationRequestClosedBodyTaken, event: event);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(serverMessage.isNotEmpty ? serverMessage : loc.snackDriverRideTakenOther)));
-      LocalNotificationService.instance.show(title: loc.driverNotificationRequestClosedTitle, body: serverMessage.isNotEmpty ? serverMessage : loc.driverNotificationRequestClosedBodyTaken);
-      _refreshRides(); return;
+      final accepterUserId =
+          (payload['accepted_driver_user_id'] as num?)?.toInt() ??
+              (payload['driver_id'] as num?)?.toInt();
+      if (accepterUserId != null &&
+          _userId != null &&
+          accepterUserId == _userId) return;
+      _pushNotification(
+          title: loc.driverNotificationRequestClosedTitle,
+          body: serverMessage.isNotEmpty
+              ? serverMessage
+              : loc.driverNotificationRequestClosedBodyTaken,
+          event: event);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(serverMessage.isNotEmpty
+              ? serverMessage
+              : loc.snackDriverRideTakenOther)));
+      LocalNotificationService.instance.show(
+          title: loc.driverNotificationRequestClosedTitle,
+          body: serverMessage.isNotEmpty
+              ? serverMessage
+              : loc.driverNotificationRequestClosedBodyTaken);
+      _refreshRides();
+      return;
     }
     if (event == 'ride_request_sent') {
-      _pushNotification(title: loc.driverNotificationNewRideTitle, body: serverMessage.isNotEmpty ? serverMessage : loc.driverNotificationNewRideBodyDefault, event: event);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(serverMessage.isNotEmpty ? serverMessage : loc.snackDriverNewNearbyRide)));
-      LocalNotificationService.instance.show(title: loc.driverNotificationNewRideTitle, body: serverMessage.isNotEmpty ? serverMessage : loc.driverNotificationNewRideBodyDefault);
-      _refreshRides(); return;
+      _pushNotification(
+          title: loc.driverNotificationNewRideTitle,
+          body: serverMessage.isNotEmpty
+              ? serverMessage
+              : loc.driverNotificationNewRideBodyDefault,
+          event: event);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(serverMessage.isNotEmpty
+              ? serverMessage
+              : loc.snackDriverNewNearbyRide)));
+      LocalNotificationService.instance.show(
+          title: loc.driverNotificationNewRideTitle,
+          body: serverMessage.isNotEmpty
+              ? serverMessage
+              : loc.driverNotificationNewRideBodyDefault);
+      _refreshRides();
+      return;
     }
     if (serverMessage.isNotEmpty) {
-      _pushNotification(title: loc.notificationRideUpdateTitle, body: serverMessage, event: event.isEmpty ? 'ride_status_changed' : event);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(serverMessage)));
-      LocalNotificationService.instance.show(title: loc.notificationRideUpdateTitle, body: serverMessage);
+      _pushNotification(
+          title: loc.notificationRideUpdateTitle,
+          body: serverMessage,
+          event: event.isEmpty ? 'ride_status_changed' : event);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(serverMessage)));
+      LocalNotificationService.instance
+          .show(title: loc.notificationRideUpdateTitle, body: serverMessage);
       _refreshRides();
     }
   }
@@ -1179,7 +2321,8 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     if (conversationId == null) return null;
     final cached = _rideIdByConversationId[conversationId];
     if (cached != null) return cached;
-    final t = _token; if (t == null) return null;
+    final t = _token;
+    if (t == null) return null;
     final candidates =
         _rides.where((r) => rideMayHaveConversation(r.status)).toList();
     for (final ride in candidates) {
@@ -1215,55 +2358,89 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     final int rid = rideId;
     if (conversationId != null) {
       final prev = _lastSeenMessageIdByConversationId[conversationId] ?? 0;
-      if (msg.id > prev) _lastSeenMessageIdByConversationId[conversationId] = msg.id;
+      if (msg.id > prev)
+        _lastSeenMessageIdByConversationId[conversationId] = msg.id;
       _conversationIdByRideId[rid] = conversationId;
       _rideIdByConversationId[conversationId] = rid;
     }
     if (_activeChatRideId == rid) return;
     final l = AppLocalizations.of(context)!;
-    final body = msg.displayText.trim().isEmpty ? l.openChatButton : msg.displayText;
+    final body =
+        msg.displayText.trim().isEmpty ? l.openChatButton : msg.displayText;
     setState(() {
       _unreadChatByRideId[rid] = (_unreadChatByRideId[rid] ?? 0) + 1;
     });
     final senderName = (msg.senderName ?? '').trim();
-    final title = senderName.isEmpty ? l.openChatButton : '${l.openChatButton} • $senderName';
-    _pushNotification(title: title, body: body, event: 'chat_message', rideId: rid);
-    LocalNotificationService.instance.show(title: title, body: body, isChat: true);
+    final title = senderName.isEmpty
+        ? l.openChatButton
+        : '${l.openChatButton} • $senderName';
+    _pushNotification(
+        title: title, body: body, event: 'chat_message', rideId: rid);
+    LocalNotificationService.instance
+        .show(title: title, body: body, isChat: true);
   }
 
   Future<void> _acceptRide(Ride ride) async {
-    final t = _token; if (t == null) return;
+    final t = _token;
+    if (t == null) return;
     _selfAcceptedRideIds.add(ride.id);
     setState(() => _busy = true);
-    try { await _api.acceptRide(token: t, rideId: ride.id); await _refreshRides(); }
-    catch (e) { _selfAcceptedRideIds.remove(ride.id); setState(() => _message = e.toString()); }
-    finally { if (mounted) setState(() => _busy = false); }
+    try {
+      await _api.acceptRide(token: t, rideId: ride.id);
+      await _refreshRides();
+      _tabController?.animateTo(1);
+    } catch (e) {
+      _selfAcceptedRideIds.remove(ride.id);
+      setState(() => _message = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
-  void _declineOffer(Ride ride) { setState(() => _dismissedPendingRideIds.add(ride.id)); }
+  void _declineOffer(Ride ride) {
+    setState(() => _dismissedPendingRideIds.add(ride.id));
+  }
 
   Future<void> _releaseRide(Ride ride) async {
-    final t = _token; if (t == null) return;
+    final t = _token;
+    if (t == null) return;
     setState(() => _busy = true);
-    try { await _api.rejectRide(token: t, rideId: ride.id); await _refreshRides(); }
-    catch (e) { setState(() => _message = e.toString()); }
-    finally { if (mounted) setState(() => _busy = false); }
+    try {
+      await _api.rejectRide(token: t, rideId: ride.id);
+      await _refreshRides();
+    } catch (e) {
+      setState(() => _message = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _startRide(Ride ride) async {
-    final t = _token; if (t == null) return;
+    final t = _token;
+    if (t == null) return;
     setState(() => _busy = true);
-    try { await _api.startRide(token: t, rideId: ride.id); await _refreshRides(); }
-    catch (e) { setState(() => _message = e.toString()); }
-    finally { if (mounted) setState(() => _busy = false); }
+    try {
+      await _api.startRide(token: t, rideId: ride.id);
+      await _refreshRides();
+    } catch (e) {
+      setState(() => _message = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _completeRide(Ride ride) async {
-    final t = _token; if (t == null) return;
+    final t = _token;
+    if (t == null) return;
     setState(() => _busy = true);
-    try { await _api.completeRide(token: t, rideId: ride.id); await _refreshRides(); }
-    catch (e) { setState(() => _message = e.toString()); }
-    finally { if (mounted) setState(() => _busy = false); }
+    try {
+      await _api.completeRide(token: t, rideId: ride.id);
+      await _refreshRides();
+    } catch (e) {
+      setState(() => _message = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _primeReadWatermarkAfterChat({
@@ -1294,7 +2471,9 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
       final info = await _api.getRideConversation(token: t, rideId: ride.id);
       if (!mounted) return;
       if (info == null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.snackDriverChatAfterAcceptance)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                AppLocalizations.of(context)!.snackDriverChatAfterAcceptance)));
         return;
       }
       final cid = info.conversationId;
@@ -1315,14 +2494,18 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
           ),
         ),
       );
-      if (mounted && _activeChatRideId == ride.id) setState(() => _activeChatRideId = null);
-      await _primeReadWatermarkAfterChat(token: t, conversationId: cid, rideId: ride.id);
+      if (mounted && _activeChatRideId == ride.id)
+        setState(() => _activeChatRideId = null);
+      await _primeReadWatermarkAfterChat(
+          token: t, conversationId: cid, rideId: ride.id);
       await _refreshRides(silent: true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
-      if (mounted && _activeChatRideId == ride.id) setState(() => _activeChatRideId = null);
+      if (mounted && _activeChatRideId == ride.id)
+        setState(() => _activeChatRideId = null);
     }
   }
 
@@ -1340,8 +2523,13 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     final l = AppLocalizations.of(context)!;
     final unread = _unreadChatByRideId[ride.id] ?? 0;
     return Badge(
-      label: Text(unread > 99 ? '99+' : '$unread', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A))),
-      padding: EdgeInsets.only(left: unread > 0 ? 6 : 0, right: unread > 0 ? 6 : 0),
+      label: Text(unread > 99 ? '99+' : '$unread',
+          style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1A1A1A))),
+      padding:
+          EdgeInsets.only(left: unread > 0 ? 6 : 0, right: unread > 0 ? 6 : 0),
       isLabelVisible: unread > 0,
       offset: const Offset(10, -6),
       backgroundColor: _C.yellow,
@@ -1352,14 +2540,24 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
           decoration: BoxDecoration(
             color: _C.charcoal,
             borderRadius: BorderRadius.circular(50),
-            boxShadow: [BoxShadow(color: _C.charcoal.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 3))],
+            boxShadow: [
+              BoxShadow(
+                  color: _C.charcoal.withOpacity(0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3))
+            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
+              const Icon(Icons.chat_bubble_rounded,
+                  color: Colors.white, size: 16),
               const SizedBox(width: 6),
-              Text(l.openChatButton, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+              Text(l.openChatButton,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13)),
             ],
           ),
         ),
@@ -1378,20 +2576,38 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
         children: [
           _Module(
             accent: true,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _SectionHead('Dispatch', subtitle: '${pendingOffers.length} open offers'),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              _SectionHead('Dispatch',
+                  subtitle: '${pendingOffers.length} open offers'),
               // Zone selector
               Container(
-                decoration: BoxDecoration(color: _C.surfaceAlt, borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.border)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                    color: _C.surfaceAlt,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _C.border)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _location.isEmpty ? null : _location,
                     isExpanded: true,
-                    icon: const Icon(Icons.place_outlined, color: _C.charcoal, size: 18),
-                    items: _locations.map((e) => DropdownMenuItem(value: e, child: Text(localizedPlaceName(l, e), style: const TextStyle(fontSize: 13)))).toList(),
-                    onChanged: (v) async { if (v == null) return; setState(() => _location = v); await _pushDriverLocation(); },
-                    hint: Text(l.ridePickupLabel, style: const TextStyle(color: _C.textSoft, fontSize: 13)),
+                    icon: const Icon(Icons.place_outlined,
+                        color: _C.charcoal, size: 18),
+                    items: _locations
+                        .map((e) => DropdownMenuItem(
+                            value: e,
+                            child: Text(localizedPlaceName(l, e),
+                                style: const TextStyle(fontSize: 13))))
+                        .toList(),
+                    onChanged: (v) async {
+                      if (v == null) return;
+                      setState(() => _location = v);
+                      await _pushDriverLocation();
+                    },
+                    hint: Text(l.ridePickupLabel,
+                        style:
+                            const TextStyle(color: _C.textSoft, fontSize: 13)),
                   ),
                 ),
               ),
@@ -1409,7 +2625,8 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                                   (_locating
                                       ? l.passengerLocationDetecting
                                       : l.passengerLocationUnavailable)),
-                          style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                          style:
+                              const TextStyle(color: _C.textSoft, fontSize: 11),
                         ),
                         if (_nearestZoneDistanceKm != null &&
                             _location.trim().isNotEmpty)
@@ -1425,38 +2642,56 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                     ),
                   ),
                   IconButton(
-                    onPressed: _locating ? null : () => unawaited(_detectDriverLocation()),
+                    onPressed: _locating
+                        ? null
+                        : () => unawaited(_detectDriverLocation()),
                     icon: const Icon(Icons.my_location_rounded, size: 18),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               Row(children: [
-                Expanded(child: _DarkButton(label: l.adminLoadRidesBtn, icon: Icons.refresh_rounded, onPressed: _busy ? null : _refreshRides, small: true)),
+                Expanded(
+                    child: _DarkButton(
+                        label: l.adminLoadRidesBtn,
+                        icon: Icons.refresh_rounded,
+                        onPressed: _busy ? null : _refreshRides,
+                        small: true)),
               ]),
               const SizedBox(height: 12),
               Wrap(spacing: 8, runSpacing: 8, children: [
-                _StatChip(label: l.driverPendingRides, value: '${pendingOffers.length}', icon: Icons.hourglass_top_rounded, color: _C.yellowDeep),
-                _StatChip(label: 'Alerts', value: '$_unreadCount', icon: Icons.notifications_active_rounded, color: _C.info),
+                _StatChip(
+                    label: l.driverPendingRides,
+                    value: '${pendingOffers.length}',
+                    icon: Icons.hourglass_top_rounded,
+                    color: _C.yellowDeep),
+                _StatChip(
+                    label: 'Alerts',
+                    value: '$_unreadCount',
+                    icon: Icons.notifications_active_rounded,
+                    color: _C.info),
               ]),
             ]),
           ),
           if (pendingOffers.isEmpty)
             _Module(
-              child: Center(child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(children: [
-                  Container(width: 56, height: 56, decoration: BoxDecoration(color: _C.surfaceAlt, borderRadius: BorderRadius.circular(16), border: Border.all(color: _C.border)), child: const Icon(Icons.local_taxi_outlined, size: 28, color: _C.textSoft)),
-                  const SizedBox(height: 10),
-                  Text(l.driverPendingRides, style: const TextStyle(color: _C.textSoft, fontSize: 13)),
-                ]),
-              )),
+              child: ManagementEmptyState(
+                message: l.driverPendingRides,
+                icon: Icons.local_taxi_outlined,
+              ),
             )
           else
-            ...pendingOffers.where((r) => !_dismissedPendingRideIds.contains(r.id)).map((r) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: DriverRideOfferCard(ride: r, api: _api, busy: _busy, onAccept: () => _acceptRide(r), onReject: () => _declineOffer(r)),
-            )),
+            ...pendingOffers
+                .where((r) => !_dismissedPendingRideIds.contains(r.id))
+                .map((r) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: DriverRideOfferCard(
+                          ride: r,
+                          api: _api,
+                          busy: _busy,
+                          onAccept: () => _acceptRide(r),
+                          onReject: () => _declineOffer(r)),
+                    )),
         ],
       ),
     );
@@ -1464,7 +2699,9 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
 
   // ══ HISTORY TAB ════════════════════════════════════════════
   Widget _buildHistoryTab(AppLocalizations l, List<Ride> historyRides) {
-    final visibleRides = historyRides.where((r) => _historyFilter == 'all' || r.status == _historyFilter).toList();
+    final visibleRides = historyRides
+        .where((r) => _historyFilter == 'all' || r.status == _historyFilter)
+        .toList();
     return RefreshIndicator(
       color: _C.yellow,
       onRefresh: _refreshRides,
@@ -1473,77 +2710,133 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
         children: [
           _Module(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _SectionHead(l.operatorTabTripHistory, subtitle: '${visibleRides.length} rides'),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              _SectionHead(l.operatorTabTripHistory,
+                  subtitle: '${visibleRides.length} rides'),
               Container(
-                decoration: BoxDecoration(color: _C.surfaceAlt, borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.border)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                    color: _C.surfaceAlt,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _C.border)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _historyFilter,
                     isExpanded: true,
-                    icon: const Icon(Icons.filter_list_rounded, color: _C.charcoal, size: 18),
+                    icon: const Icon(Icons.filter_list_rounded,
+                        color: _C.charcoal, size: 18),
                     items: [
-                      DropdownMenuItem(value: 'all', child: Text(l.adminRidesHeading, style: const TextStyle(fontSize: 13))),
-                      DropdownMenuItem(value: 'completed', child: Text(localizedRideStatusLabel(l, 'completed'), style: const TextStyle(fontSize: 13))),
-                      DropdownMenuItem(value: 'cancelled', child: Text(localizedRideStatusLabel(l, 'cancelled'), style: const TextStyle(fontSize: 13))),
-                      DropdownMenuItem(value: 'accepted', child: Text(localizedRideStatusLabel(l, 'accepted'), style: const TextStyle(fontSize: 13))),
-                      DropdownMenuItem(value: 'ongoing', child: Text(localizedRideStatusLabel(l, 'ongoing'), style: const TextStyle(fontSize: 13))),
+                      DropdownMenuItem(
+                          value: 'all',
+                          child: Text(l.adminRidesHeading,
+                              style: const TextStyle(fontSize: 13))),
+                      DropdownMenuItem(
+                          value: 'completed',
+                          child: Text(localizedRideStatusLabel(l, 'completed'),
+                              style: const TextStyle(fontSize: 13))),
+                      DropdownMenuItem(
+                          value: 'cancelled',
+                          child: Text(localizedRideStatusLabel(l, 'cancelled'),
+                              style: const TextStyle(fontSize: 13))),
+                      DropdownMenuItem(
+                          value: 'accepted',
+                          child: Text(localizedRideStatusLabel(l, 'accepted'),
+                              style: const TextStyle(fontSize: 13))),
+                      DropdownMenuItem(
+                          value: 'ongoing',
+                          child: Text(localizedRideStatusLabel(l, 'ongoing'),
+                              style: const TextStyle(fontSize: 13))),
                     ],
-                    onChanged: (v) => setState(() => _historyFilter = v ?? 'all'),
+                    onChanged: (v) =>
+                        setState(() => _historyFilter = v ?? 'all'),
                   ),
                 ),
               ),
             ]),
           ),
           if (visibleRides.isEmpty)
-            _Module(child: Center(child: Padding(
+            _Module(
+                child: Center(
+                    child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(children: [
-                const Icon(Icons.receipt_long_rounded, size: 36, color: _C.textSoft),
+                const Icon(Icons.receipt_long_rounded,
+                    size: 36, color: _C.textSoft),
                 const SizedBox(height: 8),
                 Text(l.noTripsYet, style: const TextStyle(color: _C.textSoft)),
               ]),
             )))
           else
             ...visibleRides.map((r) {
-              final statusColor = r.status == 'completed' ? _C.success : r.status == 'cancelled' ? _C.danger : r.status == 'ongoing' ? _C.info : _C.yellowDeep;
-              final statusBg = r.status == 'completed' ? _C.successBg : r.status == 'cancelled' ? _C.dangerBg : r.status == 'ongoing' ? _C.infoBg : _C.yellowSoft;
-              return _Module(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  _rowInfoCard(
-                    icon: Icons.local_taxi_outlined,
-                    content: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(localizedRideRouteRow(l, r.pickup, r.destination), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(color: statusBg, borderRadius: BorderRadius.circular(50)),
-                        child: Text(localizedRideStatusLabel(l, r.status), style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w800)),
+              final passengerName = r.isB2b == true
+                  ? ((r.b2bGuestName ?? '').trim().isEmpty
+                      ? (r.passengerName ?? '-')
+                      : r.b2bGuestName!)
+                  : ((r.passengerName ?? '').trim().isEmpty
+                      ? '-'
+                      : r.passengerName!);
+              final passengerPhone = (r.passengerPhone ?? '').trim();
+              final dateSource =
+                  (r.scheduledPickupAt ?? r.createdAt ?? '').trim();
+              if (r.status == 'accepted' || r.status == 'ongoing') {
+                return _DriverRideDetailsCard(
+                  ride: r,
+                  api: _api,
+                  busy: _busy,
+                  onStart: _busy ? null : () => _startRide(r),
+                  onRelease: _busy ? null : () => _releaseRide(r),
+                  onComplete: _busy ? null : () => _completeRide(r),
+                  chatButton: rideMayHaveConversation(r.status)
+                      ? _chatActionButton(r)
+                      : null,
+                );
+              }
+              return _DriverTripHistoryCard(
+                ride: r,
+                statusLabel: localizedRideStatusLabel(l, r.status),
+                route: localizedRideRouteRow(l, r.pickup, r.destination),
+                passengerLine:
+                    '${r.isB2b == true ? l.roleB2b : l.rolePassenger}: $passengerName${passengerPhone.isEmpty ? '' : ' • $passengerPhone'}',
+                metaLine:
+                    '${_driverPrettyDate(dateSource)} • ${_driverPrettyTime(dateSource)}',
+                actions: [
+                  if (r.status == 'accepted')
+                    _DarkButton(
+                        label: l.startRide,
+                        icon: Icons.play_arrow_rounded,
+                        onPressed: _busy ? null : () => _startRide(r),
+                        small: true,
+                        fullWidth: false),
+                  if (r.status == 'accepted' || r.status == 'ongoing')
+                    GestureDetector(
+                      onTap: _busy ? null : () => _releaseRide(r),
+                      child: Container(
+                        height: 38,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                            color: _C.dangerBg,
+                            borderRadius: BorderRadius.circular(50),
+                            border:
+                                Border.all(color: _C.danger.withOpacity(0.3))),
+                        child: Center(
+                            child: Text(l.cancelRidePassenger,
+                                style: const TextStyle(
+                                    color: _C.danger,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12))),
                       ),
-                      if (r.isB2b == true) ...[const SizedBox(height: 4), Text('${l.roleB2b} • ${r.b2bGuestName ?? '-'} • ${((r.b2bFare ?? 0)).toStringAsFixed(3)} DT', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11))],
-                      if ((r.passengerName ?? '').trim().isNotEmpty || (r.passengerPhone ?? '').trim().isNotEmpty)
-                        Text('${l.rolePassenger}: ${(r.passengerName ?? '').trim().isEmpty ? '-' : r.passengerName} • ${(r.passengerPhone ?? '').trim().isEmpty ? '-' : r.passengerPhone}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11)),
-                    ]),
-                  ),
-                  Wrap(spacing: 8, runSpacing: 6, children: [
-                    if (r.status == 'accepted')
-                      _DarkButton(label: l.startRide, icon: Icons.play_arrow_rounded, onPressed: _busy ? null : () => _startRide(r), small: true, fullWidth: false),
-                    if (r.status == 'accepted' || r.status == 'ongoing')
-                      GestureDetector(
-                        onTap: _busy ? null : () => _releaseRide(r),
-                        child: Container(
-                          height: 38,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(color: _C.dangerBg, borderRadius: BorderRadius.circular(50), border: Border.all(color: _C.danger.withOpacity(0.3))),
-                          child: Center(child: Text(l.cancelRidePassenger, style: const TextStyle(color: _C.danger, fontWeight: FontWeight.w700, fontSize: 12))),
-                        ),
-                      ),
-                    if (r.status == 'ongoing')
-                      _YellowButton(label: l.completeRide, icon: Icons.check_rounded, onPressed: _busy ? null : () => _completeRide(r), small: true, fullWidth: false),
-                    if (rideMayHaveConversation(r.status)) _chatActionButton(r),
-                  ]),
-                ]),
+                    ),
+                  if (r.status == 'ongoing')
+                    _YellowButton(
+                        label: l.completeRide,
+                        icon: Icons.check_rounded,
+                        onPressed: _busy ? null : () => _completeRide(r),
+                        small: true,
+                        fullWidth: false),
+                  if (rideMayHaveConversation(r.status)) _chatActionButton(r),
+                ],
               );
             }),
         ],
@@ -1580,12 +2873,14 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.info_outline_rounded, color: _C.charcoal, size: 22),
+                    const Icon(Icons.info_outline_rounded,
+                        color: _C.charcoal, size: 22),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         l.flightArrivalsSampleDataBanner,
-                        style: const TextStyle(color: _C.textStrong, fontSize: 13, height: 1.35),
+                        style: const TextStyle(
+                            color: _C.textStrong, fontSize: 13, height: 1.35),
                       ),
                     ),
                   ],
@@ -1628,7 +2923,8 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                     letterSpacing: 0.5,
                   ),
                   dataRowColor: WidgetStateProperty.resolveWith(
-                    (s) => s.contains(WidgetState.selected) ? _C.yellowSoft : null,
+                    (s) =>
+                        s.contains(WidgetState.selected) ? _C.yellowSoft : null,
                   ),
                   border: const TableBorder(
                     horizontalInside: BorderSide(color: _C.border),
@@ -1707,13 +3003,17 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                         ),
                         DataCell(
                           Text(
-                            (r['speed_kmh'] == null) ? '-' : '${r['speed_kmh']} km/h',
+                            (r['speed_kmh'] == null)
+                                ? '-'
+                                : '${r['speed_kmh']} km/h',
                             style: const TextStyle(fontSize: 13),
                           ),
                         ),
                         DataCell(
                           Text(
-                            (r['altitude_m'] == null) ? '-' : '${r['altitude_m']} m',
+                            (r['altitude_m'] == null)
+                                ? '-'
+                                : '${r['altitude_m']} m',
                             style: const TextStyle(fontSize: 13),
                           ),
                         ),
@@ -1743,16 +3043,19 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     final pendingOffers = (_walletBalance > 0 && _isAvailable)
         ? _rides.where((r) => r.status == 'pending').toList()
         : <Ride>[];
-    final historyRides = _rides.where((r) => _driverId != null && r.driverId == _driverId).toList();
+    final historyRides = _rides
+        .where((r) => _driverId != null && r.driverId == _driverId)
+        .toList();
 
     return Scaffold(
       backgroundColor: _C.bgWarm,
       appBar: AppBar(
-        backgroundColor: _C.charcoal,
+        backgroundColor: _C.yellow,
+        foregroundColor: _C.charcoal,
         centerTitle: true,
         leading: IconButton(
           onPressed: _goBack,
-          icon: const Icon(Icons.arrow_back_rounded, color: _C.yellow),
+          icon: const Icon(Icons.arrow_back_rounded, color: _C.charcoal),
         ),
         title: Text(
           _uiText(
@@ -1765,29 +3068,44 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
             ru: 'Панель водителя',
             zh: '司机工作台',
           ),
-          style: const TextStyle(color: _C.yellow, fontWeight: FontWeight.w800, fontSize: 16),
+          style: const TextStyle(
+              color: _C.charcoal, fontWeight: FontWeight.w800, fontSize: 16),
         ),
         actions: [
-          LocalePopupMenuButton(authToken: _token, uiRole: AppUiRole.driver),
+          LocalePopupMenuButton(
+            authToken: _token,
+            uiRole: AppUiRole.driver,
+            foregroundColor: _C.charcoal,
+          ),
           if (_token != null)
             IconButton(
               onPressed: () => unawaited(_logout()),
               tooltip: l.logoutApp,
-              icon: const Icon(Icons.logout_rounded, color: _C.yellow),
+              icon: const Icon(Icons.logout_rounded, color: _C.charcoal),
             ),
           if (_token != null)
             IconButton(
               onPressed: _showNotifications,
               icon: Stack(clipBehavior: Clip.none, children: [
-                const Icon(Icons.notifications_rounded, color: _C.yellow),
+                const Icon(Icons.notifications_rounded, color: _C.charcoal),
                 if (_unreadCount > 0)
                   Positioned(
-                    right: -6, top: -6,
+                    right: -6,
+                    top: -6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(10)),
-                      constraints: const BoxConstraints(minWidth: 18, minHeight: 14),
-                      child: Text(_unreadCount > 99 ? '99+' : '$_unreadCount', style: const TextStyle(color: _C.charcoal, fontSize: 10, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                          color: _C.yellow,
+                          borderRadius: BorderRadius.circular(10)),
+                      constraints:
+                          const BoxConstraints(minWidth: 18, minHeight: 14),
+                      child: Text(_unreadCount > 99 ? '99+' : '$_unreadCount',
+                          style: const TextStyle(
+                              color: _C.charcoal,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700),
+                          textAlign: TextAlign.center),
                     ),
                   ),
               ]),
@@ -1801,92 +3119,188 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                 padding: const EdgeInsets.all(24),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Container(
-                    width: 92, height: 72,
-                    decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: _C.yellow.withOpacity(0.45), blurRadius: 20)]),
+                    width: 92,
+                    height: 72,
+                    decoration: BoxDecoration(
+                        color: _C.yellow,
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                              color: _C.yellow.withOpacity(0.45),
+                              blurRadius: 20)
+                        ]),
                     child: const VoomLogo(height: 44),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Driver Portal', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: _C.textStrong)),
+                  const Text('Driver Portal',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 24,
+                          color: _C.textStrong)),
                   const SizedBox(height: 4),
-                  const Text('Sign in with your phone & PIN', style: TextStyle(color: _C.textSoft, fontSize: 13)),
+                  const Text('Sign in with your phone & PIN',
+                      style: TextStyle(color: _C.textSoft, fontSize: 13)),
                   const SizedBox(height: 24),
                   Container(
-                    decoration: BoxDecoration(color: _C.surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: _C.border), boxShadow: [BoxShadow(color: _C.charcoal.withOpacity(0.07), blurRadius: 12, offset: const Offset(0, 4))]),
+                    decoration: BoxDecoration(
+                        color: _C.surface,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: _C.border),
+                        boxShadow: [
+                          BoxShadow(
+                              color: _C.charcoal.withOpacity(0.07),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4))
+                        ]),
                     padding: const EdgeInsets.all(20),
                     child: Column(children: [
-                      TextField(controller: _phoneController, keyboardType: TextInputType.phone, decoration: _fd(l.emailLabel, icon: Icons.phone_rounded)),
+                      TextField(
+                          controller: _phoneController,
+                          keyboardType: TextInputType.phone,
+                          decoration:
+                              _fd(l.emailLabel, icon: Icons.phone_rounded)),
                       const SizedBox(height: 12),
                       TextField(
                         controller: _pinController,
                         obscureText: _obscurePin,
-                        decoration: _fd(l.passwordLabel, icon: Icons.lock_outline_rounded).copyWith(
+                        decoration: _fd(l.passwordLabel,
+                                icon: Icons.lock_outline_rounded)
+                            .copyWith(
                           suffixIcon: IconButton(
-                            onPressed: () => setState(() => _obscurePin = !_obscurePin),
+                            onPressed: () =>
+                                setState(() => _obscurePin = !_obscurePin),
                             icon: Icon(
-                              _obscurePin ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              _obscurePin
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
                               color: _C.charcoal,
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _YellowButton(label: l.login, icon: Icons.login_rounded, onPressed: _busy ? null : _login),
+                      _YellowButton(
+                          label: l.login,
+                          icon: Icons.login_rounded,
+                          onPressed: _busy ? null : _login),
                     ]),
                   ),
                   if (_message != null) ...[
                     const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(color: _C.dangerBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.danger.withOpacity(0.3))),
-                      child: Row(children: [const Icon(Icons.error_outline_rounded, color: _C.danger, size: 16), const SizedBox(width: 8), Expanded(child: Text(_message!, style: const TextStyle(color: _C.danger, fontSize: 13)))]),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                          color: _C.dangerBg,
+                          borderRadius: BorderRadius.circular(12),
+                          border:
+                              Border.all(color: _C.danger.withOpacity(0.3))),
+                      child: Row(children: [
+                        const Icon(Icons.error_outline_rounded,
+                            color: _C.danger, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: Text(_message!,
+                                style: const TextStyle(
+                                    color: _C.danger, fontSize: 13)))
+                      ]),
                     ),
                   ],
-                  if (_busy) ...[const SizedBox(height: 16), const CircularProgressIndicator(color: _C.yellow, strokeWidth: 2.5)],
+                  if (_busy) ...[
+                    const SizedBox(height: 16),
+                    const CircularProgressIndicator(
+                        color: _C.yellow, strokeWidth: 2.5)
+                  ],
                 ]),
               ),
             )
           // ── Dashboard ─────────────────────────────────────
           : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               // Welcome / status banner
-              Container(
+              ManagementModuleCard(
                 margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFFFFC200), Color(0xFFFFD84D)]),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [BoxShadow(color: _C.yellow.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 3))],
-                ),
+                padding: 12,
+                accent: true,
                 child: Row(children: [
-                  // Availability toggle embedded in banner
                   GestureDetector(
                     onTap: _busy ? null : () => _setAvailability(!_isAvailable),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 11, vertical: 7),
                       decoration: BoxDecoration(
                         color: _isAvailable ? _C.success : _C.charcoal,
                         borderRadius: BorderRadius.circular(50),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (_isAvailable ? _C.success : _C.charcoal)
+                                .withOpacity(0.20),
+                            blurRadius: 14,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Container(width: 7, height: 7, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
-                        const SizedBox(width: 5),
-                        Text(_isAvailable ? 'Online' : 'Offline', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11)),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 220),
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(_isAvailable ? 'Online' : 'Offline',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 11)),
                       ]),
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _driverName != null
+                                ? '${l.sessionActive} · $_driverName'
+                                : l.sessionActive,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: _C.charcoal,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13.5),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _uiText(
+                                en: 'Premium driver command center',
+                                ar: 'مركز قيادة السائق المميز',
+                                fr: 'Centre de conduite premium',
+                                es: 'Centro premium del conductor',
+                                de: 'Premium-Fahrerzentrale',
+                                it: 'Centro guida premium',
+                                ru: 'Премиум центр водителя',
+                                zh: '高级司机工作中心'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: _C.textSoft,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 11),
+                          ),
+                        ]),
+                  ),
                   const SizedBox(width: 10),
-                  Expanded(child: Text(
-                    _driverName != null ? '${l.sessionActive} · $_driverName' : l.sessionActive,
-                    style: const TextStyle(color: _C.charcoal, fontWeight: FontWeight.w700, fontSize: 13),
-                  )),
-                  // Wallet
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: _C.charcoal.withOpacity(0.15), borderRadius: BorderRadius.circular(50)),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.account_balance_wallet_rounded, color: _C.charcoal, size: 14),
-                      const SizedBox(width: 4),
-                      Text('${_walletBalance.toStringAsFixed(2)} DT', style: const TextStyle(color: _C.charcoal, fontWeight: FontWeight.w800, fontSize: 12)),
-                    ]),
+                  ManagementStatusPill(
+                    label: '${_walletBalance.toStringAsFixed(2)} DT',
+                    color: _C.charcoal,
+                    background: _C.yellowSoft,
                   ),
                 ]),
               ),
@@ -1894,12 +3308,24 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
               if (_gains != null)
                 Container(
                   margin: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(color: _C.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.border)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                      color: _C.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _C.border)),
                   child: Row(children: [
-                    _StatChip(label: 'Net Gains', value: '${((_gains!['net_gains'] ?? 0) as num).toStringAsFixed(2)} DT', icon: Icons.payments_outlined, color: _C.success),
+                    _StatChip(
+                        label: 'Net Gains',
+                        value:
+                            '${((_gains!['net_gains'] ?? 0) as num).toStringAsFixed(2)} DT',
+                        icon: Icons.payments_outlined,
+                        color: _C.success),
                     const SizedBox(width: 8),
-                    _StatChip(label: 'Trips', value: '${_gains!['completed_rides_count'] ?? 0}', icon: Icons.route_outlined),
+                    _StatChip(
+                        label: 'Trips',
+                        value: '${_gains!['completed_rides_count'] ?? 0}',
+                        icon: Icons.route_outlined),
                   ]),
                 ),
               // Driver profile card (name/photo/info/edit)
@@ -1908,15 +3334,44 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
               // Tab bar
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(color: _C.charcoal, borderRadius: BorderRadius.circular(14)),
+                decoration: BoxDecoration(
+                  color: _C.surface,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: _C.border.withOpacity(0.82)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _C.charcoal.withOpacity(0.07),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
                 child: TabBar(
                   controller: _tabController,
-                  indicatorColor: _C.yellow,
-                  indicatorWeight: 3,
-                  labelColor: _C.yellow,
-                  unselectedLabelColor: Colors.white38,
-                  labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 0.3),
-                  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+                  padding: const EdgeInsets.all(5),
+                  indicator: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFD84D), Color(0xFFFFC200)],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _C.yellow.withOpacity(0.25),
+                        blurRadius: 12,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  dividerColor: Colors.transparent,
+                  labelColor: _C.charcoal,
+                  unselectedLabelColor: _C.textSoft,
+                  labelStyle: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                      letterSpacing: 0.3),
+                  unselectedLabelStyle: const TextStyle(
+                      fontWeight: FontWeight.w500, fontSize: 12),
                   tabs: [
                     Tab(text: '🚖 ${l.driverPendingRides}'),
                     Tab(text: '📋 ${l.operatorTabTripHistory}'),
@@ -1924,7 +3379,8 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
                   ],
                 ),
               ),
-              Expanded(child: TabBarView(
+              Expanded(
+                  child: TabBarView(
                 controller: _tabController,
                 children: [
                   _buildPendingTab(l, pendingOffers),
@@ -1935,9 +3391,21 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
               if (_message != null)
                 Container(
                   margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(color: _C.dangerBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.danger.withOpacity(0.3))),
-                  child: Row(children: [const Icon(Icons.error_outline_rounded, color: _C.danger, size: 16), const SizedBox(width: 8), Expanded(child: Text(_message!, style: const TextStyle(color: _C.danger, fontSize: 13)))]),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                      color: _C.dangerBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _C.danger.withOpacity(0.3))),
+                  child: Row(children: [
+                    const Icon(Icons.error_outline_rounded,
+                        color: _C.danger, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: Text(_message!,
+                            style: const TextStyle(
+                                color: _C.danger, fontSize: 13)))
+                  ]),
                 ),
             ]),
     );
@@ -1948,7 +3416,10 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 0),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: _C.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: _C.border)),
+      decoration: BoxDecoration(
+          color: _C.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _C.border)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1970,30 +3441,61 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(
-                  (_driverName ?? '').trim().isEmpty
-                      ? _uiText(en: 'Driver', ar: 'السائق', fr: 'Chauffeur', es: 'Conductor', de: 'Fahrer', it: 'Autista', ru: 'Водитель', zh: '司机')
-                      : _driverName!,
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _C.textStrong),
-                ),
-                if ((_driverPhone ?? '').trim().isNotEmpty)
-                  Text('${_uiText(en: 'Phone', ar: 'الهاتف', fr: 'Telephone', es: 'Telefono', de: 'Telefon', it: 'Telefono', ru: 'Телефон', zh: '电话')}: ${_driverPhone!}', style: const TextStyle(color: _C.textSoft, fontSize: 12)),
-                if ((_driverEmail ?? '').trim().isNotEmpty)
-                  Text('${_uiText(en: 'Email', ar: 'البريد الإلكتروني', fr: 'Email', es: 'Correo', de: 'E-Mail', it: 'Email', ru: 'Email', zh: '邮箱')}: ${_driverEmail!}', style: const TextStyle(color: _C.textSoft, fontSize: 12)),
-                Text('${_uiText(en: 'Car', ar: 'السيارة', fr: 'Voiture', es: 'Coche', de: 'Auto', it: 'Auto', ru: 'Авто', zh: '车辆')}: ${(_carModel ?? '').trim().isEmpty ? '—' : _carModel} · ${(_carColor ?? '').trim().isEmpty ? '—' : _carColor}', style: const TextStyle(color: _C.textSoft, fontSize: 12)),
-              ]),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      (_driverName ?? '').trim().isEmpty
+                          ? _uiText(
+                              en: 'Driver',
+                              ar: 'السائق',
+                              fr: 'Chauffeur',
+                              es: 'Conductor',
+                              de: 'Fahrer',
+                              it: 'Autista',
+                              ru: 'Водитель',
+                              zh: '司机')
+                          : _driverName!,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: _C.textStrong),
+                    ),
+                    if ((_driverPhone ?? '').trim().isNotEmpty)
+                      Text(
+                          '${_uiText(en: 'Phone', ar: 'الهاتف', fr: 'Telephone', es: 'Telefono', de: 'Telefon', it: 'Telefono', ru: 'Телефон', zh: '电话')}: ${_driverPhone!}',
+                          style: const TextStyle(
+                              color: _C.textSoft, fontSize: 12)),
+                    if ((_driverEmail ?? '').trim().isNotEmpty)
+                      Text(
+                          '${_uiText(en: 'Email', ar: 'البريد الإلكتروني', fr: 'Email', es: 'Correo', de: 'E-Mail', it: 'Email', ru: 'Email', zh: '邮箱')}: ${_driverEmail!}',
+                          style: const TextStyle(
+                              color: _C.textSoft, fontSize: 12)),
+                    Text(
+                        '${_uiText(en: 'Car', ar: 'السيارة', fr: 'Voiture', es: 'Coche', de: 'Auto', it: 'Auto', ru: 'Авто', zh: '车辆')}: ${(_carModel ?? '').trim().isEmpty ? '—' : _carModel} · ${(_carColor ?? '').trim().isEmpty ? '—' : _carColor}',
+                        style:
+                            const TextStyle(color: _C.textSoft, fontSize: 12)),
+                  ]),
             ),
             FilledButton.icon(
               style: FilledButton.styleFrom(
-                backgroundColor: _C.yellowSoft,
+                backgroundColor: _C.yellow,
                 foregroundColor: _C.charcoal,
                 side: const BorderSide(color: _C.yellowDeep),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(50)),
               ),
               onPressed: _busy ? null : _showEditDriverProfileDialog,
               icon: const Icon(Icons.edit_rounded, size: 16),
-              label: Text(_uiText(en: 'Edit', ar: 'تعديل', fr: 'Modifier', es: 'Editar', de: 'Bearbeiten', it: 'Modifica', ru: 'Изменить', zh: '编辑')),
+              label: Text(_uiText(
+                  en: 'Edit',
+                  ar: 'تعديل',
+                  fr: 'Modifier',
+                  es: 'Editar',
+                  de: 'Bearbeiten',
+                  it: 'Modifica',
+                  ru: 'Изменить',
+                  zh: '编辑')),
             ),
           ]),
         ],
@@ -2001,13 +3503,16 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     );
   }
 
-  List<String> _startsFromRouteKeys(Iterable<String> routeKeys, AppLocalizations l) {
+  List<String> _startsFromRouteKeys(
+      Iterable<String> routeKeys, AppLocalizations l) {
     final starts = <String>{};
     for (final key in routeKeys) {
       final parts = key.split(airportRouteKeySeparator);
       if (parts.isNotEmpty) starts.add(parts.first.trim());
     }
-    return starts.toList()..sort((a, b) => localizedPlaceName(l, a).compareTo(localizedPlaceName(l, b)));
+    return starts.toList()
+      ..sort((a, b) =>
+          localizedPlaceName(l, a).compareTo(localizedPlaceName(l, b)));
   }
 
   ImageProvider<Object>? _imageProviderFromString(String? value) {
@@ -2016,7 +3521,11 @@ class _DriverScreenState extends State<DriverScreen> with SingleTickerProviderSt
     if (raw.startsWith('data:image/')) {
       final commaIdx = raw.indexOf(',');
       if (commaIdx <= 0 || commaIdx + 1 >= raw.length) return null;
-      try { return MemoryImage(base64Decode(raw.substring(commaIdx + 1))); } catch (_) { return null; }
+      try {
+        return MemoryImage(base64Decode(raw.substring(commaIdx + 1)));
+      } catch (_) {
+        return null;
+      }
     }
     return NetworkImage(raw);
   }

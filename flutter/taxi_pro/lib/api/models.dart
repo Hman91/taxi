@@ -192,6 +192,7 @@ class Ride {
     this.driverPhone,
     this.passengerName,
     this.passengerPhone,
+    this.passengerPhotoUrl,
     this.isRated,
     this.driverPhotoUrl,
     this.driverCarModel,
@@ -202,6 +203,8 @@ class Ride {
     this.b2bRoomNumber,
     this.b2bSourceCode,
     this.b2bFare,
+    this.scheduledPickupAt,
+    this.reservationStatus,
     this.createdAt,
     this.updatedAt,
   });
@@ -217,6 +220,7 @@ class Ride {
   final String? driverPhone;
   final String? passengerName;
   final String? passengerPhone;
+  final String? passengerPhotoUrl;
   final bool? isRated;
   final String? driverPhotoUrl;
   final String? driverCarModel;
@@ -227,6 +231,8 @@ class Ride {
   final String? b2bRoomNumber;
   final String? b2bSourceCode;
   final double? b2bFare;
+  final String? scheduledPickupAt;
+  final String? reservationStatus;
   final String? createdAt;
   final String? updatedAt;
 
@@ -243,6 +249,7 @@ class Ride {
       driverPhone: json['driver_phone'] as String?,
       passengerName: json['passenger_name'] as String?,
       passengerPhone: json['passenger_phone'] as String?,
+      passengerPhotoUrl: json['passenger_photo_url'] as String?,
       isRated: json['is_rated'] as bool?,
       driverPhotoUrl: json['driver_photo_url'] as String?,
       driverCarModel: json['driver_car_model'] as String?,
@@ -253,6 +260,8 @@ class Ride {
       b2bRoomNumber: json['b2b_room_number'] as String?,
       b2bSourceCode: json['b2b_source_code'] as String?,
       b2bFare: (json['b2b_fare'] as num?)?.toDouble(),
+      scheduledPickupAt: json['scheduled_pickup_at'] as String?,
+      reservationStatus: json['reservation_status'] as String?,
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
     );

@@ -58,6 +58,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   String? _driverCarModel;
   String? _driverCarColor;
   List<Ride> _rides = [];
+  List<Map<String, dynamic>> _availabilitySlots = [];
   final Set<int> _dismissedPendingRideIds = {};
   final List<AppNotification> _notifications = [];
   final Map<int, int> _unreadChatByRideId = <int, int>{};
@@ -173,6 +174,73 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     return Colors.red;
   }
 
+  static String _formatDateTime(DateTime dt) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${two(dt.day)}/${two(dt.month)} ${two(dt.hour)}:${two(dt.minute)}';
+  }
+
+  String _slotLabel(Map<String, dynamic> slot) {
+    final start = DateTime.tryParse('${slot['starts_at']}')?.toLocal();
+    final end = DateTime.tryParse('${slot['ends_at']}')?.toLocal();
+    if (start == null || end == null) return 'Availability slot';
+    return '${_formatDateTime(start)} - ${_formatDateTime(end)}';
+  }
+
+  Future<void> _refreshAvailability() async {
+    final t = _token;
+    if (t == null) return;
+    try {
+      final slots = await _api.listDriverAvailability(t);
+      if (!mounted) return;
+      setState(() => _availabilitySlots = slots);
+    } catch (_) {}
+  }
+
+  Future<void> _addAvailabilitySlot() async {
+    final t = _token;
+    if (t == null) return;
+    final now = DateTime.now();
+    final initial = now.add(const Duration(hours: 12));
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 30)),
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (time == null) return;
+    final start = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    final end = start.add(const Duration(hours: 4));
+    setState(() => _busy = true);
+    try {
+      await _api.createDriverAvailability(token: t, startsAt: start, endsAt: end);
+      await _refreshAvailability();
+    } catch (e) {
+      if (mounted) setState(() => _message = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _deleteAvailabilitySlot(Map<String, dynamic> slot) async {
+    final t = _token;
+    final id = (slot['id'] as num?)?.toInt();
+    if (t == null || id == null) return;
+    setState(() => _busy = true);
+    try {
+      await _api.deleteDriverAvailability(token: t, slotId: id);
+      await _refreshAvailability();
+    } catch (e) {
+      if (mounted) setState(() => _message = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -199,6 +267,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     _activeChatRideId = null;
     _connectRealtime();
     final fares = await _api.getAirportFares();
+    if (!mounted) return;
     final loc = AppLocalizations.of(context)!;
     _locations = _startsFromRouteKeys(fares.keys, loc);
     if (_selectedLocation.isEmpty || !_locations.contains(_selectedLocation)) {
@@ -206,6 +275,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
     }
     await _detectDriverLocation();
     await _refreshRides();
+    await _refreshAvailability();
     _startPeriodicRideSync();
     if (mounted) setState(() {});
   }
@@ -677,6 +747,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
       await _syncConversationRideMap(list);
       await _pollChatUnreadFallback();
       await _pollWalletDepletionFromApi();
+      unawaited(_refreshAvailability());
     } catch (e) {
       if (!quiet) {
         setState(() => _message = e.toString());
@@ -878,22 +949,22 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
       child: Container(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+            colors: [Color(0xFFFFC200), Color(0xFFE6A800)],
           ),
           borderRadius: BorderRadius.circular(20),
         ),
         child: TextButton.icon(
           onPressed: _busy ? null : () => _openChat(ride),
-          icon: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
+          icon: const Icon(Icons.chat_bubble_rounded, color: Color(0xFF111111), size: 16),
           label: Text(
             l10n.openChatButton,
             style: const TextStyle(
-              color: Colors.white,
+              color: Color(0xFF111111),
               fontWeight: FontWeight.w700,
             ),
           ),
           style: TextButton.styleFrom(
-            foregroundColor: Colors.white,
+            foregroundColor: const Color(0xFF111111),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           ),
@@ -912,9 +983,24 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   List<Ride> _pendingForLocation() => _rides
       .where((r) =>
           r.status == 'pending' &&
-          r.pickup.trim() == _selectedLocation.trim() &&
+          ((r.scheduledPickupAt ?? '').isNotEmpty ||
+              r.pickup.trim() == _selectedLocation.trim()) &&
           !_dismissedPendingRideIds.contains(r.id))
       .toList();
+
+  List<Ride> _upcomingScheduledMine() => _rides
+      .where((r) =>
+          _isMine(r) &&
+          (r.scheduledPickupAt ?? '').isNotEmpty &&
+          (r.status == 'accepted' || r.status == 'pending'))
+      .toList()
+    ..sort((a, b) => (a.scheduledPickupAt ?? '').compareTo(b.scheduledPickupAt ?? ''));
+
+  String _rideScheduleLabel(Ride ride) {
+    final dt = DateTime.tryParse(ride.scheduledPickupAt ?? '')?.toLocal();
+    if (dt == null) return 'Scheduled ride';
+    return _formatDateTime(dt);
+  }
 
   void _declineOffer(Ride r) {
     setState(() => _dismissedPendingRideIds.add(r.id));
@@ -945,12 +1031,16 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F5EC),
       appBar: AppBar(
+        backgroundColor: const Color(0xFFFFC200),
+        foregroundColor: const Color(0xFF1A1A1A),
         title: Text(l.appDriverTitle),
         actions: [
           LocalePopupMenuButton(
             authToken: _token,
             uiRole: AppUiRole.driver,
+            foregroundColor: const Color(0xFF1A1A1A),
           ),
           if (_token != null) ...[
             IconButton(
@@ -1101,6 +1191,80 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
               onPressed: _busy ? null : _refreshRides,
               child: Text(l.adminLoadRidesBtn),
             ),
+            const SizedBox(height: 8),
+            Card(
+              color: const Color(0xFF12192B),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: Color(0xFFE8C547)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.event_available_rounded, color: Color(0xFFFFD666)),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Scheduled availability',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: _busy ? null : _addAvailabilitySlot,
+                          icon: const Icon(Icons.add_rounded, color: Color(0xFF111111), size: 16),
+                          label: const Text('Add slot'),
+                          style: TextButton.styleFrom(
+                            backgroundColor: const Color(0xFFFFC200),
+                            foregroundColor: const Color(0xFF111111),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (_availabilitySlots.isEmpty)
+                      const Text(
+                        'Add future windows to receive reserved airport rides.',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      )
+                    else
+                      ..._availabilitySlots.take(4).map(
+                            (slot) => ListTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.timeline_rounded, color: Color(0xFFFFD666)),
+                              title: Text(
+                                _slotLabel(slot),
+                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                              ),
+                              trailing: IconButton(
+                                onPressed: _busy ? null : () => _deleteAvailabilitySlot(slot),
+                                icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
+                              ),
+                            ),
+                          ),
+                  ],
+                ),
+              ),
+            ),
+            if (_upcomingScheduledMine().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Text('Upcoming reserved rides', style: TextStyle(fontWeight: FontWeight.bold)),
+              ..._upcomingScheduledMine().map(
+                (r) => Card(
+                  color: const Color(0xFFFFF8E0),
+                  child: ListTile(
+                    leading: const Icon(Icons.flight_takeoff_rounded),
+                    title: Text(localizedRideRouteRow(l, r.pickup, r.destination)),
+                    subtitle: Text('${_rideScheduleLabel(r)} • ${r.reservationStatus ?? 'reserved'}'),
+                    trailing: Wrap(spacing: 4, children: _actionsFor(r)),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             Text(l.driverPendingRides,
                 style: const TextStyle(fontWeight: FontWeight.bold)),

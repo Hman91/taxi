@@ -214,6 +214,8 @@ class Ride {
     this.b2bRoomNumber,
     this.b2bSourceCode,
     this.b2bFare,
+    this.scheduledPickupAt,
+    this.reservationStatus,
     this.createdAt,
     this.updatedAt,
     this.quotedDistanceKm,
@@ -241,6 +243,8 @@ class Ride {
   final String? b2bRoomNumber;
   final String? b2bSourceCode;
   final double? b2bFare;
+  final String? scheduledPickupAt;
+  final String? reservationStatus;
   final String? createdAt;
   final String? updatedAt;
   /// Server-computed route distance when pickup/destination match the fare catalog (km).
@@ -271,6 +275,8 @@ class Ride {
       b2bRoomNumber: json['b2b_room_number'] as String?,
       b2bSourceCode: json['b2b_source_code'] as String?,
       b2bFare: (json['b2b_fare'] as num?)?.toDouble(),
+      scheduledPickupAt: json['scheduled_pickup_at'] as String?,
+      reservationStatus: json['reservation_status'] as String?,
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
       quotedDistanceKm: (json['quoted_distance_km'] as num?)?.toDouble(),
@@ -304,6 +310,8 @@ extension RideQuoteMerge on Ride {
       b2bRoomNumber: b2bRoomNumber,
       b2bSourceCode: b2bSourceCode,
       b2bFare: b2bFare,
+      scheduledPickupAt: scheduledPickupAt,
+      reservationStatus: reservationStatus,
       createdAt: createdAt,
       updatedAt: updatedAt,
       quotedDistanceKm: quotedDistanceKm ?? previous.quotedDistanceKm,

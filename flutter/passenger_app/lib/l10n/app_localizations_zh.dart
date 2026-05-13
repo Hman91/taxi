@@ -25,6 +25,51 @@ class AppLocalizationsZh extends AppLocalizations {
   String get language => '语言';
 
   @override
+  String get passengerLanguageReminderTitle => '选择你的语言';
+
+  @override
+  String get passengerLanguageReminderSubtitle => '设置你偏好的 Voom 体验。';
+
+  @override
+  String get passengerLanguageReminderContinue => '继续';
+
+  @override
+  String get passengerLanguageNameEnglish => '英语';
+
+  @override
+  String get passengerLanguageNameFrench => '法语';
+
+  @override
+  String get passengerLanguageNameArabic => '阿拉伯语';
+
+  @override
+  String get passengerLanguageNameGerman => '德语';
+
+  @override
+  String get passengerLanguageNameSpanish => '西班牙语';
+
+  @override
+  String get passengerLanguageNameItalian => '意大利语';
+
+  @override
+  String get passengerLanguageNameChinese => '中文';
+
+  @override
+  String get passengerLanguageNameRussian => '俄语';
+
+  @override
+  String get passengerLanguageRegionGlobal => '全球';
+
+  @override
+  String get passengerLanguageRegionEurope => '欧洲';
+
+  @override
+  String get passengerLanguageRegionMena => '中东和北非';
+
+  @override
+  String get passengerLanguageRegionAsia => '亚洲';
+
+  @override
   String get rolePassenger => '乘客';
 
   @override

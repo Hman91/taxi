@@ -128,6 +128,7 @@ def create_b2b_booking(**kwargs: Any) -> Tuple[Any, int]:
     flight_eta = (data.get("flight_eta") or "").strip()
     room_number = (data.get("room_number") or "").strip()
     source_code_input = (data.get("source_code") or "").strip()
+    scheduled_pickup_at = data.get("scheduled_pickup_at") or data.get("scheduledPickupAt")
     user = db_module.user_by_id(int(uid)) or {}
     email = str(user.get("email") or "").strip().lower()
     source_code_by_uid = email.split("@")[0].strip() if "@" in email else ""
@@ -169,6 +170,7 @@ def create_b2b_booking(**kwargs: Any) -> Tuple[Any, int]:
         pickup,
         destination,
         enforce_single_active=False,
+        scheduled_pickup_at=scheduled_pickup_at,
     )
     if ride is not None:
         booking = db_module.b2b_booking_update(

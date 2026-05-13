@@ -41,7 +41,7 @@ class _C {
   static const yellowSoft = Color(0xFFFFF8E0);
   static const yellowDeep = Color(0xFFE6A800);
   static const charcoal = Color(0xFF1A1A1A);
-  static const bgWarm = Color(0xFFFAF8F2);
+  static const bgWarm = Color(0xFFF8F5EC);
   static const surface = Color(0xFFFFFFFF);
   static const surfaceAlt = Color(0xFFF5F1E8);
   static const border = Color(0xFFDDD8C8);
@@ -50,22 +50,431 @@ class _C {
   static const textSoft = Color(0xFF5C5C5C);
   static const danger = Color(0xFFB91C1C);
   static const dangerBg = Color(0xFFFFE4E4);
+  static const neonBlue = Color(0xFFFFC200);
 }
 
+const Map<String, Map<String, String>> _b2bUiTranslations = {
+  'driverReserved': {
+    'en': 'Driver reserved',
+    'fr': 'Chauffeur réservé',
+    'ar': 'تم حجز سائق',
+    'de': 'Fahrer reserviert',
+    'es': 'Conductor reservado',
+    'it': 'Autista prenotato',
+    'zh': '司机已预约',
+    'ru': 'Водитель забронирован',
+  },
+  'reservationCancelled': {
+    'en': 'Reservation cancelled',
+    'fr': 'Réservation annulée',
+    'ar': 'تم إلغاء الحجز',
+    'de': 'Reservierung storniert',
+    'es': 'Reserva cancelada',
+    'it': 'Prenotazione annullata',
+    'zh': '预约已取消',
+    'ru': 'Бронирование отменено',
+  },
+  'completed': {
+    'en': 'Completed',
+    'fr': 'Terminé',
+    'ar': 'مكتمل',
+    'de': 'Abgeschlossen',
+    'es': 'Completado',
+    'it': 'Completato',
+    'zh': '已完成',
+    'ru': 'Завершено',
+  },
+  'searching': {
+    'en': 'Searching',
+    'fr': 'Recherche',
+    'ar': 'جارٍ البحث',
+    'de': 'Suche läuft',
+    'es': 'Buscando',
+    'it': 'Ricerca',
+    'zh': '正在搜索',
+    'ru': 'Поиск',
+  },
+  'upcomingRide': {
+    'en': 'Upcoming ride',
+    'fr': 'Course à venir',
+    'ar': 'رحلة قادمة',
+    'de': 'Bevorstehende Fahrt',
+    'es': 'Viaje próximo',
+    'it': 'Corsa in arrivo',
+    'zh': '即将开始的行程',
+    'ru': 'Предстоящая поездка',
+  },
+  'scheduled': {
+    'en': 'Scheduled',
+    'fr': 'Planifié',
+    'ar': 'مجدول',
+    'de': 'Geplant',
+    'es': 'Programado',
+    'it': 'Programmato',
+    'zh': '已预约',
+    'ru': 'Запланировано',
+  },
+  'pickupWindowOpen': {
+    'en': 'Pickup window open',
+    'fr': 'Fenêtre de prise en charge ouverte',
+    'ar': 'وقت الانطلاق مفتوح',
+    'de': 'Abholfenster geöffnet',
+    'es': 'Ventana de recogida abierta',
+    'it': 'Finestra di ritiro aperta',
+    'zh': '接送时间窗口已开启',
+    'ru': 'Окно подачи открыто',
+  },
+  'editB2bAccount': {
+    'en': 'Edit B2B account',
+    'fr': 'Modifier le compte B2B',
+    'ar': 'تعديل حساب B2B',
+    'de': 'B2B-Konto bearbeiten',
+    'es': 'Editar cuenta B2B',
+    'it': 'Modifica account B2B',
+    'zh': '编辑 B2B 账号',
+    'ru': 'Редактировать аккаунт B2B',
+  },
+  'newPasswordOptional': {
+    'en': 'New password (optional)',
+    'fr': 'Nouveau mot de passe (optionnel)',
+    'ar': 'كلمة مرور جديدة (اختياري)',
+    'de': 'Neues Passwort (optional)',
+    'es': 'Nueva contraseña (opcional)',
+    'it': 'Nuova password (opzionale)',
+    'zh': '新密码（可选）',
+    'ru': 'Новый пароль (необязательно)',
+  },
+  'name': {
+    'en': 'Name',
+    'fr': 'Nom',
+    'ar': 'الاسم',
+    'de': 'Name',
+    'es': 'Nombre',
+    'it': 'Nome',
+    'zh': '姓名',
+    'ru': 'Имя',
+  },
+  'phone': {
+    'en': 'Phone',
+    'fr': 'Téléphone',
+    'ar': 'الهاتف',
+    'de': 'Telefon',
+    'es': 'Teléfono',
+    'it': 'Telefono',
+    'zh': '电话',
+    'ru': 'Телефон',
+  },
+  'save': {
+    'en': 'Save',
+    'fr': 'Enregistrer',
+    'ar': 'حفظ',
+    'de': 'Speichern',
+    'es': 'Guardar',
+    'it': 'Salva',
+    'zh': '保存',
+    'ru': 'Сохранить',
+  },
+  'accountUpdated': {
+    'en': 'Account updated successfully.',
+    'fr': 'Compte mis à jour avec succès.',
+    'ar': 'تم تحديث الحساب بنجاح.',
+    'de': 'Konto erfolgreich aktualisiert.',
+    'es': 'Cuenta actualizada correctamente.',
+    'it': 'Account aggiornato correttamente.',
+    'zh': '账号已成功更新。',
+    'ru': 'Аккаунт успешно обновлён.',
+  },
+  'loginSubtitle': {
+    'en': 'Corporate access for guest ride requests and scheduled transfers.',
+    'fr':
+        'Accès entreprise pour les demandes de trajets invités et les transferts planifiés.',
+    'ar': 'دخول الشركات لطلبات رحلات الضيوف والنقل المجدول.',
+    'de': 'Firmenzugang für Gästefahrten und geplante Transfers.',
+    'es':
+        'Acceso corporativo para viajes de invitados y traslados programados.',
+    'it': 'Accesso aziendale per corse ospiti e transfer programmati.',
+    'zh': '企业入口，用于客人行程请求和预约接送。',
+    'ru':
+        'Корпоративный доступ для гостевых поездок и трансферов по расписанию.',
+  },
+  'b2bRideControl': {
+    'en': 'B2B RIDE CONTROL',
+    'fr': 'CONTRÔLE DES COURSES B2B',
+    'ar': 'تحكم رحلات B2B',
+    'de': 'B2B-FAHRTSTEUERUNG',
+    'es': 'CONTROL DE VIAJES B2B',
+    'it': 'CONTROLLO CORSE B2B',
+    'zh': 'B2B 行程控制',
+    'ru': 'УПРАВЛЕНИЕ B2B-ПОЕЗДКАМИ',
+  },
+  'heroBody': {
+    'en':
+        'Create guest rides, schedule pickup times, and track driver assignment in one clear control surface.',
+    'fr':
+        'Créez des courses invités, planifiez les prises en charge et suivez l’affectation du chauffeur dans une interface claire.',
+    'ar':
+        'أنشئ رحلات للضيوف، وجدول أوقات الانطلاق، وتابع تعيين السائق من لوحة واحدة واضحة.',
+    'de':
+        'Erstelle Gästefahrten, plane Abholzeiten und verfolge die Fahrerzuweisung in einer klaren Oberfläche.',
+    'es':
+        'Crea viajes para invitados, programa recogidas y sigue la asignación del conductor en un panel claro.',
+    'it':
+        'Crea corse ospiti, programma i ritiri e monitora l’assegnazione dell’autista in un unico pannello.',
+    'zh': '创建客人行程、预约接送时间，并在一个清晰界面中跟踪司机分配。',
+    'ru':
+        'Создавайте гостевые поездки, планируйте подачу и отслеживайте назначение водителя в одном интерфейсе.',
+  },
+  'portalStatus': {
+    'en': 'Portal status',
+    'fr': 'État du portail',
+    'ar': 'حالة البوابة',
+    'de': 'Portalstatus',
+    'es': 'Estado del portal',
+    'it': 'Stato portale',
+    'zh': '门户状态',
+    'ru': 'Статус портала',
+  },
+  'tapAccountDetails': {
+    'en': 'Tap to open account details',
+    'fr': 'Touchez pour ouvrir les détails du compte',
+    'ar': 'اضغط لفتح تفاصيل الحساب',
+    'de': 'Tippen, um Kontodetails zu öffnen',
+    'es': 'Toca para abrir los detalles de la cuenta',
+    'it': 'Tocca per aprire i dettagli account',
+    'zh': '点击打开账号详情',
+    'ru': 'Нажмите, чтобы открыть данные аккаунта',
+  },
+  'codeUnavailable': {
+    'en': 'Code unavailable',
+    'fr': 'Code indisponible',
+    'ar': 'الرمز غير متاح',
+    'de': 'Code nicht verfügbar',
+    'es': 'Código no disponible',
+    'it': 'Codice non disponibile',
+    'zh': '代码不可用',
+    'ru': 'Код недоступен',
+  },
+  'codeLine': {
+    'en': 'Code: {value}',
+    'fr': 'Code : {value}',
+    'ar': 'الرمز: {value}',
+    'de': 'Code: {value}',
+    'es': 'Código: {value}',
+    'it': 'Codice: {value}',
+    'zh': '代码：{value}',
+    'ru': 'Код: {value}',
+  },
+  'namePinLine': {
+    'en': 'Name / PIN: {value}',
+    'fr': 'Nom / PIN : {value}',
+    'ar': 'الاسم / PIN: {value}',
+    'de': 'Name / PIN: {value}',
+    'es': 'Nombre / PIN: {value}',
+    'it': 'Nome / PIN: {value}',
+    'zh': '姓名 / PIN：{value}',
+    'ru': 'Имя / PIN: {value}',
+  },
+  'phoneHotelLine': {
+    'en': 'Phone / Hotel: {value}',
+    'fr': 'Téléphone / Hôtel : {value}',
+    'ar': 'الهاتف / الفندق: {value}',
+    'de': 'Telefon / Hotel: {value}',
+    'es': 'Teléfono / Hotel: {value}',
+    'it': 'Telefono / Hotel: {value}',
+    'zh': '电话 / 酒店：{value}',
+    'ru': 'Телефон / Отель: {value}',
+  },
+  'guestRequestSubtitle': {
+    'en': 'Guest ride request',
+    'fr': 'Demande de trajet invité',
+    'ar': 'طلب رحلة ضيف',
+    'de': 'Gastfahrt anfragen',
+    'es': 'Solicitud de viaje de invitado',
+    'it': 'Richiesta corsa ospite',
+    'zh': '客人行程请求',
+    'ru': 'Запрос гостевой поездки',
+  },
+  'newRideRequest': {
+    'en': 'New ride request',
+    'fr': 'Nouvelle demande',
+    'ar': 'طلب رحلة جديد',
+    'de': 'Neue Anfrage',
+    'es': 'Nueva solicitud',
+    'it': 'Nuova richiesta',
+    'zh': '新行程请求',
+    'ru': 'Новый запрос',
+  },
+  'tapOpenForm': {
+    'en': 'Tap to open the request form',
+    'fr': 'Touchez pour ouvrir le formulaire',
+    'ar': 'اضغط لفتح نموذج الطلب',
+    'de': 'Tippen, um das Formular zu öffnen',
+    'es': 'Toca para abrir el formulario',
+    'it': 'Tocca per aprire il modulo',
+    'zh': '点击打开请求表单',
+    'ru': 'Нажмите, чтобы открыть форму',
+  },
+  'guestName': {
+    'en': 'Guest name',
+    'fr': 'Nom du client',
+    'ar': 'اسم الضيف',
+    'de': 'Name des Gastes',
+    'es': 'Nombre del cliente',
+    'it': 'Nome ospite',
+    'zh': '客人姓名',
+    'ru': 'Имя гостя',
+  },
+  'guestPhone': {
+    'en': 'Guest phone',
+    'fr': 'Téléphone du client',
+    'ar': 'هاتف الضيف',
+    'de': 'Telefon des Gastes',
+    'es': 'Teléfono del cliente',
+    'it': 'Telefono ospite',
+    'zh': '客人电话',
+    'ru': 'Телефон гостя',
+  },
+  'hotel': {
+    'en': 'Hotel',
+    'fr': 'Hôtel',
+    'ar': 'الفندق',
+    'de': 'Hotel',
+    'es': 'Hotel',
+    'it': 'Hotel',
+    'zh': '酒店',
+    'ru': 'Отель',
+  },
+  'flightEta': {
+    'en': 'Flight ETA / Stopover',
+    'fr': 'ETA vol / Escale',
+    'ar': 'موعد الرحلة / التوقف',
+    'de': 'Flug ETA / Zwischenstopp',
+    'es': 'ETA vuelo / Escala',
+    'it': 'ETA volo / Scalo',
+    'zh': '航班到达时间 / 经停',
+    'ru': 'ETA рейса / пересадка',
+  },
+  'roomNumber': {
+    'en': 'Room number',
+    'fr': 'Numéro de chambre',
+    'ar': 'رقم الغرفة',
+    'de': 'Zimmernummer',
+    'es': 'Número de habitación',
+    'it': 'Numero camera',
+    'zh': '房间号',
+    'ru': 'Номер комнаты',
+  },
+  'gpsLine': {
+    'en': 'GPS: {value}',
+    'fr': 'GPS : {value}',
+    'ar': 'GPS: {value}',
+    'de': 'GPS: {value}',
+    'es': 'GPS: {value}',
+    'it': 'GPS: {value}',
+    'zh': 'GPS：{value}',
+    'ru': 'GPS: {value}',
+  },
+  'nearestZone': {
+    'en': 'Nearest zone: {value}',
+    'fr': 'Zone la plus proche : {value}',
+    'ar': 'أقرب منطقة: {value}',
+    'de': 'Nächste Zone: {value}',
+    'es': 'Zona más cercana: {value}',
+    'it': 'Zona più vicina: {value}',
+    'zh': '最近区域：{value}',
+    'ru': 'Ближайшая зона: {value}',
+  },
+  'departureLine': {
+    'en': 'Departure: {value}',
+    'fr': 'Départ : {value}',
+    'ar': 'الانطلاق: {value}',
+    'de': 'Abfahrt: {value}',
+    'es': 'Salida: {value}',
+    'it': 'Partenza: {value}',
+    'zh': '出发地：{value}',
+    'ru': 'Отправление: {value}',
+  },
+  'destination': {
+    'en': 'Destination',
+    'fr': 'Destination',
+    'ar': 'الوجهة',
+    'de': 'Ziel',
+    'es': 'Destino',
+    'it': 'Destinazione',
+    'zh': '目的地',
+    'ru': 'Пункт назначения',
+  },
+  'scheduledPickup': {
+    'en': 'Scheduled ride pickup',
+    'fr': 'Prise en charge planifiée',
+    'ar': 'موعد انطلاق الرحلة المجدولة',
+    'de': 'Geplante Abholung',
+    'es': 'Recogida programada',
+    'it': 'Ritiro programmato',
+    'zh': '预约接送时间',
+    'ru': 'Подача по расписанию',
+  },
+  'chooseDateBeforeBooking': {
+    'en': 'Choose date and time before booking',
+    'fr': 'Choisissez la date et l’heure avant de réserver',
+    'ar': 'اختر التاريخ والوقت قبل الحجز',
+    'de': 'Datum und Uhrzeit vor der Buchung wählen',
+    'es': 'Elige fecha y hora antes de reservar',
+    'it': 'Scegli data e ora prima di prenotare',
+    'zh': '预订前请选择日期和时间',
+    'ru': 'Выберите дату и время перед бронированием',
+  },
+  'ridesCount': {
+    'en': '{value} rides',
+    'fr': '{value} courses',
+    'ar': '{value} رحلة',
+    'de': '{value} Fahrten',
+    'es': '{value} viajes',
+    'it': '{value} corse',
+    'zh': '{value} 个行程',
+    'ru': '{value} поездок',
+  },
+  'departDestinationLine': {
+    'en': 'Depart: {value}',
+    'fr': 'Départ : {value}',
+    'ar': 'الانطلاق: {value}',
+    'de': 'Abfahrt: {value}',
+    'es': 'Salida: {value}',
+    'it': 'Partenza: {value}',
+    'zh': '出发：{value}',
+    'ru': 'Отправление: {value}',
+  },
+  'driverSearching': {
+    'en': 'Looking for a driver...',
+    'fr': 'Recherche d’un chauffeur...',
+    'ar': 'جارٍ البحث عن سائق...',
+    'de': 'Fahrer wird gesucht...',
+    'es': 'Buscando conductor...',
+    'it': 'Ricerca autista...',
+    'zh': '正在寻找司机...',
+    'ru': 'Ищем водителя...',
+  },
+};
+
 InputDecoration _fd(String label, {IconData? icon}) => InputDecoration(
-  labelText: label,
-  prefixIcon: icon == null ? null : Icon(icon, color: _C.charcoal, size: 18),
-  filled: true,
-  fillColor: _C.surfaceAlt,
-  enabledBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: const BorderSide(color: _C.border, width: 1.4),
-  ),
-  focusedBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: const BorderSide(color: _C.yellow, width: 2),
-  ),
-);
+      labelText: label,
+      labelStyle: const TextStyle(
+          color: _C.textSoft, fontSize: 12, fontWeight: FontWeight.w700),
+      prefixIcon:
+          icon == null ? null : Icon(icon, color: _C.yellowDeep, size: 18),
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.84),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide:
+            BorderSide(color: Colors.white.withOpacity(0.9), width: 1.2),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: const BorderSide(color: _C.neonBlue, width: 2),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+    );
 
 class _Module extends StatelessWidget {
   const _Module({required this.child, this.accent = false});
@@ -73,13 +482,40 @@ class _Module extends StatelessWidget {
   final bool accent;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: _C.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: accent ? _C.yellowDeep : _C.border, width: accent ? 2 : 1),
-          boxShadow: [BoxShadow(color: _C.charcoal.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 3))],
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: accent
+                ? [
+                    Colors.white.withOpacity(0.96),
+                    _C.yellowSoft.withOpacity(0.86)
+                  ]
+                : [
+                    Colors.white.withOpacity(0.92),
+                    Colors.white.withOpacity(0.72)
+                  ],
+          ),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(
+              color: accent
+                  ? _C.yellow.withOpacity(0.72)
+                  : Colors.white.withOpacity(0.9),
+              width: 1.4),
+          boxShadow: [
+            BoxShadow(
+                color: _C.yellowDeep.withOpacity(accent ? 0.18 : 0.10),
+                blurRadius: accent ? 36 : 28,
+                offset: const Offset(0, 16)),
+            BoxShadow(
+                color: Colors.white.withOpacity(0.65),
+                blurRadius: 0,
+                offset: const Offset(0, 1)),
+          ],
         ),
         child: Padding(padding: const EdgeInsets.all(12), child: child),
       );
@@ -92,30 +528,89 @@ Widget _rowInfoCard({
   Color iconBg = _C.surfaceAlt,
   Color iconColor = _C.charcoal,
 }) =>
-    Container(
+    AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: _C.surfaceAlt,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _C.border),
+        gradient: LinearGradient(colors: [
+          Colors.white.withOpacity(0.94),
+          _C.yellowSoft.withOpacity(0.28),
+          _C.surfaceAlt.withOpacity(0.76)
+        ]),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withOpacity(0.92), width: 1.1),
+        boxShadow: [
+          BoxShadow(
+              color: _C.yellowDeep.withOpacity(0.08),
+              blurRadius: 22,
+              offset: const Offset(0, 10))
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              color: iconBg,
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: _C.border),
+              gradient: LinearGradient(
+                colors: [iconBg, Colors.white.withOpacity(0.86)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withOpacity(0.8)),
             ),
             child: Icon(icon, color: iconColor, size: 16),
           ),
           const SizedBox(width: 10),
           Expanded(child: content),
           if (trailing != null) ...[const SizedBox(width: 8), trailing],
+        ],
+      ),
+    );
+
+Widget _metricPill(IconData icon, String label, Color accent) =>
+    AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.92),
+            _C.yellowSoft.withOpacity(0.62)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _C.yellow.withOpacity(0.65)),
+        boxShadow: [
+          BoxShadow(
+            color: _C.yellowDeep.withOpacity(0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: accent, size: 16),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  color: _C.charcoal,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900),
+            ),
+          ),
         ],
       ),
     );
@@ -131,14 +626,25 @@ class _SectionHead extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 12),
         child: Row(
           children: [
-            Container(width: 4, height: 20, decoration: BoxDecoration(color: _C.yellow, borderRadius: BorderRadius.circular(4))),
+            Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                    color: _C.yellow, borderRadius: BorderRadius.circular(4))),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(color: _C.textStrong, fontWeight: FontWeight.w800, fontSize: 15)),
-                  if (subtitle != null) Text(subtitle!, style: const TextStyle(color: _C.textSoft, fontSize: 12)),
+                  Text(title,
+                      style: const TextStyle(
+                          color: _C.textStrong,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15)),
+                  if (subtitle != null)
+                    Text(subtitle!,
+                        style:
+                            const TextStyle(color: _C.textSoft, fontSize: 12)),
                 ],
               ),
             ),
@@ -184,7 +690,8 @@ class _B2bScreenState extends State<B2bScreen> {
   final Map<int, int> _rideIdByConversationId = {};
   final Map<int, int> _conversationIdByRideId = {};
   final Map<int, int> _lastSeenMessageIdByConversationId = <int, int>{};
-  final Map<String, ImageProvider<Object>?> _photoProviderCache = <String, ImageProvider<Object>?>{};
+  final Map<String, ImageProvider<Object>?> _photoProviderCache =
+      <String, ImageProvider<Object>?>{};
   final Set<int> _ratedRideIds = <int>{};
   final Map<int, int> _ratingByRideId = <int, int>{};
   int? _activeChatRideId;
@@ -194,7 +701,8 @@ class _B2bScreenState extends State<B2bScreen> {
   bool _busy = false;
   bool _obscureSecret = true;
   bool _ok = false;
-  bool _requestFormExpanded = true;
+  bool _requestFormExpanded = false;
+  DateTime? _scheduledPickupAt;
   _B2bRideFilter _rideFilter = _B2bRideFilter.all;
   String _b2bDisplayName = 'B2B account';
   String _b2bEmail = '';
@@ -245,9 +753,11 @@ class _B2bScreenState extends State<B2bScreen> {
     if ((token ?? '').trim().isEmpty) return;
     final claims = _decodeJwtClaims(token!);
     final email = (claims['email'] ?? claims['sub'] ?? '').toString().trim();
-    final name = (claims['display_name'] ?? claims['name'] ?? '').toString().trim();
+    final name =
+        (claims['display_name'] ?? claims['name'] ?? '').toString().trim();
     final phone = (claims['phone'] ?? '').toString().trim();
-    final code = (claims['source_code'] ?? claims['code'] ?? '').toString().trim();
+    final code =
+        (claims['source_code'] ?? claims['code'] ?? '').toString().trim();
     if (!mounted) return;
     setState(() {
       if (name.isNotEmpty) _b2bDisplayName = name;
@@ -255,7 +765,8 @@ class _B2bScreenState extends State<B2bScreen> {
       if (phone.isNotEmpty) _b2bPhone = phone;
       if (code.isNotEmpty) _b2bCode = code;
       if (_b2bDisplayName.trim().isEmpty) {
-        _b2bDisplayName = _b2bEmail.isNotEmpty ? _b2bEmail : 'B2B #${_userId ?? ''}';
+        _b2bDisplayName =
+            _b2bEmail.isNotEmpty ? _b2bEmail : 'B2B #${_userId ?? ''}';
       }
     });
   }
@@ -264,7 +775,8 @@ class _B2bScreenState extends State<B2bScreen> {
     try {
       final data = await _api.getB2bMe(token);
       if (!mounted) return;
-      final user = Map<String, dynamic>.from((data['user'] as Map?) ?? const {});
+      final user =
+          Map<String, dynamic>.from((data['user'] as Map?) ?? const {});
       final tenant =
           Map<String, dynamic>.from((data['tenant'] as Map?) ?? const {});
       final display = (user['display_name'] ?? '').toString().trim();
@@ -293,6 +805,7 @@ class _B2bScreenState extends State<B2bScreen> {
       });
     } catch (_) {}
   }
+
   String _uiText({
     required String en,
     required String ar,
@@ -312,6 +825,58 @@ class _B2bScreenState extends State<B2bScreen> {
     if (code.startsWith('ru')) return ru;
     if (code.startsWith('zh')) return zh;
     return en;
+  }
+
+  String _tx(String key, [Object? value]) {
+    final code = Localizations.localeOf(context).languageCode.toLowerCase();
+    final table = _b2bUiTranslations[key];
+    return (table?[code] ?? table?['en'] ?? key)
+        .replaceAll('{value}', '${value ?? ''}');
+  }
+
+  static String _formatSchedule(DateTime dt) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${two(dt.day)}/${two(dt.month)}/${dt.year} ${two(dt.hour)}:${two(dt.minute)}';
+  }
+
+  Future<void> _pickScheduledPickup() async {
+    final now = DateTime.now();
+    final initial = _scheduledPickupAt ?? now.add(const Duration(hours: 12));
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 30)),
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (time == null) return;
+    setState(() {
+      _scheduledPickupAt =
+          DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    });
+  }
+
+  String _reservationStatusText(Ride ride) {
+    final status = (ride.reservationStatus ?? '').trim();
+    if (status == 'reserved') return _tx('driverReserved');
+    if (status == 'cancelled') return _tx('reservationCancelled');
+    if (status == 'completed') return _tx('completed');
+    return ride.driverId == null ? _tx('searching') : _tx('upcomingRide');
+  }
+
+  String _scheduleCountdown(Ride ride) {
+    final raw = ride.scheduledPickupAt;
+    final dt = raw == null ? null : DateTime.tryParse(raw)?.toLocal();
+    if (dt == null) return _tx('scheduled');
+    final diff = dt.difference(DateTime.now());
+    if (diff.isNegative) return _tx('pickupWindowOpen');
+    if (diff.inDays > 0) return '${diff.inDays}d ${diff.inHours % 24}h';
+    if (diff.inHours > 0) return '${diff.inHours}h ${diff.inMinutes % 60}m';
+    return '${diff.inMinutes.clamp(0, 59)}m';
   }
 
   static const Set<String> _airportZones = {
@@ -354,7 +919,8 @@ class _B2bScreenState extends State<B2bScreen> {
     'Borj el Kebir': _ZoneCoord(35.5030, 11.0610),
   };
 
-  ({String? zone, double? distanceMeters}) _nearestZoneFor(double lat, double lng) {
+  ({String? zone, double? distanceMeters}) _nearestZoneFor(
+      double lat, double lng) {
     String? bestZone;
     double? bestDist;
     for (final e in _zoneCoords.entries) {
@@ -395,7 +961,8 @@ class _B2bScreenState extends State<B2bScreen> {
         return;
       }
       final p = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
       );
       final nearest = _nearestZoneFor(p.latitude, p.longitude);
       if (!mounted) return;
@@ -412,7 +979,9 @@ class _B2bScreenState extends State<B2bScreen> {
               .toSet();
           if (starts.contains(nearest.zone!.trim())) {
             final keys = _filteredRouteKeys()
-                .where((k) => k.split(airportRouteKeySeparator).first.trim() == nearest.zone!.trim())
+                .where((k) =>
+                    k.split(airportRouteKeySeparator).first.trim() ==
+                    nearest.zone!.trim())
                 .toList();
             if (keys.isNotEmpty) _routeKey = keys.first;
           }
@@ -458,15 +1027,17 @@ class _B2bScreenState extends State<B2bScreen> {
   }
 
   List<String> _destinationChoices() {
-    final keys = _filteredRouteKeys();
     final set = <String>{};
-    for (final key in keys) {
+    for (final key in _fares.keys) {
       final parts = key.split(airportRouteKeySeparator);
       if (parts.length < 2) continue;
       final dest = parts[1].trim();
       if (dest.isNotEmpty) set.add(dest);
     }
-    final list = set.toList()..sort();
+    final l = AppLocalizations.of(context)!;
+    final list = set.toList()
+      ..sort((a, b) =>
+          localizedPlaceName(l, a).compareTo(localizedPlaceName(l, b)));
     return list;
   }
 
@@ -474,27 +1045,54 @@ class _B2bScreenState extends State<B2bScreen> {
     final query = _destinationController.text.trim().toLowerCase();
     final base = _destinationChoices();
     if (query.isEmpty) return base.take(10).toList();
+    final l = AppLocalizations.of(context)!;
     return base
-        .where((d) => d.toLowerCase().contains(query))
-        .take(10)
+        .where((d) =>
+            d.toLowerCase().contains(query) ||
+            localizedPlaceName(l, d).toLowerCase().contains(query))
+        .take(12)
         .toList();
   }
 
   String? _resolveRouteFromDestination(String destination) {
     final target = destination.trim().toLowerCase();
     if (target.isEmpty) return null;
-    final keys = _filteredRouteKeys();
+    final keys = _fares.keys.toList();
     if (keys.isEmpty) return null;
+    final preferredStart = (_nearestZoneName ?? '').trim().toLowerCase();
     final exact = keys.where((k) {
       final parts = k.split(airportRouteKeySeparator);
       return parts.length >= 2 && parts[1].trim().toLowerCase() == target;
     }).toList();
-    if (exact.isNotEmpty) return exact.first;
+    if (exact.isNotEmpty) {
+      if (preferredStart.isNotEmpty) {
+        final preferred = exact.where((k) {
+          final parts = k.split(airportRouteKeySeparator);
+          return parts.isNotEmpty &&
+              parts.first.trim().toLowerCase() == preferredStart;
+        }).toList();
+        if (preferred.isNotEmpty) return preferred.first;
+      }
+      exact.sort((a, b) => a.compareTo(b));
+      return exact.first;
+    }
     final fuzzy = keys.where((k) {
       final parts = k.split(airportRouteKeySeparator);
-      return parts.length >= 2 && parts[1].trim().toLowerCase().contains(target);
+      return parts.length >= 2 &&
+          parts[1].trim().toLowerCase().contains(target);
     }).toList();
-    if (fuzzy.isNotEmpty) return fuzzy.first;
+    if (fuzzy.isNotEmpty) {
+      if (preferredStart.isNotEmpty) {
+        final preferred = fuzzy.where((k) {
+          final parts = k.split(airportRouteKeySeparator);
+          return parts.isNotEmpty &&
+              parts.first.trim().toLowerCase() == preferredStart;
+        }).toList();
+        if (preferred.isNotEmpty) return preferred.first;
+      }
+      fuzzy.sort((a, b) => a.compareTo(b));
+      return fuzzy.first;
+    }
     return null;
   }
 
@@ -511,7 +1109,8 @@ class _B2bScreenState extends State<B2bScreen> {
     final start = _zoneCoords[parts.first.trim()];
     final dest = _zoneCoords[parts[1].trim()];
     if (start == null || dest == null) return null;
-    final m = Geolocator.distanceBetween(start.lat, start.lng, dest.lat, dest.lng);
+    final m =
+        Geolocator.distanceBetween(start.lat, start.lng, dest.lat, dest.lng);
     return m / 1000.0;
   }
 
@@ -575,7 +1174,7 @@ class _B2bScreenState extends State<B2bScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          title: const Text('Edit B2B Account'),
+          title: Text(_tx('editB2bAccount')),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -583,39 +1182,49 @@ class _B2bScreenState extends State<B2bScreen> {
                 TextField(
                   controller: emailCtrl,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: _fd('E-mail', icon: Icons.alternate_email_rounded),
+                  decoration: _fd(AppLocalizations.of(context)!.emailLabel,
+                      icon: Icons.alternate_email_rounded),
                 ),
                 const SizedBox(height: 10),
                 TextField(
                   controller: newPasswordCtrl,
                   obscureText: obscureNext,
-                  decoration: _fd('New password (optional)', icon: Icons.password_rounded).copyWith(
+                  decoration: _fd(_tx('newPasswordOptional'),
+                          icon: Icons.password_rounded)
+                      .copyWith(
                     suffixIcon: IconButton(
-                      onPressed: () => setLocal(() => obscureNext = !obscureNext),
-                      icon: Icon(obscureNext ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                      onPressed: () =>
+                          setLocal(() => obscureNext = !obscureNext),
+                      icon: Icon(obscureNext
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined),
                     ),
                   ),
                 ),
                 const SizedBox(height: 10),
                 TextField(
                   controller: displayNameCtrl,
-                  decoration: _fd('Name', icon: Icons.person_outline_rounded),
+                  decoration:
+                      _fd(_tx('name'), icon: Icons.person_outline_rounded),
                 ),
                 const SizedBox(height: 10),
                 TextField(
                   controller: phoneCtrl,
                   keyboardType: TextInputType.phone,
-                  decoration: _fd('Phone', icon: Icons.phone_outlined),
+                  decoration: _fd(_tx('phone'), icon: Icons.phone_outlined),
                 ),
                 if ((error ?? '').isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  Text(error!, style: const TextStyle(color: _C.danger, fontSize: 12)),
+                  Text(error!,
+                      style: const TextStyle(color: _C.danger, fontSize: 12)),
                 ],
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: localBusy ? null : () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            TextButton(
+                onPressed: localBusy ? null : () => Navigator.pop(ctx, false),
+                child: Text(AppLocalizations.of(context)!.genericCancel)),
             FilledButton(
               onPressed: localBusy
                   ? null
@@ -642,13 +1251,16 @@ class _B2bScreenState extends State<B2bScreen> {
                         setState(() {
                           _b2bEmail = (user['email'] ?? _b2bEmail).toString();
                           _b2bPhone = (user['phone'] ?? _b2bPhone).toString();
-                          final dn = (user['display_name'] ?? '').toString().trim();
+                          final dn =
+                              (user['display_name'] ?? '').toString().trim();
                           if (dn.isNotEmpty) _b2bDisplayName = dn;
-                          final sc = (user['source_code'] ?? '').toString().trim();
+                          final sc =
+                              (user['source_code'] ?? '').toString().trim();
                           if (sc.isNotEmpty) _b2bCode = sc;
                           _b2bLabel = (tenant['label'] ?? _b2bLabel).toString();
                           _b2bContactName =
-                              (tenant['contact_name'] ?? _b2bContactName).toString();
+                              (tenant['contact_name'] ?? _b2bContactName)
+                                  .toString();
                           _b2bPin = (tenant['pin'] ?? _b2bPin).toString();
                           _b2bTenantPhone =
                               (tenant['phone'] ?? _b2bTenantPhone).toString();
@@ -662,7 +1274,7 @@ class _B2bScreenState extends State<B2bScreen> {
                         });
                       }
                     },
-              child: const Text('Save'),
+              child: Text(_tx('save')),
             ),
           ],
         ),
@@ -674,7 +1286,7 @@ class _B2bScreenState extends State<B2bScreen> {
     newPasswordCtrl.dispose();
     if (ok == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account updated successfully.')),
+        SnackBar(content: Text(_tx('accountUpdated'))),
       );
     }
   }
@@ -717,7 +1329,8 @@ class _B2bScreenState extends State<B2bScreen> {
       final entered = _secretController.text.trim();
       if (entered.isNotEmpty) {
         _b2bCode = entered;
-        if (_b2bDisplayName.trim().isEmpty || _b2bDisplayName == 'B2B account') {
+        if (_b2bDisplayName.trim().isEmpty ||
+            _b2bDisplayName == 'B2B account') {
           _b2bDisplayName = entered;
         }
       }
@@ -758,7 +1371,11 @@ class _B2bScreenState extends State<B2bScreen> {
     final destination = _destinationController.text.trim();
     final route = _resolveRouteFromDestination(destination) ?? _routeKey;
     final token = _token;
-    if (guest.isEmpty || destination.isEmpty || route == null || token == null) {
+    if (guest.isEmpty ||
+        destination.isEmpty ||
+        route == null ||
+        token == null ||
+        _scheduledPickupAt == null) {
       setState(() => _message = l.loginFirst);
       return;
     }
@@ -777,12 +1394,15 @@ class _B2bScreenState extends State<B2bScreen> {
       flightEta: flightEta,
       roomNumber: room,
       fare: fare,
-      sourceCode: (_b2bCode.isNotEmpty ? _b2bCode : _secretController.text.trim()),
+      sourceCode:
+          (_b2bCode.isNotEmpty ? _b2bCode : _secretController.text.trim()),
+      scheduledPickupAt: _scheduledPickupAt,
     )
         .then((booking) {
       if (!mounted) return;
       _refreshRides();
       setState(() {
+        _scheduledPickupAt = null;
         _message = l.b2bBookingSuccessMessage(
           l.requestRideButton,
           booking['id'] as Object,
@@ -798,8 +1418,8 @@ class _B2bScreenState extends State<B2bScreen> {
 
   void _connectRealtime(String token) {
     final host = Uri.tryParse(apiBaseUrl)?.host.toLowerCase() ?? '';
-    final isWebLocal =
-        kIsWeb && (host == '127.0.0.1' || host == 'localhost' || host == '0.0.0.0');
+    final isWebLocal = kIsWeb &&
+        (host == '127.0.0.1' || host == 'localhost' || host == '0.0.0.0');
     // On Flutter Web local, socket_io_common polling can throw decode RangeError.
     // Keep chat/notification via HTTP fallback polling instead.
     if (isWebLocal) {
@@ -881,8 +1501,8 @@ class _B2bScreenState extends State<B2bScreen> {
     if (rideId == null && convId != null) {
       await _refreshRides();
       if (!mounted) return;
-      rideId =
-          _rideIdByConversationId[convId] ?? await _resolveB2bRideIdForConversation(convId);
+      rideId = _rideIdByConversationId[convId] ??
+          await _resolveB2bRideIdForConversation(convId);
     }
 
     if (!mounted) return;
@@ -936,7 +1556,8 @@ class _B2bScreenState extends State<B2bScreen> {
           if (info == null) continue;
           _rideIdByConversationId[info.conversationId] = r.id;
           _conversationIdByRideId[r.id] = info.conversationId;
-          _lastSeenMessageIdByConversationId.putIfAbsent(info.conversationId, () => 0);
+          _lastSeenMessageIdByConversationId.putIfAbsent(
+              info.conversationId, () => 0);
         } catch (_) {}
       }
     } catch (_) {}
@@ -952,7 +1573,8 @@ class _B2bScreenState extends State<B2bScreen> {
     }
 
     unawaited(tick());
-    _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) => unawaited(tick()));
+    _pollingTimer =
+        Timer.periodic(const Duration(seconds: 4), (_) => unawaited(tick()));
   }
 
   Future<void> _pollChatUnreadFallback() async {
@@ -979,7 +1601,8 @@ class _B2bScreenState extends State<B2bScreen> {
         );
         if (msgs.isEmpty) continue;
         final stored = _lastSeenMessageIdByConversationId[conversationId] ?? 0;
-        final delta = computeUnreadChatDelta(msgs: msgs, myUserId: uid, storedWatermark: stored);
+        final delta = computeUnreadChatDelta(
+            msgs: msgs, myUserId: uid, storedWatermark: stored);
         _lastSeenMessageIdByConversationId[conversationId] = delta.newWatermark;
         if (delta.incomingCount > 0) {
           if (!mounted) return;
@@ -1002,7 +1625,8 @@ class _B2bScreenState extends State<B2bScreen> {
             event: 'chat_message_fallback',
             rideId: rid,
           );
-          LocalNotificationService.instance.show(title: title, body: body, isChat: true);
+          LocalNotificationService.instance
+              .show(title: title, body: body, isChat: true);
         }
       } catch (_) {}
     }
@@ -1039,7 +1663,8 @@ class _B2bScreenState extends State<B2bScreen> {
       context: context,
       builder: (_) => SafeArea(
         child: _notifications.isEmpty
-            ? SizedBox(height: 180, child: Center(child: Text(l.notificationsEmpty)))
+            ? SizedBox(
+                height: 180, child: Center(child: Text(l.notificationsEmpty)))
             : ListView.builder(
                 itemCount: _notifications.length,
                 itemBuilder: (context, i) {
@@ -1099,7 +1724,8 @@ class _B2bScreenState extends State<B2bScreen> {
       if (!mounted) return;
       if (info == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.chatUnavailable)),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!.chatUnavailable)),
         );
         return;
       }
@@ -1126,7 +1752,8 @@ class _B2bScreenState extends State<B2bScreen> {
         _activeChatRideId = null;
         _unreadChatByRideId.remove(ride.id);
       });
-      await _primeReadWatermarkAfterChat(token: t, conversationId: cid, rideId: ride.id);
+      await _primeReadWatermarkAfterChat(
+          token: t, conversationId: cid, rideId: ride.id);
       await _pollChatUnreadFallback();
     } catch (e) {
       if (!mounted) return;
@@ -1207,7 +1834,8 @@ class _B2bScreenState extends State<B2bScreen> {
       if (mounted) setState(() {});
     });
     _destinationController.addListener(() {
-      final resolved = _resolveRouteFromDestination(_destinationController.text);
+      final resolved =
+          _resolveRouteFromDestination(_destinationController.text);
       if (resolved != null && resolved != _routeKey && mounted) {
         setState(() => _routeKey = resolved);
       }
@@ -1277,7 +1905,8 @@ class _B2bScreenState extends State<B2bScreen> {
     final l = AppLocalizations.of(context)!;
     final isPhone = MediaQuery.of(context).size.width < 700;
     const activeStatuses = {'pending', 'accepted', 'ongoing'};
-    final activeCount = _rides.where((r) => activeStatuses.contains(r.status)).length;
+    final activeCount =
+        _rides.where((r) => activeStatuses.contains(r.status)).length;
     final routeKeys = _filteredRouteKeys();
     final filteredRides = _rides.where((r) {
       switch (_rideFilter) {
@@ -1316,12 +1945,18 @@ class _B2bScreenState extends State<B2bScreen> {
             ru: 'Портал B2B',
             zh: 'B2B门户',
           ),
-          style: const TextStyle(color: _C.yellow, fontWeight: FontWeight.w800, fontSize: 16),
+          style: const TextStyle(
+              color: _C.charcoal, fontWeight: FontWeight.w800, fontSize: 16),
         ),
-        backgroundColor: _C.charcoal,
-        foregroundColor: Colors.white,
+        backgroundColor: _C.yellow,
+        foregroundColor: _C.charcoal,
+        elevation: 0,
         actions: [
-          LocalePopupMenuButton(authToken: _appToken ?? _token, uiRole: AppUiRole.b2b),
+          LocalePopupMenuButton(
+            authToken: _appToken ?? _token,
+            uiRole: AppUiRole.b2b,
+            foregroundColor: _C.charcoal,
+          ),
           if (_ok)
             IconButton(
               onPressed: () => unawaited(_logout()),
@@ -1340,14 +1975,18 @@ class _B2bScreenState extends State<B2bScreen> {
                       right: -6,
                       top: -6,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 1),
                         decoration: BoxDecoration(
                           color: _C.yellow,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
                           _unreadCount > 99 ? '99+' : '$_unreadCount',
-                          style: const TextStyle(color: Color(0xFF111111), fontSize: 10, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                              color: Color(0xFF111111),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),
@@ -1357,61 +1996,190 @@ class _B2bScreenState extends State<B2bScreen> {
         ],
       ),
       body: ListView(
-        padding: EdgeInsets.all(isPhone ? 12 : 16),
+        padding: EdgeInsets.fromLTRB(
+            isPhone ? 12 : 16, isPhone ? 14 : 18, isPhone ? 12 : 16, 40),
         children: [
           if (!_ok)
             _Module(
-            accent: true,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _SectionHead(l.b2bPortalHeading, subtitle: 'Corporate access'),
-                  TextField(
-                    controller: _secretController,
-                    obscureText: _obscureSecret,
-                    decoration: _fd(l.companyCode, icon: Icons.business_rounded).copyWith(
-                      suffixIcon: IconButton(
-                        onPressed: () => setState(() => _obscureSecret = !_obscureSecret),
-                        icon: Icon(
-                          _obscureSecret ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                          color: _C.charcoal,
+              accent: true,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(26),
+                        gradient: const LinearGradient(colors: [
+                          _C.surface,
+                          _C.yellowSoft,
+                          _C.yellowLight
+                        ]),
+                        border: Border.all(color: _C.yellow.withOpacity(0.65)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.business_center_rounded,
+                              color: _C.yellow, size: 26),
+                          const SizedBox(height: 12),
+                          Text(l.b2bPortalHeading,
+                              style: const TextStyle(
+                                  color: _C.charcoal,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.4)),
+                          const SizedBox(height: 6),
+                          Text(_tx('loginSubtitle'),
+                              style: const TextStyle(
+                                  color: _C.textMid,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _secretController,
+                      obscureText: _obscureSecret,
+                      decoration:
+                          _fd(l.companyCode, icon: Icons.business_rounded)
+                              .copyWith(
+                        suffixIcon: IconButton(
+                          onPressed: () =>
+                              setState(() => _obscureSecret = !_obscureSecret),
+                          icon: Icon(
+                            _obscureSecret
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: _C.charcoal,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: _C.yellow,
-                        foregroundColor: _C.charcoal,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: _C.yellow,
+                          foregroundColor: _C.charcoal,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(50)),
+                        ),
+                        onPressed: _busy ? null : _login,
+                        child: Text(l.verifyCompanyCode,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w800)),
                       ),
-                      onPressed: _busy ? null : _login,
-                      child: Text(l.verifyCompanyCode, style: const TextStyle(fontWeight: FontWeight.w800)),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
           if (_ok)
             Padding(
               padding: EdgeInsets.only(top: isPhone ? 12 : 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Container(
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(34),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [_C.yellow, _C.yellowLight, _C.yellowSoft],
+                      ),
+                      border: Border.all(color: _C.yellow.withOpacity(0.65)),
+                      boxShadow: [
+                        BoxShadow(
+                            color: _C.yellowDeep.withOpacity(0.20),
+                            blurRadius: 38,
+                            offset: const Offset(0, 18))
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.78),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                    color: _C.yellow.withOpacity(0.65)),
+                              ),
+                              child: Text(_tx('b2bRideControl'),
+                                  style: const TextStyle(
+                                      color: _C.charcoal,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.25)),
+                            ),
+                            const Spacer(),
+                            const Icon(Icons.auto_awesome_rounded,
+                                color: _C.yellowDeep, size: 22),
+                          ],
+                        ),
+                        const SizedBox(height: 22),
+                        Text(
+                          _b2bDisplayName.trim().isEmpty ||
+                                  _b2bDisplayName == 'B2B account'
+                              ? l.b2bPortalHeading
+                              : _b2bDisplayName,
+                          style: const TextStyle(
+                              color: _C.charcoal,
+                              fontSize: 25,
+                              height: 1.08,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _tx('heroBody'),
+                          style: const TextStyle(
+                              color: _C.textMid,
+                              fontSize: 13,
+                              height: 1.35,
+                              fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          children: [
+                            Expanded(
+                                child: _metricPill(
+                                    Icons.bolt_rounded,
+                                    l.passengerActiveRidesChip(activeCount),
+                                    _C.neonBlue)),
+                            const SizedBox(width: 10),
+                            Expanded(
+                                child: _metricPill(
+                                    Icons.route_rounded,
+                                    l.passengerTotalRidesChip(_rides.length),
+                                    _C.yellow)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   _Module(
                     accent: true,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _SectionHead('Portal Status', subtitle: '${l.passengerActiveRidesChip(activeCount)} • ${l.passengerTotalRidesChip(_rides.length)}'),
+                        _SectionHead(_tx('portalStatus'),
+                            subtitle:
+                                '${l.passengerActiveRidesChip(activeCount)} • ${l.passengerTotalRidesChip(_rides.length)}'),
                         InkWell(
-                          onTap: _busy ? null : () => unawaited(_showB2bAccountDialog()),
+                          onTap: _busy
+                              ? null
+                              : () => unawaited(_showB2bAccountDialog()),
                           borderRadius: BorderRadius.circular(12),
                           child: _rowInfoCard(
                             icon: Icons.account_circle_outlined,
@@ -1419,7 +2187,9 @@ class _B2bScreenState extends State<B2bScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  _b2bDisplayName,
+                                  _b2bDisplayName == 'B2B account'
+                                      ? l.b2bPortalHeading
+                                      : _b2bDisplayName,
                                   style: const TextStyle(
                                     color: _C.textStrong,
                                     fontWeight: FontWeight.w800,
@@ -1428,30 +2198,43 @@ class _B2bScreenState extends State<B2bScreen> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  (_b2bEmail.isNotEmpty ? _b2bEmail : 'Tap to open account details') +
-                                      (_b2bPhone.isNotEmpty ? ' · $_b2bPhone' : ''),
-                                  style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                                  (_b2bEmail.isNotEmpty
+                                          ? _b2bEmail
+                                          : _tx('tapAccountDetails')) +
+                                      (_b2bPhone.isNotEmpty
+                                          ? ' · $_b2bPhone'
+                                          : ''),
+                                  style: const TextStyle(
+                                      color: _C.textSoft, fontSize: 11),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   _b2bCode.trim().isEmpty
-                                      ? 'Code unavailable'
-                                      : 'Code: ${_b2bCode.trim()}',
-                                  style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                                      ? _tx('codeUnavailable')
+                                      : _tx('codeLine', _b2bCode.trim()),
+                                  style: const TextStyle(
+                                      color: _C.textSoft, fontSize: 11),
                                 ),
-                                if (_b2bContactName.trim().isNotEmpty || _b2bPin.trim().isNotEmpty)
+                                if (_b2bContactName.trim().isNotEmpty ||
+                                    _b2bPin.trim().isNotEmpty)
                                   Text(
-                                    'Name: ${_b2bContactName.trim().isEmpty ? '-' : _b2bContactName} | PIN: ${_b2bPin.trim().isEmpty ? '-' : _b2bPin}',
-                                    style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                                    _tx('namePinLine',
+                                        '${_b2bContactName.trim().isEmpty ? '-' : _b2bContactName} | ${_b2bPin.trim().isEmpty ? '-' : _b2bPin}'),
+                                    style: const TextStyle(
+                                        color: _C.textSoft, fontSize: 11),
                                   ),
-                                if (_b2bTenantPhone.trim().isNotEmpty || _b2bHotel.trim().isNotEmpty)
+                                if (_b2bTenantPhone.trim().isNotEmpty ||
+                                    _b2bHotel.trim().isNotEmpty)
                                   Text(
-                                    'Phone: ${_b2bTenantPhone.trim().isEmpty ? '-' : _b2bTenantPhone} | Hotel: ${_b2bHotel.trim().isEmpty ? '-' : _b2bHotel}',
-                                    style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                                    _tx('phoneHotelLine',
+                                        '${_b2bTenantPhone.trim().isEmpty ? '-' : _b2bTenantPhone} | ${_b2bHotel.trim().isEmpty ? '-' : _b2bHotel}'),
+                                    style: const TextStyle(
+                                        color: _C.textSoft, fontSize: 11),
                                   ),
                               ],
                             ),
-                            trailing: const Icon(Icons.edit_outlined, size: 18, color: _C.textMid),
+                            trailing: const Icon(Icons.edit_outlined,
+                                size: 18, color: _C.textMid),
                           ),
                         ),
                       ],
@@ -1466,302 +2249,472 @@ class _B2bScreenState extends State<B2bScreen> {
                         children: [
                           _SectionHead(
                             l.b2bBookOnAccountHeading,
-                            subtitle: _uiText(
-                              en: 'Light request flow',
-                              ar: 'نموذج طلب خفيف',
-                              fr: 'Formulaire de demande leger',
-                              es: 'Formulario de solicitud ligero',
-                              de: 'Leichtes Anfrageformular',
-                              it: 'Modulo richiesta leggero',
-                              ru: 'Легкая форма запроса',
-                              zh: '轻量请求表单',
-                            ),
+                            subtitle: _tx('guestRequestSubtitle'),
                           ),
                           Theme(
-                            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                            data: Theme.of(context)
+                                .copyWith(dividerColor: Colors.transparent),
                             child: ExpansionTile(
                               initiallyExpanded: _requestFormExpanded,
-                              onExpansionChanged: (v) => setState(() => _requestFormExpanded = v),
+                              onExpansionChanged: (v) =>
+                                  setState(() => _requestFormExpanded = v),
                               tilePadding: EdgeInsets.zero,
                               childrenPadding: EdgeInsets.zero,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              backgroundColor: _C.surfaceAlt,
-                              collapsedBackgroundColor: _C.surfaceAlt,
-                              title: Text(
-                                _uiText(
-                                  en: 'New ride request',
-                                  ar: 'طلب رحلة جديد',
-                                  fr: 'Nouvelle demande',
-                                  es: 'Nueva solicitud',
-                                  de: 'Neue Anfrage',
-                                  it: 'Nuova richiesta',
-                                  ru: 'Новый запрос',
-                                  zh: '新行程请求',
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                side: const BorderSide(
+                                    color: _C.yellowDeep, width: 1.2),
+                              ),
+                              collapsedShape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                side: const BorderSide(
+                                    color: _C.yellowDeep, width: 1.2),
+                              ),
+                              backgroundColor: Colors.white,
+                              collapsedBackgroundColor: _C.yellow,
+                              iconColor: _C.charcoal,
+                              collapsedIconColor: _C.charcoal,
+                              leading: Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: _C.charcoal,
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
-                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                                child: const Icon(Icons.add_road_rounded,
+                                    color: _C.yellow, size: 19),
+                              ),
+                              title: Text(
+                                _tx('newRideRequest'),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14,
+                                    color: _C.charcoal),
                               ),
                               subtitle: Text(
-                                _uiText(
-                                  en: 'Tap to open/close form',
-                                  ar: 'اضغط لفتح/إغلاق النموذج',
-                                  fr: 'Touchez pour ouvrir/fermer',
-                                  es: 'Toca para abrir/cerrar',
-                                  de: 'Tippen zum Öffnen/Schließen',
-                                  it: 'Tocca per aprire/chiudere',
-                                  ru: 'Нажмите, чтобы открыть/закрыть',
-                                  zh: '点击展开/收起表单',
-                                ),
-                                style: const TextStyle(fontSize: 11, color: _C.textSoft),
+                                _tx('tapOpenForm'),
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    color: _C.textStrong,
+                                    fontWeight: FontWeight.w700),
                               ),
                               children: [
                                 const SizedBox(height: 10),
                                 TextField(
-                            controller: _guestController,
-                            decoration: _fd(
-                              _uiText(
-                                en: 'Guest name',
-                                ar: 'اسم الضيف',
-                                fr: 'Nom du client',
-                                es: 'Nombre del cliente',
-                                de: 'Name des Gastes',
-                                it: 'Nome ospite',
-                                ru: 'Имя гостя',
-                                zh: '客人姓名',
-                              ),
-                            ),
-                          ),
-                          TextField(
-                            controller: _guestPhoneController,
-                            decoration: _fd(
-                              _uiText(
-                                en: 'Guest phone',
-                                ar: 'هاتف الضيف',
-                                fr: 'Telephone du client',
-                                es: 'Telefono del cliente',
-                                de: 'Telefon des Gastes',
-                                it: 'Telefono ospite',
-                                ru: 'Телефон гостя',
-                                zh: '客人电话',
-                              ),
-                            ),
-                          ),
-                          TextField(
-                            controller: _hotelController,
-                            decoration: _fd(
-                              _uiText(
-                                en: 'Hotel',
-                                ar: 'الفندق',
-                                fr: 'Hotel',
-                                es: 'Hotel',
-                                de: 'Hotel',
-                                it: 'Hotel',
-                                ru: 'Отель',
-                                zh: '酒店',
-                              ),
-                            ),
-                          ),
-                          TextField(
-                            controller: _flightEtaController,
-                            decoration: _fd(
-                              _uiText(
-                                en: 'Flight ETA / Stopover',
-                                ar: 'موعد الرحلة / التوقف',
-                                fr: 'ETA vol / Escale',
-                                es: 'ETA vuelo / Escala',
-                                de: 'Flug ETA / Zwischenstopp',
-                                it: 'ETA volo / Scalo',
-                                ru: 'ETA рейса / пересадка',
-                                zh: '航班到达时间/经停',
-                              ),
-                            ),
-                          ),
-                          TextField(
-                            controller: _roomController,
-                            decoration: _fd(
-                              _uiText(
-                                en: 'Room number',
-                                ar: 'رقم الغرفة',
-                                fr: 'Numero de chambre',
-                                es: 'Numero de habitacion',
-                                de: 'Zimmernummer',
-                                it: 'Numero camera',
-                                ru: 'Номер комнаты',
-                                zh: '房间号',
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  controller: _guestController,
+                                  decoration: _fd(
+                                    _tx('guestName'),
+                                    icon: Icons.person_outline_rounded,
+                                  ),
+                                ),
+                                TextField(
+                                  controller: _guestPhoneController,
+                                  decoration: _fd(
+                                    _tx('guestPhone'),
+                                    icon: Icons.phone_outlined,
+                                  ),
+                                ),
+                                TextField(
+                                  controller: _hotelController,
+                                  decoration: _fd(
+                                    _tx('hotel'),
+                                    icon: Icons.apartment_rounded,
+                                  ),
+                                ),
+                                TextField(
+                                  controller: _flightEtaController,
+                                  decoration: _fd(
+                                    _tx('flightEta'),
+                                    icon: Icons.flight_land_rounded,
+                                  ),
+                                ),
+                                TextField(
+                                  controller: _roomController,
+                                  decoration: _fd(
+                                    _tx('roomNumber'),
+                                    icon: Icons.meeting_room_outlined,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
                                   children: [
-                                    Text(
-                                      _locationText != null
-                                          ? 'GPS: $_locationText'
-                                          : (_locationError ??
-                                              (_locating
-                                                  ? l.passengerLocationDetecting
-                                                  : l.passengerLocationUnavailable)),
-                                      style: const TextStyle(
-                                          color: _C.textSoft, fontSize: 11),
-                                    ),
-                                    if (_nearestZoneDistanceKm != null &&
-                                        (_nearestZoneName ?? '').trim().isNotEmpty)
-                                      Text(
-                                        'Nearest zone: ${localizedPlaceName(l, _nearestZoneName)} (${_nearestZoneDistanceKm!.toStringAsFixed(1)} km)',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: _distanceColor(_nearestZoneDistanceKm!),
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: _locating ? null : () => unawaited(_detectB2bLocation()),
-                                icon: const Icon(Icons.my_location_rounded, size: 18),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          _rowInfoCard(
-                            icon: Icons.my_location_rounded,
-                            content: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Departure: ${_nearestZoneName != null ? localizedPlaceName(l, _nearestZoneName) : l.passengerLocationCurrent}',
-                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _locationText != null
-                                      ? 'GPS: $_locationText'
-                                      : (_locationError ??
-                                          (_locating ? l.passengerLocationDetecting : l.passengerLocationUnavailable)),
-                                  style: const TextStyle(color: _C.textSoft, fontSize: 11),
-                                ),
-                              ],
-                            ),
-                            trailing: IconButton(
-                              onPressed: _locating ? null : () => unawaited(_detectB2bLocation()),
-                              icon: const Icon(Icons.refresh_rounded, size: 18),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _destinationController,
-                            focusNode: _destinationFocus,
-                            decoration: _fd(
-                              _uiText(
-                                en: 'Destination',
-                                ar: 'الوجهة',
-                                fr: 'Destination',
-                                es: 'Destino',
-                                de: 'Ziel',
-                                it: 'Destinazione',
-                                ru: 'Пункт назначения',
-                                zh: '目的地',
-                              ),
-                              icon: Icons.place_outlined,
-                            ).copyWith(
-                              suffixIcon: _destinationController.text.trim().isEmpty
-                                  ? null
-                                  : IconButton(
-                                      onPressed: () {
-                                        setState(() {
-                                          _destinationController.clear();
-                                          _routeKey = null;
-                                        });
-                                      },
-                                      icon: const Icon(Icons.close_rounded, size: 18),
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          if (_destinationFocus.hasFocus) ...[
-                            const SizedBox(height: 8),
-                            Container(
-                              constraints: const BoxConstraints(maxHeight: 220),
-                              decoration: BoxDecoration(
-                                color: _C.surfaceAlt,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: _C.border),
-                              ),
-                              child: ListView(
-                                shrinkWrap: true,
-                                children: _destinationSuggestions().map((s) {
-                                  final route = _routeForSuggestion(s);
-                                  final km = _routeDistanceKm(route);
-                                  final fare = route == null ? null : _fareForRouteKey(route);
-                                  return ListTile(
-                                    dense: true,
-                                    leading: const Icon(Icons.location_on_outlined, size: 16),
-                                    title: Text(s, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                                    subtitle: (km == null && fare == null)
-                                        ? null
-                                        : Text(
-                                            '${km?.toStringAsFixed(1) ?? '-'} km • ${l.fareDt((fare ?? 0).toStringAsFixed(2))}',
-                                            style: const TextStyle(fontSize: 11, color: _C.textSoft),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _locationText != null
+                                                ? _tx('gpsLine', _locationText)
+                                                : (_locationError ??
+                                                    (_locating
+                                                        ? l.passengerLocationDetecting
+                                                        : l.passengerLocationUnavailable)),
+                                            style: const TextStyle(
+                                                color: _C.textSoft,
+                                                fontSize: 11),
                                           ),
-                                    onTap: () {
-                                      _destinationController.text = s;
-                                      final resolved = route ?? _resolveRouteFromDestination(s);
-                                      if (resolved != null) {
-                                        setState(() => _routeKey = resolved);
-                                      }
-                                      _destinationFocus.unfocus();
-                                    },
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 8),
-                          if (_routeKey != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: _rowInfoCard(
-                                icon: Icons.route_rounded,
-                                content: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      localizedRouteKeyForDisplay(l, _routeKey!),
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12),
+                                          if (_nearestZoneDistanceKm != null &&
+                                              (_nearestZoneName ?? '')
+                                                  .trim()
+                                                  .isNotEmpty)
+                                            Text(
+                                              _tx('nearestZone',
+                                                  '${localizedPlaceName(l, _nearestZoneName)} (${_nearestZoneDistanceKm!.toStringAsFixed(1)} km)'),
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: _distanceColor(
+                                                    _nearestZoneDistanceKm!),
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${_routeDistanceKm(_routeKey)?.toStringAsFixed(1) ?? '-'} km • ${l.fareDt(_fareForRouteKey(_routeKey).toStringAsFixed(2))} ${l.b2bFareAdminPercentSuffix}',
-                                      style: const TextStyle(
-                                          color: _C.textSoft, fontSize: 11),
+                                    IconButton(
+                                      onPressed: _locating
+                                          ? null
+                                          : () =>
+                                              unawaited(_detectB2bLocation()),
+                                      icon: const Icon(
+                                          Icons.my_location_rounded,
+                                          size: 18),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: _C.yellow,
-                                foregroundColor: _C.charcoal,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-                              ),
-                              onPressed: _busy ? null : _bookGuest,
-                              child: Text(
-                                l.requestRideButton,
-                                style: const TextStyle(fontWeight: FontWeight.w800),
-                              ),
-                            ),
-                          ),
+                                const SizedBox(height: 8),
+                                _rowInfoCard(
+                                  icon: Icons.my_location_rounded,
+                                  content: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _tx(
+                                            'departureLine',
+                                            _nearestZoneName != null
+                                                ? localizedPlaceName(
+                                                    l, _nearestZoneName)
+                                                : l.passengerLocationCurrent),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 12),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _locationText != null
+                                            ? _tx('gpsLine', _locationText)
+                                            : (_locationError ??
+                                                (_locating
+                                                    ? l.passengerLocationDetecting
+                                                    : l.passengerLocationUnavailable)),
+                                        style: const TextStyle(
+                                            color: _C.textSoft, fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                  trailing: IconButton(
+                                    onPressed: _locating
+                                        ? null
+                                        : () => unawaited(_detectB2bLocation()),
+                                    icon: const Icon(Icons.refresh_rounded,
+                                        size: 18),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _destinationController,
+                                  focusNode: _destinationFocus,
+                                  decoration: _fd(
+                                    _tx('destination'),
+                                    icon: Icons.place_outlined,
+                                  ).copyWith(
+                                    suffixIcon: _destinationController.text
+                                            .trim()
+                                            .isEmpty
+                                        ? null
+                                        : IconButton(
+                                            onPressed: () {
+                                              setState(() {
+                                                _destinationController.clear();
+                                                _routeKey = null;
+                                              });
+                                            },
+                                            icon: const Icon(
+                                                Icons.close_rounded,
+                                                size: 18),
+                                          ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 220),
+                                  switchInCurve: Curves.easeOutCubic,
+                                  switchOutCurve: Curves.easeInCubic,
+                                  transitionBuilder: (child, animation) =>
+                                      SizeTransition(
+                                    sizeFactor: animation,
+                                    axisAlignment: -1,
+                                    child: FadeTransition(
+                                        opacity: animation, child: child),
+                                  ),
+                                  child: _destinationFocus.hasFocus
+                                      ? Padding(
+                                          key: const ValueKey<String>(
+                                              'destination-suggestions'),
+                                          padding:
+                                              const EdgeInsets.only(top: 10),
+                                          child: Container(
+                                            constraints: const BoxConstraints(
+                                                maxHeight: 250),
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                                colors: [
+                                                  Colors.white
+                                                      .withOpacity(0.96),
+                                                  _C.yellowSoft
+                                                      .withOpacity(0.72),
+                                                  _C.surfaceAlt
+                                                      .withOpacity(0.90),
+                                                ],
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(22),
+                                              border: Border.all(
+                                                color:
+                                                    _C.yellow.withOpacity(0.55),
+                                                width: 1.2,
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: _C.yellowDeep
+                                                      .withOpacity(0.12),
+                                                  blurRadius: 24,
+                                                  offset: const Offset(0, 12),
+                                                ),
+                                              ],
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(22),
+                                              child: ListView.separated(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 6),
+                                                shrinkWrap: true,
+                                                itemCount:
+                                                    _destinationSuggestions()
+                                                        .length,
+                                                separatorBuilder: (_, __) =>
+                                                    Divider(
+                                                  height: 1,
+                                                  indent: 58,
+                                                  color: _C.border
+                                                      .withOpacity(0.7),
+                                                ),
+                                                itemBuilder: (context, index) {
+                                                  final s =
+                                                      _destinationSuggestions()[
+                                                          index];
+                                                  final route =
+                                                      _routeForSuggestion(s);
+                                                  final km =
+                                                      _routeDistanceKm(route);
+                                                  final fare = route == null
+                                                      ? null
+                                                      : _fareForRouteKey(route);
+                                                  return ListTile(
+                                                    dense: true,
+                                                    contentPadding:
+                                                        const EdgeInsets
+                                                            .symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 3,
+                                                    ),
+                                                    leading: Container(
+                                                      width: 34,
+                                                      height: 34,
+                                                      decoration: BoxDecoration(
+                                                        color: _C.yellow,
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(14),
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: _C.yellowDeep
+                                                                .withOpacity(
+                                                                    0.18),
+                                                            blurRadius: 14,
+                                                            offset:
+                                                                const Offset(
+                                                                    0, 6),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      child: const Icon(
+                                                        Icons
+                                                            .location_on_outlined,
+                                                        color: _C.charcoal,
+                                                        size: 17,
+                                                      ),
+                                                    ),
+                                                    title: Text(
+                                                      localizedPlaceName(l, s),
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                        color: _C.charcoal,
+                                                      ),
+                                                    ),
+                                                    subtitle: (km == null &&
+                                                            fare == null)
+                                                        ? null
+                                                        : Text(
+                                                            '${km?.toStringAsFixed(1) ?? '-'} km • ${l.fareDt((fare ?? 0).toStringAsFixed(2))}',
+                                                            style:
+                                                                const TextStyle(
+                                                              fontSize: 11,
+                                                              color:
+                                                                  _C.textSoft,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                            ),
+                                                          ),
+                                                    trailing: const Icon(
+                                                      Icons.north_east_rounded,
+                                                      color: _C.yellowDeep,
+                                                      size: 16,
+                                                    ),
+                                                    onTap: () {
+                                                      _destinationController
+                                                          .text = s;
+                                                      final resolved = route ??
+                                                          _resolveRouteFromDestination(
+                                                              s);
+                                                      if (resolved != null) {
+                                                        setState(() =>
+                                                            _routeKey =
+                                                                resolved);
+                                                      }
+                                                      _destinationFocus
+                                                          .unfocus();
+                                                    },
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      : const SizedBox.shrink(
+                                          key: ValueKey<String>(
+                                              'no-destination-suggestions'),
+                                        ),
+                                ),
+                                const SizedBox(height: 8),
+                                if (_routeKey != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: _rowInfoCard(
+                                      icon: Icons.route_rounded,
+                                      content: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            localizedRouteKeyForDisplay(
+                                                l, _routeKey!),
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 12),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${_routeDistanceKm(_routeKey)?.toStringAsFixed(1) ?? '-'} km • ${l.fareDt(_fareForRouteKey(_routeKey).toStringAsFixed(2))} ${l.b2bFareAdminPercentSuffix}',
+                                            style: const TextStyle(
+                                                color: _C.textSoft,
+                                                fontSize: 11),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                const SizedBox(height: 8),
+                                InkWell(
+                                  onTap: _busy ? null : _pickScheduledPickup,
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                          colors: [_C.surface, _C.yellowSoft]),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                          color: _C.yellow.withOpacity(0.65)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                            Icons.event_available_rounded,
+                                            color: _C.yellowDeep,
+                                            size: 20),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                _tx('scheduledPickup'),
+                                                style: const TextStyle(
+                                                    color: _C.charcoal,
+                                                    fontWeight: FontWeight.w900,
+                                                    fontSize: 13),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                _scheduledPickupAt == null
+                                                    ? _tx(
+                                                        'chooseDateBeforeBooking')
+                                                    : _formatSchedule(
+                                                        _scheduledPickupAt!),
+                                                style: const TextStyle(
+                                                    color: _C.yellowDeep,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 12),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const Icon(
+                                            Icons.keyboard_arrow_down_rounded,
+                                            color: _C.yellowDeep),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: FilledButton(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: _C.yellow,
+                                      foregroundColor: _C.charcoal,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(50)),
+                                    ),
+                                    onPressed: _busy ? null : _bookGuest,
+                                    child: Text(
+                                      l.requestRideButton,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -1770,7 +2723,8 @@ class _B2bScreenState extends State<B2bScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _SectionHead(l.myRidesHeading, subtitle: '${filteredRides.length} rides'),
+                  _SectionHead(l.myRidesHeading,
+                      subtitle: _tx('ridesCount', filteredRides.length)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -1788,96 +2742,196 @@ class _B2bScreenState extends State<B2bScreen> {
                           zh: '全部',
                         ),
                         selected: _rideFilter == _B2bRideFilter.all,
-                        onTap: () => setState(() => _rideFilter = _B2bRideFilter.all),
+                        onTap: () =>
+                            setState(() => _rideFilter = _B2bRideFilter.all),
                       ),
                       _statusFilterChip(
                         label: localizedRideStatusLabel(l, 'pending'),
                         selected: _rideFilter == _B2bRideFilter.pending,
-                        onTap: () => setState(() => _rideFilter = _B2bRideFilter.pending),
+                        onTap: () => setState(
+                            () => _rideFilter = _B2bRideFilter.pending),
                       ),
                       _statusFilterChip(
                         label: localizedRideStatusLabel(l, 'accepted'),
                         selected: _rideFilter == _B2bRideFilter.accepted,
-                        onTap: () => setState(() => _rideFilter = _B2bRideFilter.accepted),
+                        onTap: () => setState(
+                            () => _rideFilter = _B2bRideFilter.accepted),
                       ),
                       _statusFilterChip(
                         label: localizedRideStatusLabel(l, 'cancelled'),
                         selected: _rideFilter == _B2bRideFilter.cancelled,
-                        onTap: () => setState(() => _rideFilter = _B2bRideFilter.cancelled),
+                        onTap: () => setState(
+                            () => _rideFilter = _B2bRideFilter.cancelled),
                       ),
                       _statusFilterChip(
                         label: localizedRideStatusLabel(l, 'completed'),
                         selected: _rideFilter == _B2bRideFilter.completed,
-                        onTap: () => setState(() => _rideFilter = _B2bRideFilter.completed),
+                        onTap: () => setState(
+                            () => _rideFilter = _B2bRideFilter.completed),
                       ),
                     ],
                   ),
                   _Module(
                     child: filteredRides.isEmpty
-                        ? Text(l.noRidesYetApp, style: const TextStyle(color: _C.textSoft))
+                        ? Text(l.noRidesYetApp,
+                            style: const TextStyle(color: _C.textSoft))
                         : Column(
                             children: filteredRides
                                 .map(
                                   (r) => Container(
-                                    key: ValueKey<String>('b2b-ride-${r.id}-chat-${_rideUnread(r.id)}'),
+                                    key: ValueKey<String>(
+                                        'b2b-ride-${r.id}-chat-${_rideUnread(r.id)}'),
                                     margin: const EdgeInsets.only(bottom: 10),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         _rowInfoCard(
                                           icon: Icons.local_taxi_outlined,
                                           content: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              Text(localizedRideRouteRow(l, r.pickup, r.destination), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                                              Text(
+                                                  localizedRideRouteRow(l,
+                                                      r.pickup, r.destination),
+                                                  style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 12)),
                                               const SizedBox(height: 2),
                                               Text(
-                                                l.rideStatusFmt(localizedRideStatusLabel(l, r.status)),
-                                                style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                                                l.rideStatusFmt(
+                                                    localizedRideStatusLabel(
+                                                        l, r.status)),
+                                                style: const TextStyle(
+                                                    color: _C.textSoft,
+                                                    fontSize: 11),
                                               ),
                                               const SizedBox(height: 2),
                                               Text(
-                                                'Depart: ${localizedPlaceName(l, r.pickup)} • Destination: ${localizedPlaceName(l, r.destination)}',
-                                                style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                                                _tx('departDestinationLine',
+                                                    '${localizedPlaceName(l, r.pickup)} • ${_tx('destination')}: ${localizedPlaceName(l, r.destination)}'),
+                                                style: const TextStyle(
+                                                    color: _C.textSoft,
+                                                    fontSize: 11),
                                               ),
                                               Builder(
                                                 builder: (_) {
-                                                  final route = '${r.pickup}$airportRouteKeySeparator${r.destination}';
-                                                  final fare = _fareForRouteKey(route);
-                                                  final km = _routeDistanceKm(route);
+                                                  final route =
+                                                      '${r.pickup}$airportRouteKeySeparator${r.destination}';
+                                                  final fare =
+                                                      _fareForRouteKey(route);
+                                                  final km =
+                                                      _routeDistanceKm(route);
                                                   return Text(
                                                     '${km?.toStringAsFixed(1) ?? '-'} km • ${l.fareDt(fare.toStringAsFixed(2))}',
-                                                    style: const TextStyle(color: _C.textSoft, fontSize: 11),
+                                                    style: const TextStyle(
+                                                        color: _C.textSoft,
+                                                        fontSize: 11),
                                                   );
                                                 },
                                               ),
+                                              if ((r.scheduledPickupAt ?? '')
+                                                  .isNotEmpty) ...[
+                                                const SizedBox(height: 6),
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 8),
+                                                  decoration: BoxDecoration(
+                                                    gradient:
+                                                        const LinearGradient(
+                                                            colors: [
+                                                          _C.surface,
+                                                          _C.yellowSoft
+                                                        ]),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            14),
+                                                    border: Border.all(
+                                                        color: _C.yellow
+                                                            .withOpacity(0.65)),
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      const Icon(
+                                                          Icons
+                                                              .hourglass_top_rounded,
+                                                          color: _C.yellowDeep,
+                                                          size: 16),
+                                                      const SizedBox(width: 8),
+                                                      Expanded(
+                                                        child: Text(
+                                                          '${_reservationStatusText(r)} • ${_scheduleCountdown(r)}',
+                                                          style: const TextStyle(
+                                                              color:
+                                                                  _C.charcoal,
+                                                              fontSize: 11,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w800),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
                                               if (r.status == 'pending')
                                                 Text(
-                                                  'Chauffeur en cours...',
+                                                  _tx('driverSearching'),
                                                   style: const TextStyle(
                                                     color: _C.yellowDeep,
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.w700,
                                                   ),
                                                 ),
-                                              if ((r.driverName ?? '').trim().isNotEmpty ||
-                                                  (r.driverPhone ?? '').trim().isNotEmpty) ...[
+                                              if ((r.driverName ?? '')
+                                                      .trim()
+                                                      .isNotEmpty ||
+                                                  (r.driverPhone ?? '')
+                                                      .trim()
+                                                      .isNotEmpty) ...[
                                                 const SizedBox(height: 4),
                                                 Text(
-                                                  l.passengerDriverLine((r.driverName ?? '').trim().isEmpty ? l.driverNameFallback : r.driverName!),
-                                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                                                  l.passengerDriverLine(
+                                                      (r.driverName ?? '')
+                                                              .trim()
+                                                              .isEmpty
+                                                          ? l.driverNameFallback
+                                                          : r.driverName!),
+                                                  style: const TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w600),
                                                 ),
-                                                if ((r.driverPhone ?? '').trim().isNotEmpty)
-                                                  Text(l.passengerPhoneLine(r.driverPhone!), style: const TextStyle(fontSize: 11)),
+                                                if ((r.driverPhone ?? '')
+                                                    .trim()
+                                                    .isNotEmpty)
+                                                  Text(
+                                                      l.passengerPhoneLine(
+                                                          r.driverPhone!),
+                                                      style: const TextStyle(
+                                                          fontSize: 11)),
                                               ],
                                             ],
                                           ),
-                                          trailing: (r.driverPhotoUrl ?? '').trim().isNotEmpty
+                                          trailing: (r.driverPhotoUrl ?? '')
+                                                  .trim()
+                                                  .isNotEmpty
                                               ? Builder(
                                                   builder: (context) {
-                                                    final provider = _stableImageProviderFromString(r.driverPhotoUrl);
-                                                    if (provider == null) return const SizedBox.shrink();
-                                                    return CircleAvatar(radius: 16, backgroundImage: provider);
+                                                    final provider =
+                                                        _stableImageProviderFromString(
+                                                            r.driverPhotoUrl);
+                                                    if (provider == null)
+                                                      return const SizedBox
+                                                          .shrink();
+                                                    return CircleAvatar(
+                                                        radius: 16,
+                                                        backgroundImage:
+                                                            provider);
                                                   },
                                                 )
                                               : null,
@@ -1887,40 +2941,69 @@ class _B2bScreenState extends State<B2bScreen> {
                                           spacing: 6,
                                           runSpacing: 6,
                                           children: [
-                                            if (r.status != 'completed' && r.status != 'cancelled')
+                                            if (r.status != 'completed' &&
+                                                r.status != 'cancelled')
                                               OutlinedButton(
                                                 style: OutlinedButton.styleFrom(
                                                   foregroundColor: _C.textMid,
-                                                  side: const BorderSide(color: _C.border),
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                                                  side: const BorderSide(
+                                                      color: _C.border),
+                                                  shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              50)),
                                                 ),
-                                                onPressed: _busy ? null : () => _cancelRide(r),
-                                                child: Text(l.cancelRidePassenger),
+                                                onPressed: _busy
+                                                    ? null
+                                                    : () => _cancelRide(r),
+                                                child:
+                                                    Text(l.cancelRidePassenger),
                                               ),
                                             Builder(
                                               builder: (ctx) {
                                                 final uChat = _rideUnread(r.id);
                                                 return Badge(
                                                   label: Text(
-                                                    uChat > 99 ? '99+' : '$uChat',
-                                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: _C.charcoal),
+                                                    uChat > 99
+                                                        ? '99+'
+                                                        : '$uChat',
+                                                    style: TextStyle(
+                                                        fontSize: 10,
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                        color: _C.charcoal),
                                                   ),
-                                                  padding: EdgeInsets.only(left: uChat > 0 ? 5 : 0, right: uChat > 0 ? 5 : 0),
+                                                  padding: EdgeInsets.only(
+                                                      left: uChat > 0 ? 5 : 0,
+                                                      right: uChat > 0 ? 5 : 0),
                                                   isLabelVisible: uChat > 0,
                                                   offset: const Offset(8, -6),
                                                   backgroundColor: _C.yellow,
                                                   child: Container(
                                                     decoration: BoxDecoration(
                                                       color: _C.surfaceAlt,
-                                                      borderRadius: BorderRadius.circular(20),
-                                                      border: Border.all(color: _C.border),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              20),
+                                                      border: Border.all(
+                                                          color: _C.border),
                                                     ),
                                                     child: TextButton.icon(
-                                                      onPressed: _busy ? null : () => _openChat(r),
-                                                      icon: const Icon(Icons.chat_bubble_rounded, color: _C.charcoal, size: 16),
+                                                      onPressed: _busy
+                                                          ? null
+                                                          : () => _openChat(r),
+                                                      icon: const Icon(
+                                                          Icons
+                                                              .chat_bubble_rounded,
+                                                          color: _C.charcoal,
+                                                          size: 16),
                                                       label: Text(
                                                         l.openChatButton,
-                                                        style: const TextStyle(color: _C.charcoal, fontWeight: FontWeight.w700),
+                                                        style: const TextStyle(
+                                                            color: _C.charcoal,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w700),
                                                       ),
                                                     ),
                                                   ),
@@ -1928,44 +3011,95 @@ class _B2bScreenState extends State<B2bScreen> {
                                               },
                                             ),
                                             if (r.status == 'completed' &&
-                                                (_pendingRatingRideId == r.id || !_ratedRideIds.contains(r.id)))
+                                                (_pendingRatingRideId == r.id ||
+                                                    !_ratedRideIds
+                                                        .contains(r.id)))
                                               Wrap(
                                                 spacing: 4,
                                                 runSpacing: 4,
-                                                crossAxisAlignment: WrapCrossAlignment.center,
+                                                crossAxisAlignment:
+                                                    WrapCrossAlignment.center,
                                                 children: [
                                                   ...List.generate(5, (i) {
                                                     final star = i + 1;
-                                                    final selected = (_ratingByRideId[r.id] ?? 0) >= star;
+                                                    final selected =
+                                                        (_ratingByRideId[
+                                                                    r.id] ??
+                                                                0) >=
+                                                            star;
                                                     return InkWell(
-                                                      borderRadius: BorderRadius.circular(20),
-                                                      onTap: _busy ? null : () => setState(() => _ratingByRideId[r.id] = star),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              20),
+                                                      onTap: _busy
+                                                          ? null
+                                                          : () => setState(() =>
+                                                              _ratingByRideId[
+                                                                  r.id] = star),
                                                       child: Container(
                                                         width: 24,
                                                         height: 24,
-                                                        decoration: BoxDecoration(
-                                                          color: selected ? _C.yellowSoft : _C.surfaceAlt,
-                                                          borderRadius: BorderRadius.circular(20),
-                                                          border: Border.all(color: selected ? _C.yellowDeep : _C.border),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: selected
+                                                              ? _C.yellowSoft
+                                                              : _C.surfaceAlt,
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(20),
+                                                          border: Border.all(
+                                                              color: selected
+                                                                  ? _C.yellowDeep
+                                                                  : _C.border),
                                                         ),
                                                         child: Icon(
-                                                          selected ? Icons.star_rounded : Icons.star_border_rounded,
-                                                          color: selected ? _C.yellowDeep : _C.textSoft,
+                                                          selected
+                                                              ? Icons
+                                                                  .star_rounded
+                                                              : Icons
+                                                                  .star_border_rounded,
+                                                          color: selected
+                                                              ? _C.yellowDeep
+                                                              : _C.textSoft,
                                                           size: 15,
                                                         ),
                                                       ),
                                                     );
                                                   }),
                                                   FilledButton(
-                                                    style: FilledButton.styleFrom(
-                                                      backgroundColor: _C.yellow,
-                                                      foregroundColor: _C.charcoal,
-                                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-                                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                                      minimumSize: const Size(0, 30),
+                                                    style:
+                                                        FilledButton.styleFrom(
+                                                      backgroundColor:
+                                                          _C.yellow,
+                                                      foregroundColor:
+                                                          _C.charcoal,
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          50)),
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 10,
+                                                          vertical: 8),
+                                                      minimumSize:
+                                                          const Size(0, 30),
                                                     ),
-                                                    onPressed: _busy || ((_ratingByRideId[r.id] ?? 0) < 1) ? null : () => _submitRideRating(r.id),
-                                                    child: Text(l.submitRating, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                                                    onPressed: _busy ||
+                                                            ((_ratingByRideId[
+                                                                        r.id] ??
+                                                                    0) <
+                                                                1)
+                                                        ? null
+                                                        : () =>
+                                                            _submitRideRating(
+                                                                r.id),
+                                                    child: Text(l.submitRating,
+                                                        style: const TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.w800,
+                                                            fontSize: 12)),
                                                   ),
                                                 ],
                                               ),

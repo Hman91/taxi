@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Keys for per-role UI language (in-memory for this app session).
 abstract final class AppUiRole {
@@ -20,6 +21,8 @@ final ValueNotifier<Locale> appLocale = ValueNotifier(const Locale('en'));
 final ValueNotifier<bool> userChoseLocaleThisSession = ValueNotifier(false);
 
 final Map<String, String> _localeByUiRole = <String, String>{};
+
+const String _storedLocaleKey = 'passenger_preferred_language_v1';
 
 /// Called when opening a role screen — applies the last language chosen for that flow
 /// or records the current [appLocale] the first time.
@@ -43,6 +46,27 @@ void setAppLocaleForUiRole(String? role, Locale loc) {
   if (role != null && role.isNotEmpty) {
     _localeByUiRole[role] = loc.languageCode;
   }
+}
+
+Future<bool> hasStoredPreferredLanguage() async {
+  final p = await SharedPreferences.getInstance();
+  final code = p.getString(_storedLocaleKey);
+  return code != null && code.trim().isNotEmpty;
+}
+
+Future<void> loadStoredPreferredLanguage() async {
+  final p = await SharedPreferences.getInstance();
+  final code = p.getString(_storedLocaleKey);
+  if (code == null || code.trim().isEmpty) return;
+  appLocale.value = localeFromPreferredLanguage(code);
+  userChoseLocaleThisSession.value = true;
+  _localeByUiRole[AppUiRole.passenger] = appLocale.value.languageCode;
+}
+
+Future<void> savePreferredLanguageForUiRole(String? role, Locale loc) async {
+  setAppLocaleForUiRole(role, loc);
+  final p = await SharedPreferences.getInstance();
+  await p.setString(_storedLocaleKey, loc.languageCode);
 }
 
 /// Maps backend `users.preferred_language` (ISO-style code) to a [Locale].

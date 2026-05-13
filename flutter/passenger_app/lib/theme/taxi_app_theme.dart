@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Futuristic + cute visual language.
-/// Dark neon surfaces, cyan/violet accents, soft glows.
+/// Warm taxi visual language with yellow accents and light surfaces.
 abstract final class TaxiAppColors {
   TaxiAppColors._();
 
@@ -12,20 +11,20 @@ abstract final class TaxiAppColors {
 
   static const Color textSoft = Color(0xFF4F4F4F);
 
-  static const Color gradientStart = Color(0xFF070912);
-  static const Color gradientMidA = Color(0xFF0C1122);
-  static const Color gradientMidB = Color(0xFF11162C);
-  static const Color gradientEnd = Color(0xFF0D1020);
+  static const Color gradientStart = Color(0xFFFAF8F2);
+  static const Color gradientMidA = Color(0xFFFFF8E0);
+  static const Color gradientMidB = Color(0xFFFFF3CC);
+  static const Color gradientEnd = Color(0xFFF8F5EC);
 
-  /// App bar / chrome (dark glass)
-  static const Color appBarFill = Color(0xCC0F1428);
+  /// App bar / chrome.
+  static const Color appBarFill = Color(0xFFFFC200);
 
   /// Primary / FilledButton
-  static const Color buttonDark = Color(0xFF00E5FF);
-  static const Color buttonDarkTop = Color(0xFF9D4EDD);
+  static const Color buttonDark = Color(0xFFFFC200);
+  static const Color buttonDarkTop = Color(0xFFE6A800);
 
-  static const Color cardFill = Color(0xCC131A33);
-  static const Color cardBorder = Color(0x553F4D7A);
+  static const Color cardFill = Color(0xFFFFFFFF);
+  static const Color cardBorder = Color(0xFFDDD8C8);
 
   /// Unread badge / highlights
   static const Color accentAmber = Color(0xFFFFB703);
@@ -71,19 +70,19 @@ ThemeData buildTaxiProTheme() {
     brightness: Brightness.light,
   ).copyWith(
     primary: TaxiAppColors.buttonDark,
-    onPrimary: const Color(0xFF060910),
-    primaryContainer: const Color(0xFF1A2342),
+    onPrimary: const Color(0xFF111111),
+    primaryContainer: const Color(0xFFFFF3CC),
     onPrimaryContainer: TaxiAppColors.textStrong,
     secondary: TaxiAppColors.buttonDarkTop,
-    onSecondary: Colors.white,
-    secondaryContainer: const Color(0xFF211739),
+    onSecondary: const Color(0xFF111111),
+    secondaryContainer: const Color(0xFFFFF8E0),
     onSecondaryContainer: TaxiAppColors.textStrong,
     surface: const Color(0xFFFFFFFF),
     onSurface: TaxiAppColors.text,
     onSurfaceVariant: TaxiAppColors.textSoft,
     tertiary: TaxiAppColors.accentAmber,
     onTertiary: const Color(0xFF111111),
-    outline: const Color(0x4A4C5C88),
+    outline: const Color(0xFFDDD8C8),
     shadow: const Color(0x50000000),
   );
 
@@ -129,10 +128,10 @@ ThemeData buildTaxiProTheme() {
       scrolledUnderElevation: 2,
       centerTitle: false,
       backgroundColor: TaxiAppColors.appBarFill,
-      foregroundColor: Colors.white,
+      foregroundColor: TaxiAppColors.textStrong,
       surfaceTintColor: Colors.transparent,
-      iconTheme: const IconThemeData(color: Colors.white),
-      titleTextStyle: baseText.titleLarge?.copyWith(fontSize: 19, color: Colors.white),
+      iconTheme: const IconThemeData(color: TaxiAppColors.textStrong),
+      titleTextStyle: baseText.titleLarge?.copyWith(fontSize: 19, color: TaxiAppColors.textStrong),
     ),
     cardTheme: CardThemeData(
       elevation: 0,
@@ -164,7 +163,7 @@ ThemeData buildTaxiProTheme() {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: TaxiAppColors.buttonDark,
-        foregroundColor: const Color(0xFF050910),
+        foregroundColor: const Color(0xFF111111),
         disabledBackgroundColor: Colors.grey.shade400,
         elevation: 0,
         shadowColor: Colors.black.withOpacity(0.24),
@@ -176,7 +175,7 @@ ThemeData buildTaxiProTheme() {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: TaxiAppColors.buttonDark,
-        foregroundColor: const Color(0xFF050910),
+        foregroundColor: const Color(0xFF111111),
         elevation: 0,
         shadowColor: Colors.black.withOpacity(0.18),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -186,7 +185,7 @@ ThemeData buildTaxiProTheme() {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: TaxiAppColors.buttonDark,
-        side: const BorderSide(color: Color(0x6600E5FF), width: 1.3),
+        side: const BorderSide(color: Color(0xFFE6A800), width: 1.3),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         shape: buttonShape,
       ),
@@ -198,14 +197,14 @@ ThemeData buildTaxiProTheme() {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFF1A2340),
+      fillColor: const Color(0xFFF5F1E8),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0x66485A89)),
+        borderSide: const BorderSide(color: Color(0xFFDDD8C8)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0x66485A89)),
+        borderSide: const BorderSide(color: Color(0xFFDDD8C8)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
@@ -213,7 +212,7 @@ ThemeData buildTaxiProTheme() {
       ),
       labelStyle: TextStyle(color: TaxiAppColors.textSoft.withOpacity(0.95)),
       floatingLabelStyle: const TextStyle(
-        color: TaxiAppColors.buttonDark,
+        color: TaxiAppColors.buttonDarkTop,
         fontWeight: FontWeight.w600,
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
