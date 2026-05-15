@@ -8,7 +8,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../config.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
-import '../maps/light_elegant_map_style.dart';
 import '../maps/reservation_bubble_marker.dart';
 import '../maps/tunisia_tourist_restaurants.dart';
 import '../maps/tunisia_zone_coordinates.dart';
@@ -17,6 +16,8 @@ import '../services/google_geocoding_service.dart';
 import '../services/google_places_service.dart';
 import '../services/taxi_app_service.dart';
 import '../utils/airport_place_heuristics.dart';
+import '../utils/debounce.dart';
+import '../widgets/maps/optimized_map_layer.dart';
 import '../widgets/night_fare_breakdown.dart';
 import '../widgets/ride_address_summary_card.dart';
 
@@ -48,6 +49,11 @@ class PassengerReservationMapResult {
     required this.scheduleLater,
     required this.finalFare,
     this.scheduledPickupAt,
+    this.quotedDistanceKm,
+    this.quotedDurationSeconds,
+    this.quotedBaseFareDt,
+    this.quotedNightSurchargeDt,
+    this.quotedIsNight,
     this.pickupAddress,
     this.pickupDisplayName,
     this.destinationAddress,
@@ -63,6 +69,11 @@ class PassengerReservationMapResult {
   final bool scheduleLater;
   final double finalFare;
   final DateTime? scheduledPickupAt;
+  final double? quotedDistanceKm;
+  final int? quotedDurationSeconds;
+  final double? quotedBaseFareDt;
+  final double? quotedNightSurchargeDt;
+  final bool? quotedIsNight;
   final String? pickupAddress;
   final String? pickupDisplayName;
   final String? destinationAddress;
@@ -140,6 +151,9 @@ class _PassengerReservationMapScreenState extends State<PassengerReservationMapS
   final _promoCtrl = TextEditingController();
   final _destSearchCtrl = TextEditingController();
   GoogleMapController? _map;
+  final _quoteDebouncer = Debouncer(duration: const Duration(milliseconds: 450));
+  Set<Marker>? _cachedMarkers;
+  Set<Polyline>? _cachedPolylines;
 
   late String _selectedFrom;
   String? _selectedTo;
@@ -184,13 +198,45 @@ class _PassengerReservationMapScreenState extends State<PassengerReservationMapS
       unawaited(_syncOriginFromGps(_userGps!));
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_recalcQuote());
+      _scheduleRecalcQuote();
       unawaited(_startGpsTracking());
     });
   }
 
+  int _mapOverlayGen = 0;
+  int _mapOverlayBuiltGen = -1;
+
+  void _invalidateMapOverlays() {
+    _mapOverlayGen++;
+    _cachedMarkers = null;
+    _cachedPolylines = null;
+  }
+
+  Set<Marker> _markersForMap() {
+    if (_cachedMarkers != null && _mapOverlayBuiltGen == _mapOverlayGen) {
+      return _cachedMarkers!;
+    }
+    _cachedMarkers = _markers();
+    _mapOverlayBuiltGen = _mapOverlayGen;
+    return _cachedMarkers!;
+  }
+
+  Set<Polyline> _polylinesForMap() {
+    if (_cachedPolylines != null && _mapOverlayBuiltGen == _mapOverlayGen) {
+      return _cachedPolylines!;
+    }
+    _cachedPolylines = _polylines();
+    _mapOverlayBuiltGen = _mapOverlayGen;
+    return _cachedPolylines!;
+  }
+
+  void _scheduleRecalcQuote() {
+    _quoteDebouncer.run(_recalcQuote);
+  }
+
   @override
   void dispose() {
+    _quoteDebouncer.dispose();
     _geoDeb?.cancel();
     _posSub?.cancel();
     _pulse.dispose();
@@ -278,7 +324,7 @@ class _PassengerReservationMapScreenState extends State<PassengerReservationMapS
           _selectedRouteKey = _findRouteKey(_selectedFrom, _selectedTo);
         }
       });
-      await _recalcQuote();
+      _scheduleRecalcQuote();
       await _refreshDestMarkerBitmaps();
     } else {
       _selectedRouteKey = _findRouteKey(_selectedFrom, _selectedTo);
@@ -381,6 +427,7 @@ class _PassengerReservationMapScreenState extends State<PassengerReservationMapS
   Future<void> _refreshDestMarkerBitmaps() async {
     if ((_selectedTo ?? '').trim().isNotEmpty) {
       if (!mounted) return;
+      _invalidateMapOverlays();
       setState(() {
         _destIcons = {};
         _restaurantIcons = {};
@@ -415,6 +462,7 @@ class _PassengerReservationMapScreenState extends State<PassengerReservationMapS
     }
 
     if (!mounted) return;
+    _invalidateMapOverlays();
     setState(() {
       _destIcons = nextDest;
       _restaurantIcons = nextRp;
@@ -490,10 +538,14 @@ class _PassengerReservationMapScreenState extends State<PassengerReservationMapS
       _destinationAddressLine = null;
     });
     unawaited(_loadDestinationAddressFromZone(d));
-    await _recalcQuote();
+    _scheduleRecalcQuote();
     await _loadRoute(fitCamera: true);
     await _refreshDestMarkerBitmaps();
   }
+
+  DateTime _pricingTimeUtc() => _scheduleLater && _scheduledPickupAt != null
+      ? _scheduledPickupAt!.toUtc()
+      : DateTime.now().toUtc();
 
   Future<void> _recalcQuote() async {
     final key = _selectedRouteKey;
@@ -501,14 +553,35 @@ class _PassengerReservationMapScreenState extends State<PassengerReservationMapS
       setState(() => _quote = null);
       return;
     }
+    final route = _route;
+    final pt = _pricingTimeUtc();
     try {
-      final DateTime pricingTime = _scheduleLater &&
-              _scheduledPickupAt != null
-          ? _scheduledPickupAt!.toUtc()
-          : DateTime.now().toUtc();
-      final q = await widget.api.quoteAirport(key, pricingTime: pricingTime);
+      if (route != null &&
+          route.points.length >= 2 &&
+          route.distanceMeters > 0 &&
+          _directions.isConfigured) {
+        final qGps = await widget.api.quoteGps(
+          distanceKm: route.distanceKm,
+          pricingTime: pt,
+        );
+        if (!mounted) return;
+        final merged = Map<String, dynamic>.from(qGps);
+        merged['route_key'] = key;
+        merged['quote_mode'] = 'gps';
+        merged['distance_km'] = route.distanceKm;
+        merged['directions_duration_seconds'] = route.durationSeconds;
+        var finalFare = (merged['final_fare'] as num?)?.toDouble() ?? 0;
+        if (_promoCtrl.text.trim().toUpperCase() == 'WELCOME26') {
+          finalFare *= 0.8;
+        }
+        merged['final_fare'] = double.parse(finalFare.toStringAsFixed(3));
+        setState(() => _quote = merged);
+        return;
+      }
+      final q = await widget.api.quoteAirport(key, pricingTime: pt);
       if (!mounted) return;
       final merged = Map<String, dynamic>.from(q);
+      merged['quote_mode'] = 'airport';
       var finalFare =
           (merged['final_fare'] as num?)?.toDouble() ?? (widget.fares[key] ?? 0);
       if (_promoCtrl.text.trim().toUpperCase() == 'WELCOME26') {
@@ -526,6 +599,7 @@ class _PassengerReservationMapScreenState extends State<PassengerReservationMapS
     final from = _selectedFrom.trim();
     final to = (_selectedTo ?? '').trim();
     if (from.isEmpty || to.isEmpty) {
+      _invalidateMapOverlays();
       setState(() {
         _route = null;
         _routeError = null;
@@ -562,11 +636,13 @@ class _PassengerReservationMapScreenState extends State<PassengerReservationMapS
     try {
       final r = await _directions.fetchRoute(a, b);
       if (!mounted) return;
+      _invalidateMapOverlays();
       setState(() {
         _route = r;
         _routeLoading = false;
         if (r == null) _routeError = 'Directions unavailable';
       });
+      _scheduleRecalcQuote();
       if (fitCamera) await _fitCamera();
     } catch (e) {
       if (!mounted) return;
@@ -802,7 +878,7 @@ class _PassengerReservationMapScreenState extends State<PassengerReservationMapS
       _destinationAddressLine = null;
     });
     unawaited(_reverseGeocodeDestinationPin());
-    await _recalcQuote();
+    _scheduleRecalcQuote();
     await _loadRoute(fitCamera: true);
     await _refreshDestMarkerBitmaps();
   }
@@ -1361,7 +1437,7 @@ class _PassengerReservationMapScreenState extends State<PassengerReservationMapS
         unawaited(_loadDestinationAddressFromZone(d.zoneKey));
       }
     }
-    await _recalcQuote();
+    _scheduleRecalcQuote();
     await _loadRoute(fitCamera: true);
     await _refreshDestMarkerBitmaps();
   }
@@ -1418,32 +1494,24 @@ class _PassengerReservationMapScreenState extends State<PassengerReservationMapS
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  GoogleMap(
+                  OptimizedMapLayer(
                     initialCameraPosition: CameraPosition(
                       target: _userGps ?? TunisiaZoneCoordinates.tunisOverview,
                       zoom: 11,
                       tilt: 16,
                     ),
-                    markers: _markers(),
-                    polylines: _polylines(),
-                    mapToolbarEnabled: false,
-                    zoomControlsEnabled: false,
-                    compassEnabled: false,
-                    myLocationButtonEnabled: false,
+                    markers: _markersForMap(),
+                    polylines: _polylinesForMap(),
                     myLocationEnabled: !_hasRouteDestination,
-                    buildingsEnabled: true,
                     padding: EdgeInsets.only(
                       top: MediaQuery.paddingOf(context).top + 8,
                       bottom: _hasRouteDestination
                           ? (MediaQuery.sizeOf(context).height * 0.28).clamp(120.0, 220.0)
                           : 24,
                     ),
-                    onCameraMoveStarted: () {
-                      if (mounted) setState(() => _followUser = false);
-                    },
+                    onCameraMoveStarted: () => _followUser = false,
                     onMapCreated: (c) async {
                       _map = c;
-                      await c.setMapStyle(kPassengerLightMapStyleJson);
                       final u = _userGps;
                       if (u != null) {
                         await c.moveCamera(CameraUpdate.newLatLngZoom(u, 11.2));
@@ -1737,7 +1805,7 @@ class _PassengerReservationMapScreenState extends State<PassengerReservationMapS
                       decoration: _fd(widget.l.promoCodeOptionalLabel, icon: Icons.discount_outlined),
                       onChanged: (_) async {
                         _promoCode = _promoCtrl.text.trim();
-                        await _recalcQuote();
+                        _scheduleRecalcQuote();
                       },
                     ),
                     if (_promoCtrl.text.trim().toUpperCase() == 'WELCOME26') ...[
@@ -1819,19 +1887,36 @@ class _PassengerReservationMapScreenState extends State<PassengerReservationMapS
                                     if (key == null) return;
                                     final u = _userGps;
                                     final dl = _effectiveDestinationLatLng();
+                                    final q = _quote!;
+                                    final routeSnap = _route;
                                     Navigator.of(context).pop(
                                       PassengerReservationMapResult(
                                         routeKey: key,
                                         promoCode: _promoCode,
                                         scheduleLater: _scheduleLater,
                                         finalFare:
-                                            (_quote!['final_fare'] as num).toDouble(),
+                                            (q['final_fare'] as num).toDouble(),
                                         scheduledPickupAt:
                                             _scheduleLater ? _scheduledPickupAt : null,
+                                        quotedDistanceKm: routeSnap?.distanceKm ??
+                                            (q['distance_km'] as num?)?.toDouble(),
+                                        quotedDurationSeconds: routeSnap?.durationSeconds ??
+                                            (q['directions_duration_seconds'] as num?)
+                                                ?.toInt(),
+                                        quotedBaseFareDt:
+                                            (q['base_fare'] as num?)?.toDouble() ??
+                                                (q['base_fare_dt'] as num?)?.toDouble(),
+                                        quotedNightSurchargeDt:
+                                            (q['night_surcharge_dt'] as num?)?.toDouble(),
+                                        quotedIsNight: q['is_night'] == true,
                                         pickupAddress: (_pickupGeoLine ?? '').trim().isEmpty
                                             ? null
                                             : _pickupGeoLine!.trim(),
-                                        pickupDisplayName: localizedPlaceName(widget.l, _selectedFrom),
+                                        pickupDisplayName: (_pickupGeoLine ?? '')
+                                                .trim()
+                                                .isNotEmpty
+                                            ? null
+                                            : localizedPlaceName(widget.l, _selectedFrom),
                                         destinationAddress: (_destinationAddressLine ?? '')
                                                 .trim()
                                                 .isEmpty

@@ -17,6 +17,8 @@ import '../services/google_geocoding_service.dart';
 import '../services/google_places_service.dart';
 import '../services/taxi_app_service.dart';
 import '../utils/airport_place_heuristics.dart';
+import '../utils/debounce.dart';
+import '../widgets/maps/optimized_map_layer.dart';
 import '../widgets/night_fare_breakdown.dart';
 import '../widgets/ride_address_summary_card.dart';
 
@@ -57,6 +59,11 @@ class CorporateReservationMapResult {
     required this.finalFare,
     required this.scheduleLater,
     this.scheduledPickupAt,
+    this.quotedDistanceKm,
+    this.quotedDurationSeconds,
+    this.quotedBaseFareDt,
+    this.quotedNightSurchargeDt,
+    this.quotedIsNight,
     this.pickupAddress,
     this.pickupDisplayName,
     this.destinationAddress,
@@ -73,6 +80,11 @@ class CorporateReservationMapResult {
   /// When false, B2B books as soon as possible (`scheduledPickupAt` null).
   final bool scheduleLater;
   final DateTime? scheduledPickupAt;
+  final double? quotedDistanceKm;
+  final int? quotedDurationSeconds;
+  final double? quotedBaseFareDt;
+  final double? quotedNightSurchargeDt;
+  final bool? quotedIsNight;
   final String? pickupAddress;
   final String? pickupDisplayName;
   final String? destinationAddress;
@@ -151,6 +163,11 @@ class _CorporateReservationMapScreenState
   final _places = GooglePlacesService();
   final _destSearchCtrl = TextEditingController();
   GoogleMapController? _map;
+  final _quoteDebouncer = Debouncer(duration: const Duration(milliseconds: 450));
+  int _mapOverlayGen = 0;
+  int _mapOverlayBuiltGen = -1;
+  Set<Marker>? _cachedMarkers;
+  Set<Polyline>? _cachedPolylines;
 
   late String _selectedFrom;
   String? _selectedTo;
@@ -199,8 +216,37 @@ class _CorporateReservationMapScreenState
     });
   }
 
+  void _invalidateMapOverlays() {
+    _mapOverlayGen++;
+    _cachedMarkers = null;
+    _cachedPolylines = null;
+  }
+
+  Set<Marker> _markersForMap() {
+    if (_cachedMarkers != null && _mapOverlayBuiltGen == _mapOverlayGen) {
+      return _cachedMarkers!;
+    }
+    _cachedMarkers = _markers();
+    _mapOverlayBuiltGen = _mapOverlayGen;
+    return _cachedMarkers!;
+  }
+
+  Set<Polyline> _polylinesForMap() {
+    if (_cachedPolylines != null && _mapOverlayBuiltGen == _mapOverlayGen) {
+      return _cachedPolylines!;
+    }
+    _cachedPolylines = _polylines();
+    _mapOverlayBuiltGen = _mapOverlayGen;
+    return _cachedPolylines!;
+  }
+
+  void _scheduleRecalcQuote() {
+    _quoteDebouncer.run(_recalcQuote);
+  }
+
   @override
   void dispose() {
+    _quoteDebouncer.dispose();
     _geoDeb?.cancel();
     _posSub?.cancel();
     _pulse.dispose();
@@ -432,6 +478,7 @@ class _CorporateReservationMapScreenState
     }
 
     if (!mounted) return;
+    _invalidateMapOverlays();
     setState(() {
       _destIcons = nextDest;
       _restaurantIcons = nextRp;
@@ -566,7 +613,7 @@ class _CorporateReservationMapScreenState
           _routeLoading = false;
         });
       }
-      await _recalcQuote();
+      _scheduleRecalcQuote();
       return;
     }
     final a = _userGps;
@@ -578,7 +625,7 @@ class _CorporateReservationMapScreenState
           _routeLoading = false;
         });
       }
-      await _recalcQuote();
+      _scheduleRecalcQuote();
       return;
     }
     final b =
@@ -591,7 +638,7 @@ class _CorporateReservationMapScreenState
           _routeLoading = false;
         });
       }
-      await _recalcQuote();
+      _scheduleRecalcQuote();
       return;
     }
     if (!_directions.isConfigured) {
@@ -602,7 +649,7 @@ class _CorporateReservationMapScreenState
           _routeLoading = false;
         });
       }
-      await _recalcQuote();
+      _scheduleRecalcQuote();
       return;
     }
     setState(() {
@@ -625,7 +672,7 @@ class _CorporateReservationMapScreenState
         _routeError = e.toString();
       });
     }
-    await _recalcQuote();
+    _scheduleRecalcQuote();
   }
 
   Future<void> _fitCamera() async {
@@ -1738,21 +1785,15 @@ class _CorporateReservationMapScreenState
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  GoogleMap(
-                    style: kPassengerLightMapStyleJson,
+                  OptimizedMapLayer(
                     initialCameraPosition: CameraPosition(
                       target: _userGps ?? TunisiaZoneCoordinates.tunisOverview,
                       zoom: 11,
                       tilt: 16,
                     ),
-                    markers: _markers(),
-                    polylines: _polylines(),
-                    mapToolbarEnabled: false,
-                    zoomControlsEnabled: false,
-                    compassEnabled: false,
-                    myLocationButtonEnabled: false,
+                    markers: _markersForMap(),
+                    polylines: _polylinesForMap(),
                     myLocationEnabled: !_hasRouteDestination,
-                    buildingsEnabled: true,
                     padding: EdgeInsets.only(
                       top: MediaQuery.paddingOf(context).top + 8,
                       bottom: _hasRouteDestination
@@ -1760,9 +1801,7 @@ class _CorporateReservationMapScreenState
                               .clamp(120.0, 220.0)
                           : 24,
                     ),
-                    onCameraMoveStarted: () {
-                      if (mounted) setState(() => _followUser = false);
-                    },
+                    onCameraMoveStarted: () => _followUser = false,
                     onMapCreated: (c) async {
                       _map = c;
                       final u = _userGps;
@@ -2130,23 +2169,46 @@ class _CorporateReservationMapScreenState
                                     if (key == null) return;
                                     final u = _userGps;
                                     final dl = _effectiveDestinationLatLng();
+                                    final q = _quote!;
+                                    final routeSnap = _route;
                                     Navigator.of(context).pop(
                                       CorporateReservationMapResult(
                                         routeKey: key,
                                         finalFare:
-                                            (_quote!['final_fare'] as num)
-                                                .toDouble(),
+                                            (q['final_fare'] as num).toDouble(),
                                         scheduleLater: _scheduleLater,
                                         scheduledPickupAt: _scheduleLater
                                             ? _scheduledPickupAt
                                             : null,
+                                        quotedDistanceKm:
+                                            routeSnap?.distanceKm ??
+                                                (q['distance_km'] as num?)
+                                                    ?.toDouble(),
+                                        quotedDurationSeconds:
+                                            routeSnap?.durationSeconds ??
+                                                (q['directions_duration_seconds']
+                                                        as num?)
+                                                    ?.toInt(),
+                                        quotedBaseFareDt:
+                                            (q['base_fare'] as num?)
+                                                    ?.toDouble() ??
+                                                (q['base_fare_dt'] as num?)
+                                                    ?.toDouble(),
+                                        quotedNightSurchargeDt: (q[
+                                                'night_surcharge_dt'] as num?)
+                                            ?.toDouble(),
+                                        quotedIsNight: q['is_night'] == true,
                                         pickupAddress: (_pickupGeoLine ?? '')
                                                 .trim()
                                                 .isEmpty
                                             ? null
                                             : _pickupGeoLine!.trim(),
-                                        pickupDisplayName: localizedPlaceName(
-                                            widget.l, _selectedFrom),
+                                        pickupDisplayName: (_pickupGeoLine ?? '')
+                                                .trim()
+                                                .isNotEmpty
+                                            ? null
+                                            : localizedPlaceName(
+                                                widget.l, _selectedFrom),
                                         destinationAddress:
                                             (_destinationAddressLine ?? '')
                                                     .trim()

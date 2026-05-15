@@ -1,5 +1,6 @@
 import '../api/client.dart';
 import '../api/models.dart';
+import '../api/request_cache.dart';
 import '../models/chat_message.dart';
 
 /// UI talks to this layer only — no HTTP in widgets (see `.cursor/rules.md`).
@@ -7,18 +8,46 @@ class TaxiAppService {
   TaxiAppService({TaxiApiClient? client}) : _client = client ?? TaxiApiClient();
 
   final TaxiApiClient _client;
+  final _cache = RequestCache.instance;
 
   Future<void> health() => _client.health();
 
-  Future<Map<String, double>> getAirportFares() => _client.getAirportFares();
+  Future<Map<String, double>> getAirportFares({bool forceRefresh = false}) =>
+      _cache.getOrFetch(
+        'fares:airport',
+        _client.getAirportFares,
+        ttl: const Duration(minutes: 10),
+        forceRefresh: forceRefresh,
+      );
 
-  Future<Map<String, dynamic>> quoteAirport(String routeKey,
-          {DateTime? pricingTime}) =>
-      _client.quoteAirport(routeKey, pricingTime: pricingTime);
+  Future<Map<String, dynamic>> quoteAirport(
+    String routeKey, {
+    DateTime? pricingTime,
+    bool forceRefresh = false,
+  }) {
+    final pt = (pricingTime ?? DateTime.now().toUtc()).toIso8601String();
+    return _cache.getOrFetch(
+      'quote:airport:$routeKey:$pt',
+      () => _client.quoteAirport(routeKey, pricingTime: pricingTime),
+      ttl: const Duration(seconds: 30),
+      forceRefresh: forceRefresh,
+    );
+  }
 
-  Future<Map<String, dynamic>> quoteGps(
-          {double? distanceKm, DateTime? pricingTime}) =>
-      _client.quoteGps(distanceKm: distanceKm, pricingTime: pricingTime);
+  Future<Map<String, dynamic>> quoteGps({
+    double? distanceKm,
+    DateTime? pricingTime,
+    bool forceRefresh = false,
+  }) {
+    final km = (distanceKm ?? 0).toStringAsFixed(3);
+    final pt = (pricingTime ?? DateTime.now().toUtc()).toIso8601String();
+    return _cache.getOrFetch(
+      'quote:gps:$km:$pt',
+      () => _client.quoteGps(distanceKm: distanceKm, pricingTime: pricingTime),
+      ttl: const Duration(seconds: 25),
+      forceRefresh: forceRefresh,
+    );
+  }
 
   Future<LoginResponse> login({required String role, required String secret}) =>
       _client.login(role: role, secret: secret);
@@ -92,12 +121,24 @@ class TaxiAppService {
     required String pickup,
     required String destination,
     DateTime? scheduledPickupAt,
+    double? quotedDistanceKm,
+    int? quotedDurationSeconds,
+    double? quotedFareDt,
+    double? quotedBaseFareDt,
+    double? quotedNightSurchargeDt,
+    bool? quotedIsNight,
   }) =>
       _client.createRide(
         token: token,
         pickup: pickup,
         destination: destination,
         scheduledPickupAt: scheduledPickupAt,
+        quotedDistanceKm: quotedDistanceKm,
+        quotedDurationSeconds: quotedDurationSeconds,
+        quotedFareDt: quotedFareDt,
+        quotedBaseFareDt: quotedBaseFareDt,
+        quotedNightSurchargeDt: quotedNightSurchargeDt,
+        quotedIsNight: quotedIsNight,
       );
 
   Future<GuestRideCreateResponse> createGuestRide({
@@ -128,11 +169,15 @@ class TaxiAppService {
     required String token,
     required String currentZone,
     bool? isAvailable,
+    double? lat,
+    double? lng,
   }) =>
       _client.updateDriverLocation(
         token: token,
         currentZone: currentZone,
         isAvailable: isAvailable,
+        lat: lat,
+        lng: lng,
       );
 
   Future<Map<String, dynamic>> driverGains(String token) =>
@@ -252,8 +297,16 @@ class TaxiAppService {
       );
 
   Future<({List<Map<String, dynamic>> flights, String? source})>
-      listAdminTunisiaFlightArrivals(String token) =>
-          _client.listAdminTunisiaFlightArrivals(token);
+      listAdminTunisiaFlightArrivals(
+    String token, {
+    bool forceRefresh = false,
+  }) =>
+      _cache.getOrFetch(
+        'flights:tunisia:$token',
+        () => _client.listAdminTunisiaFlightArrivals(token),
+        ttl: const Duration(minutes: 2),
+        forceRefresh: forceRefresh,
+      );
 
   Future<List<Map<String, dynamic>>> listAdminRides(
     String token, {
@@ -284,6 +337,20 @@ class TaxiAppService {
     required double fare,
     required String sourceCode,
     DateTime? scheduledPickupAt,
+    String? pickupAddress,
+    String? pickupDisplayName,
+    String? destinationAddress,
+    String? destinationDisplayName,
+    double? pickupLat,
+    double? pickupLng,
+    double? destinationLat,
+    double? destinationLng,
+    double? quotedDistanceKm,
+    int? quotedDurationSeconds,
+    double? quotedFareDt,
+    double? quotedBaseFareDt,
+    double? quotedNightSurchargeDt,
+    bool? quotedIsNight,
   }) =>
       _client.createB2bBooking(
         token: token,
@@ -296,6 +363,20 @@ class TaxiAppService {
         fare: fare,
         sourceCode: sourceCode,
         scheduledPickupAt: scheduledPickupAt,
+        pickupAddress: pickupAddress,
+        pickupDisplayName: pickupDisplayName,
+        destinationAddress: destinationAddress,
+        destinationDisplayName: destinationDisplayName,
+        pickupLat: pickupLat,
+        pickupLng: pickupLng,
+        destinationLat: destinationLat,
+        destinationLng: destinationLng,
+        quotedDistanceKm: quotedDistanceKm,
+        quotedDurationSeconds: quotedDurationSeconds,
+        quotedFareDt: quotedFareDt,
+        quotedBaseFareDt: quotedBaseFareDt,
+        quotedNightSurchargeDt: quotedNightSurchargeDt,
+        quotedIsNight: quotedIsNight,
       );
 
   Future<Map<String, dynamic>> getB2bMe(String token) => _client.getB2bMe(token);

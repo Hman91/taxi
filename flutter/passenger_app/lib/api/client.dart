@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 
 import '../config.dart';
 import '../models/chat_message.dart';
+import 'auth_refreshing_client.dart';
+import 'auth_token_store.dart';
 import 'models.dart';
 
 class TaxiApiException implements Exception {
@@ -22,7 +24,7 @@ class TaxiAccountDisabledException implements Exception {
 
 class TaxiApiClient {
   TaxiApiClient({http.Client? httpClient})
-      : _http = httpClient ?? http.Client();
+      : _http = httpClient ?? AuthRefreshingClient();
 
   final http.Client _http;
 
@@ -38,10 +40,14 @@ class TaxiApiClient {
     return null;
   }
 
-  Map<String, String> _jsonHeaders({String? bearer}) {
+  Map<String, String> _jsonHeaders({String? bearer, bool b2bRoleOnly = false}) {
     final h = <String, String>{'Content-Type': 'application/json'};
-    if (bearer != null && bearer.isNotEmpty) {
-      h['Authorization'] = 'Bearer $bearer';
+    final token = AuthTokenStore.instance.resolveBearer(
+      bearer,
+      b2bRoleOnly: b2bRoleOnly,
+    );
+    if (token != null && token.isNotEmpty) {
+      h['Authorization'] = 'Bearer $token';
     }
     return h;
   }
@@ -126,8 +132,10 @@ class TaxiApiClient {
       throw TaxiApiException(
           _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
     }
-    return DriverPinLoginResponse.fromJson(
+    final body = DriverPinLoginResponse.fromJson(
         jsonDecode(r.body) as Map<String, dynamic>);
+    AuthTokenStore.instance.applyFromDriverPin(body);
+    return body;
   }
 
   Future<Trip> createTrip({
@@ -783,6 +791,12 @@ class TaxiApiClient {
     double? pickupLng,
     double? destinationLat,
     double? destinationLng,
+    double? quotedDistanceKm,
+    int? quotedDurationSeconds,
+    double? quotedFareDt,
+    double? quotedBaseFareDt,
+    double? quotedNightSurchargeDt,
+    bool? quotedIsNight,
   }) async {
     final payload = <String, dynamic>{
       'pickup': pickup,
@@ -798,6 +812,14 @@ class TaxiApiClient {
       if (pickupLng != null) 'pickup_lng': pickupLng,
       if (destinationLat != null) 'destination_lat': destinationLat,
       if (destinationLng != null) 'destination_lng': destinationLng,
+      if (quotedDistanceKm != null) 'quoted_distance_km': quotedDistanceKm,
+      if (quotedDurationSeconds != null)
+        'quoted_duration_seconds': quotedDurationSeconds,
+      if (quotedFareDt != null) 'quoted_fare_dt': quotedFareDt,
+      if (quotedBaseFareDt != null) 'quoted_base_fare_dt': quotedBaseFareDt,
+      if (quotedNightSurchargeDt != null)
+        'quoted_night_surcharge_dt': quotedNightSurchargeDt,
+      if (quotedIsNight != null) 'quoted_is_night': quotedIsNight,
     };
     final r = await _http.post(
       _u('/api/rides'),

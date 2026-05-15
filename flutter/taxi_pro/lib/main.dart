@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -9,14 +11,17 @@ import 'screens/driver_screen.dart';
 import 'screens/operator_screen.dart';
 import 'screens/owner_screen.dart';
 import 'screens/unified_login_screen.dart';
+import 'api/auth_token_store.dart';
 import 'services/local_notification_service.dart';
 import 'services/session_store.dart';
 import 'theme/taxi_app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await LocalNotificationService.instance.init();
   runApp(const TaxiProApp());
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(LocalNotificationService.instance.init());
+  });
 }
 
 class TaxiProApp extends StatelessWidget {
@@ -65,6 +70,9 @@ class _SessionGateState extends State<_SessionGate> {
 
   Future<void> _restore() async {
     final s = await SessionStore.load();
+    if (s != null) {
+      await AuthTokenStore.instance.ensureFreshAccess();
+    }
     if (!mounted) return;
     setState(() {
       _home = _screenFromSession(s) ?? const UnifiedLoginScreen(showPassengerEntry: false);

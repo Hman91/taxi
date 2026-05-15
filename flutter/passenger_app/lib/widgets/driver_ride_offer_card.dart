@@ -5,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
 import '../l10n/ride_address_display.dart';
 import '../services/taxi_app_service.dart';
+import '../utils/ride_locked_quote.dart';
 
 /// B2B rides bill [Ride.b2bFare]; live quotes can differ from the locked corporate total.
 void _applyB2bLockedFareToQuote(Map<String, dynamic> quote, Ride ride) {
@@ -81,13 +82,32 @@ class _DriverRideOfferCardState extends State<DriverRideOfferCard> {
   }
 
   Future<void> _loadQuote() async {
+    final r = widget.ride;
+    if (rideHasLockedQuote(r)) {
+      final locked = <String, dynamic>{
+        'quote_mode': 'locked',
+        'distance_km': r.quotedDistanceKm,
+        'directions_duration_seconds': r.quotedDurationSeconds,
+        'final_fare': rideLockedFareDt(r),
+        'base_fare': r.quotedBaseFareDt,
+        'night_surcharge_dt': r.quotedNightSurchargeDt,
+        'is_night': r.quotedIsNight,
+      };
+      _applyB2bLockedFareToQuote(locked, r);
+      if (!mounted) return;
+      setState(() {
+        _quote = locked;
+        _quoteLoading = false;
+      });
+      return;
+    }
     final key =
-        '${widget.ride.pickup.trim()} $airportRouteKeySeparator ${widget.ride.destination.trim()}';
-    final pt = DateTime.tryParse(widget.ride.scheduledPickupAt ?? '');
+        '${r.pickup.trim()} $airportRouteKeySeparator ${r.destination.trim()}';
+    final pt = DateTime.tryParse(r.scheduledPickupAt ?? '');
     try {
       final q = await widget.api.quoteAirport(key, pricingTime: pt);
       if (!mounted) return;
-      _applyB2bLockedFareToQuote(q, widget.ride);
+      _applyB2bLockedFareToQuote(q, r);
       setState(() {
         _quote = q;
         _quoteLoading = false;
@@ -101,8 +121,17 @@ class _DriverRideOfferCardState extends State<DriverRideOfferCard> {
     }
   }
 
-  int _etaMinutes(double distanceKm) =>
-      (distanceKm * 2.52).round().clamp(1, 999);
+  String? _durationChipText() {
+    final fromQuote = (_quote?['directions_duration_seconds'] as num?)?.toInt();
+    if (fromQuote != null && fromQuote > 0) {
+      return formatRideDurationSeconds(fromQuote);
+    }
+    final locked = rideLockedDurationLabel(widget.ride);
+    if (locked != null) return locked;
+    final km = (_quote?['distance_km'] as num?)?.toDouble();
+    if (km == null) return null;
+    return '${(km * 2.52).round().clamp(1, 999)} min';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -337,11 +366,11 @@ class _DriverRideOfferCardState extends State<DriverRideOfferCard> {
                         distanceKm.toStringAsFixed(1),
                       )
                     : null,
-                timeText: distanceKm != null
-                    ? loc.driverOfferTimeChip(
-                        '${_etaMinutes(distanceKm)}',
-                      )
-                    : null,
+                timeText: () {
+                  final d = _durationChipText();
+                  if (d == null) return null;
+                  return loc.driverOfferTimeChip(d);
+                }(),
               ),
               if (_quote != null && _quote!['is_night'] == true) ...[
                 const SizedBox(height: 8),

@@ -98,12 +98,18 @@ class _TaxiProLoginScreenState extends State<TaxiProLoginScreen> {
 
   Future<void> _goByRole(AppLoginResponse r) async {
     if (r.role == 'owner') {
-      await SessionStore.saveOwnerToken(r.accessToken);
+      await SessionStore.saveOwnerToken(
+        r.accessToken,
+        refreshToken: r.refreshToken,
+      );
       await _go(OwnerScreen(initialToken: r.accessToken));
       return;
     }
     if (r.role == 'operator') {
-      await SessionStore.saveOperatorToken(r.accessToken);
+      await SessionStore.saveOperatorToken(
+        r.accessToken,
+        refreshToken: r.refreshToken,
+      );
       await _go(OperatorScreen(initialToken: r.accessToken));
       return;
     }

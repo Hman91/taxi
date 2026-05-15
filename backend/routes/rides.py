@@ -61,6 +61,30 @@ def create_ride(**kwargs: Any) -> Tuple[Any, int]:
         except (TypeError, ValueError):
             return None
 
+    def _opt_int(key_snake: str, key_camel: str) -> int | None:
+        raw = body.get(key_snake) or body.get(key_camel)
+        if raw is None or raw == "":
+            return None
+        try:
+            return int(round(float(raw)))
+        except (TypeError, ValueError):
+            return None
+
+    def _opt_bool(key_snake: str, key_camel: str) -> bool | None:
+        raw = body.get(key_snake) if key_snake in body else body.get(key_camel)
+        if raw is None or raw == "":
+            return None
+        if isinstance(raw, bool):
+            return raw
+        if isinstance(raw, (int, float)):
+            return bool(raw)
+        s = str(raw).strip().lower()
+        if s in ("1", "true", "yes"):
+            return True
+        if s in ("0", "false", "no"):
+            return False
+        return None
+
     ride, err = rides_service.request_ride(
         uid,
         pickup,
@@ -75,6 +99,16 @@ def create_ride(**kwargs: Any) -> Tuple[Any, int]:
         pickup_lng=_opt_float("pickup_lng", "pickupLng"),
         destination_lat=_opt_float("destination_lat", "destinationLat"),
         destination_lng=_opt_float("destination_lng", "destinationLng"),
+        quoted_distance_km=_opt_float("quoted_distance_km", "quotedDistanceKm"),
+        quoted_duration_seconds=_opt_int(
+            "quoted_duration_seconds", "quotedDurationSeconds"
+        ),
+        quoted_fare_dt=_opt_float("quoted_fare_dt", "quotedFareDt"),
+        quoted_base_fare_dt=_opt_float("quoted_base_fare_dt", "quotedBaseFareDt"),
+        quoted_night_surcharge_dt=_opt_float(
+            "quoted_night_surcharge_dt", "quotedNightSurchargeDt"
+        ),
+        quoted_is_night=_opt_bool("quoted_is_night", "quotedIsNight"),
     )
     if err:
         code = 400 if err != "active_ride_exists" else 409

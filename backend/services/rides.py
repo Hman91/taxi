@@ -1,12 +1,14 @@
 """Ride lifecycle: one active ride per passenger; driver accept / ongoing / complete."""
 from __future__ import annotations
 
-import math
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from flask import current_app
+
 from .. import db as db_module
 from . import chat_service
+from . import dispatch_service
 from . import pricing
 from . import realtime_broadcast
 
@@ -21,64 +23,11 @@ _SCHEDULE_MAX_HORIZON_DAYS = 30
 _SCHEDULE_PICKUP_WINDOW_MINUTES = 30
 _SCHEDULE_START_GRACE_MINUTES = 45
 
-_ZONE_COORDS: Dict[str, tuple[float, float]] = {
-    "مطار قرطاج": (36.8508, 10.2272),
-    "مطار النفيضة": (36.0758, 10.4386),
-    "مطار المنستير": (35.7581, 10.7547),
-    "وسط سوسة": (35.8256, 10.63699),
-    "الحمامات": (36.4000, 10.6167),
-    "نابل": (36.4561, 10.7376),
-    "القنطاوي": (35.8920, 10.5950),
-}
-
-
-def _distance_km(a_lat: float, a_lng: float, b_lat: float, b_lng: float) -> float:
-    return math.sqrt((a_lat - b_lat) ** 2 + (a_lng - b_lng) ** 2) * 111.0
-
-
 def _wallet_depleted_or_missing_for_driver(user_id: int) -> bool:
     acct = db_module.driver_pin_account_by_user_id(user_id)
     if acct is None:
         return True
     return float(acct.get("wallet_balance") or 0.0) <= 0.0
-
-
-def _select_top5_driver_user_ids_for_pickup(pickup_zone: str) -> List[int]:
-    candidates = db_module.driver_profiles_for_dispatch_online(window_minutes=30)
-    if not candidates:
-        candidates = db_module.driver_profiles_for_dispatch()
-    if not candidates:
-        return []
-    pickup_norm = pickup_zone.strip()
-    target = _ZONE_COORDS.get(pickup_norm)
-    scored: List[tuple[float, int]] = []
-    for d in candidates:
-        uid = int(d["user_id"])
-        if not bool(int(d.get("is_available", 0))):
-            continue
-        if _wallet_depleted_or_missing_for_driver(uid):
-            # Depleted wallet drivers must not receive new dispatch offers.
-            db_module.driver_set_availability_by_user_id(uid, False)
-            continue
-        current_zone = (db_module.driver_current_zone_by_user_id(uid) or "").strip()
-        lat = d.get("last_lat")
-        lng = d.get("last_lng")
-        if current_zone == pickup_norm:
-            # Strongly prefer drivers already in the pickup zone.
-            score = 0.0
-        elif target is not None and lat is not None and lng is not None:
-            # Next best: nearest by recent GPS point.
-            score = 1.0 + _distance_km(float(lat), float(lng), target[0], target[1])
-        elif target is not None and current_zone in _ZONE_COORDS:
-            # Fallback: zone-to-zone proximity when GPS point is missing.
-            cz = _ZONE_COORDS[current_zone]
-            score = 2.0 + _distance_km(cz[0], cz[1], target[0], target[1])
-        else:
-            # Last fallback: deterministic stable ordering.
-            score = 3.0 + (float(uid) / 1_000_000.0)
-        scored.append((score, uid))
-    scored.sort(key=lambda x: x[0])
-    return [uid for _, uid in scored[:5]]
 
 
 def _parse_scheduled_pickup_at(raw: Any) -> tuple[datetime | None, str | None]:
@@ -107,23 +56,6 @@ def _parse_scheduled_pickup_at(raw: Any) -> tuple[datetime | None, str | None]:
     return dt, None
 
 
-def _select_scheduled_driver_user_ids(pickup_zone: str, pickup_at: datetime) -> List[int]:
-    eligible = set(
-        db_module.driver_user_ids_available_for_scheduled_pickup(
-            pickup_at,
-            window_minutes=_SCHEDULE_PICKUP_WINDOW_MINUTES,
-        )
-    )
-    if not eligible:
-        return _select_top5_driver_user_ids_for_pickup(pickup_zone)
-    ordered_now = _select_top5_driver_user_ids_for_pickup(pickup_zone)
-    ordered = [uid for uid in ordered_now if uid in eligible]
-    for uid in sorted(eligible):
-        if uid not in ordered:
-            ordered.append(uid)
-    return ordered[:5]
-
-
 def request_ride(
     user_id: int,
     pickup: str,
@@ -139,6 +71,12 @@ def request_ride(
     pickup_lng: float | None = None,
     destination_lat: float | None = None,
     destination_lng: float | None = None,
+    quoted_distance_km: float | None = None,
+    quoted_duration_seconds: int | None = None,
+    quoted_fare_dt: float | None = None,
+    quoted_base_fare_dt: float | None = None,
+    quoted_night_surcharge_dt: float | None = None,
+    quoted_is_night: bool | None = None,
 ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     pickup = pickup.strip()
     destination = destination.strip()
@@ -164,14 +102,26 @@ def request_ride(
         pickup_lng=pickup_lng,
         destination_lat=destination_lat,
         destination_lng=destination_lng,
+        quoted_distance_km=quoted_distance_km,
+        quoted_duration_seconds=quoted_duration_seconds,
+        quoted_fare_dt=quoted_fare_dt,
+        quoted_base_fare_dt=quoted_base_fare_dt,
+        quoted_night_surcharge_dt=quoted_night_surcharge_dt,
+        quoted_is_night=quoted_is_night,
     )
     if ride is not None:
-        top5 = (
-            _select_scheduled_driver_user_ids(pickup, scheduled_dt)
-            if scheduled_dt is not None
-            else _select_top5_driver_user_ids_for_pickup(pickup)
-        )
-        db_module.ride_dispatch_set_candidates(int(ride["id"]), top5)
+        if scheduled_dt is not None:
+            eligible = set(
+                db_module.driver_user_ids_available_for_scheduled_pickup(
+                    scheduled_dt,
+                    window_minutes=_SCHEDULE_PICKUP_WINDOW_MINUTES,
+                )
+            )
+            dispatch_service.initial_dispatch(
+                ride, eligible_only=eligible if eligible else None
+            )
+        else:
+            dispatch_service.initial_dispatch(ride)
         realtime_broadcast.broadcast_ride_update(
             ride,
             event="scheduled_ride_searching" if is_scheduled else "ride_request_sent",
@@ -181,7 +131,13 @@ def request_ride(
                 else "Your ride request was sent."
             ),
         )
-        realtime_broadcast.notify_dispatch_offer(ride, top5)
+        if not is_scheduled:
+            try:
+                dispatch_service.schedule_dispatch_expansion(
+                    current_app._get_current_object(), int(ride["id"])
+                )
+            except RuntimeError:
+                pass
     return ride, None
 
 
@@ -282,9 +238,8 @@ def _apply_wallet_on_complete(
         )
 
 
-def _deduction_components_for_ride(
-    ride_row: Dict[str, Any],
-) -> tuple[float, float, float, bool]:
+def _catalog_passenger_fare_dt(ride_row: Dict[str, Any]) -> float:
+    """Legacy estimate from fare-route table (pre-Google snapshot rides only)."""
     pickup = (ride_row.get("pickup") or "").strip()
     dest = (ride_row.get("destination") or "").strip()
     route_key = f"{pickup} ➡️ {dest}"
@@ -293,7 +248,23 @@ def _deduction_components_for_ride(
     raw_t = ride_row.get("scheduled_pickup_at") or ride_row.get("created_at")
     pt = pricing.parse_pricing_time(raw_t)
     br = pricing.fare_price_breakdown(base_fare, pricing_time=pt)
-    passenger_route_fare = float(br["fare_dt"])
+    return float(br["fare_dt"])
+
+
+def _passenger_fare_dt_for_ride(ride_row: Dict[str, Any]) -> float:
+    """Single passenger fare for wallet/earnings: locked quote, else legacy catalog."""
+    qf = ride_row.get("quoted_fare_dt")
+    if qf is not None:
+        try:
+            return float(qf)
+        except (TypeError, ValueError):
+            pass
+    return _catalog_passenger_fare_dt(ride_row)
+
+
+def _deduction_components_for_ride(
+    ride_row: Dict[str, Any],
+) -> tuple[float, float, float, bool]:
     b2b_booking = db_module.b2b_booking_by_ride_id(int(ride_row["id"]))
     is_b2b = b2b_booking is not None
     owner_rate = _OWNER_COMMISSION_RATE
@@ -307,7 +278,10 @@ def _deduction_components_for_ride(
                 owner_rate = float(acct.get("owner_commission_rate") or 10.0) / 100.0
                 b2b_extra_rate = float(acct.get("b2b_commission_rate") or 5.0) / 100.0
     effective_rate = owner_rate + (b2b_extra_rate if is_b2b else 0.0)
-    fare_ref = float(b2b_booking["fare"]) if is_b2b else passenger_route_fare
+    if is_b2b:
+        fare_ref = float(b2b_booking["fare"])
+    else:
+        fare_ref = _passenger_fare_dt_for_ride(ride_row)
     deduct = round(fare_ref * effective_rate, 3)
     return fare_ref, effective_rate, deduct, is_b2b
 
@@ -510,6 +484,13 @@ def reject_or_release(ride_id: int, driver_user_id: int) -> Tuple[Optional[Dict[
     )
     if updated is not None:
         realtime_broadcast.broadcast_ride_update(updated, event="ride_released")
+        dispatch_service.redispatch_released_ride(updated)
+        try:
+            dispatch_service.schedule_dispatch_expansion(
+                current_app._get_current_object(), ride_id
+            )
+        except RuntimeError:
+            pass
     return updated, None
 
 

@@ -9,7 +9,8 @@ from typing import Any, Callable, Optional, Tuple, TypeVar
 from flask import Blueprint, jsonify, request
 from werkzeug.security import generate_password_hash
 from .. import db as db_module
-from ..auth_tokens import issue_token, verify_token_safe
+from ..auth_tokens import issue_access_token, verify_token_safe
+from ..services import auth_sessions
 from ..services import pricing
 from ..services import rides as rides_service
 from ..services import users as users_service
@@ -120,12 +121,48 @@ def quote_fare() -> Tuple[Any, int]:
 
 @bp.post("/auth/login")
 def login() -> Tuple[Any, int]:
-    return jsonify({"error": "deprecated_use_login_app"}), 410
+    data = request.get_json(silent=True) or {}
+    role = (data.get("role") or "").strip()
+    secret = (data.get("secret") or "").strip()
+    bundle, err = auth_sessions.login_with_role_secret(role, secret)
+    if err:
+        code = 401 if err in {"invalid_credentials", "b2b_user_not_found"} else 400
+        return jsonify({"error": err}), code
+    return jsonify(bundle), 200
 
 
 @bp.post("/auth/login-driver-pin")
 def login_driver_pin() -> Tuple[Any, int]:
-    return jsonify({"error": "deprecated_use_login_app"}), 410
+    data = request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip()
+    pin = (data.get("pin") or "").strip()
+    bundle, err = auth_sessions.login_driver_pin(phone, pin)
+    if err:
+        code = 403 if err == "account_disabled" else 401
+        if err == "missing_fields":
+            code = 400
+        return jsonify({"error": err}), code
+    return jsonify(bundle), 200
+
+
+@bp.post("/auth/refresh")
+def refresh_auth() -> Tuple[Any, int]:
+    data = request.get_json(silent=True) or {}
+    raw = (data.get("refresh_token") or data.get("refreshToken") or "").strip()
+    bundle, err = auth_sessions.refresh_tokens(raw)
+    if err:
+        code = 401
+        return jsonify({"error": err}), code
+    return jsonify(bundle), 200
+
+
+@bp.post("/auth/logout")
+def logout_auth() -> Tuple[Any, int]:
+    data = request.get_json(silent=True) or {}
+    raw = (data.get("refresh_token") or data.get("refreshToken") or "").strip()
+    if raw:
+        auth_sessions.revoke_refresh_token(raw)
+    return jsonify({"ok": True}), 200
 
 
 @bp.post("/b2b/bookings")
@@ -157,11 +194,59 @@ def create_b2b_booking(**kwargs: Any) -> Tuple[Any, int]:
     if not pickup or not destination:
         return jsonify({"error": "invalid_route"}), 400
     pt = pricing.parse_pricing_time(scheduled_pickup_at) or datetime.now(timezone.utc)
-    fare = float(
-        pricing.fare_quote_for_pickup_destination(
-            pickup, destination, pricing_time=pt
-        )["fare_dt"]
-    )
+
+    def _opt_float(key_snake: str, key_camel: str) -> float | None:
+        raw = data.get(key_snake) or data.get(key_camel)
+        if raw is None or raw == "":
+            return None
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
+
+    def _opt_int(key_snake: str, key_camel: str) -> int | None:
+        raw = data.get(key_snake) or data.get(key_camel)
+        if raw is None or raw == "":
+            return None
+        try:
+            return int(round(float(raw)))
+        except (TypeError, ValueError):
+            return None
+
+    def _opt_bool(key_snake: str, key_camel: str) -> bool | None:
+        raw = data.get(key_snake) if key_snake in data else data.get(key_camel)
+        if raw is None or raw == "":
+            return None
+        if isinstance(raw, bool):
+            return raw
+        s = str(raw).strip().lower()
+        if s in ("1", "true", "yes"):
+            return True
+        if s in ("0", "false", "no"):
+            return False
+        return None
+
+    def _opt_str(key_snake: str, key_camel: str) -> str | None:
+        raw = data.get(key_snake) or data.get(key_camel)
+        if raw is None:
+            return None
+        s = str(raw).strip()
+        return s if s else None
+
+    quoted_fare_dt = _opt_float("quoted_fare_dt", "quotedFareDt")
+    try:
+        fare = float(data.get("fare", 0.0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "invalid_fare"}), 400
+    if quoted_fare_dt is not None and quoted_fare_dt > 0:
+        fare = quoted_fare_dt
+    elif fare <= 0:
+        fare = float(
+            pricing.fare_quote_for_pickup_destination(
+                pickup, destination, pricing_time=pt
+            )["fare_dt"]
+        )
+
     tenant = db_module.b2b_tenant_by_code(source_code) if source_code else None
     room_compound = " | ".join(
         [
@@ -189,6 +274,26 @@ def create_b2b_booking(**kwargs: Any) -> Tuple[Any, int]:
         destination,
         enforce_single_active=False,
         scheduled_pickup_at=scheduled_pickup_at,
+        pickup_address=_opt_str("pickup_address", "pickupAddress"),
+        pickup_display_name=_opt_str("pickup_display_name", "pickupDisplayName"),
+        destination_address=_opt_str("destination_address", "destinationAddress"),
+        destination_display_name=_opt_str(
+            "destination_display_name", "destinationDisplayName"
+        ),
+        pickup_lat=_opt_float("pickup_lat", "pickupLat"),
+        pickup_lng=_opt_float("pickup_lng", "pickupLng"),
+        destination_lat=_opt_float("destination_lat", "destinationLat"),
+        destination_lng=_opt_float("destination_lng", "destinationLng"),
+        quoted_distance_km=_opt_float("quoted_distance_km", "quotedDistanceKm"),
+        quoted_duration_seconds=_opt_int(
+            "quoted_duration_seconds", "quotedDurationSeconds"
+        ),
+        quoted_fare_dt=quoted_fare_dt if quoted_fare_dt is not None else fare,
+        quoted_base_fare_dt=_opt_float("quoted_base_fare_dt", "quotedBaseFareDt"),
+        quoted_night_surcharge_dt=_opt_float(
+            "quoted_night_surcharge_dt", "quotedNightSurchargeDt"
+        ),
+        quoted_is_night=_opt_bool("quoted_is_night", "quotedIsNight"),
     )
     if ride is not None:
         booking = db_module.b2b_booking_update(
@@ -550,24 +655,20 @@ def login_app() -> Tuple[Any, int]:
         return jsonify({"error": err}), code
     if user["role"] == "user" and not str(user.get("phone") or "").strip():
         return jsonify({"error": "phone_required"}), 400
-    token = issue_token(user["role"], user_id=int(user["id"]))
-    return (
-        jsonify(
-            {
-                "access_token": token,
-                "token_type": "Bearer",
-                "role": user["role"],
-                "user_id": user["id"],
-                "email": user.get("email"),
-                "display_name": user.get("display_name"),
-                "phone": user.get("phone"),
-                "photo_url": user.get("photo_url"),
-                "preferred_language": str(user.get("preferred_language") or "en").strip()
-                or "en",
-            }
-        ),
-        200,
+    bundle = auth_sessions.build_token_bundle(
+        role=str(user["role"]),
+        user_id=int(user["id"]),
+        include_role_only_access=str(user["role"]).strip().lower() == "b2b",
+        extra={
+            "email": user.get("email"),
+            "display_name": user.get("display_name"),
+            "phone": user.get("phone"),
+            "photo_url": user.get("photo_url"),
+            "preferred_language": str(user.get("preferred_language") or "en").strip()
+            or "en",
+        },
     )
+    return jsonify(bundle), 200
 
 
 @bp.post("/auth/forgot-password-request")
@@ -624,24 +725,20 @@ def login_google() -> Tuple[Any, int]:
         if perr:
             return jsonify({"error": perr}), 400
         user = patched
-    token = issue_token(user["role"], user_id=int(user["id"]))
-    return (
-        jsonify(
-            {
-                "access_token": token,
-                "token_type": "Bearer",
-                "role": user["role"],
-                "user_id": user["id"],
-                "email": user["email"],
-                "display_name": user.get("display_name"),
-                "phone": user.get("phone"),
-                "photo_url": user.get("photo_url"),
-                "preferred_language": str(user.get("preferred_language") or "en").strip()
-                or "en",
-            }
-        ),
-        200,
+    bundle = auth_sessions.build_token_bundle(
+        role=str(user["role"]),
+        user_id=int(user["id"]),
+        include_role_only_access=str(user["role"]).strip().lower() == "b2b",
+        extra={
+            "email": user["email"],
+            "display_name": user.get("display_name"),
+            "phone": user.get("phone"),
+            "photo_url": user.get("photo_url"),
+            "preferred_language": str(user.get("preferred_language") or "en").strip()
+            or "en",
+        },
     )
+    return jsonify(bundle), 200
 
 
 @bp.post("/trips")

@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 
 import '../config.dart';
 import '../models/chat_message.dart';
+import 'auth_refreshing_client.dart';
+import 'auth_token_store.dart';
 import 'models.dart';
 
 class TaxiApiException implements Exception {
@@ -28,7 +30,7 @@ class TaxiAccountPendingException implements Exception {
 
 class TaxiApiClient {
   TaxiApiClient({http.Client? httpClient})
-      : _http = httpClient ?? http.Client();
+      : _http = httpClient ?? AuthRefreshingClient();
 
   final http.Client _http;
 
@@ -44,10 +46,14 @@ class TaxiApiClient {
     return null;
   }
 
-  Map<String, String> _jsonHeaders({String? bearer}) {
+  Map<String, String> _jsonHeaders({String? bearer, bool b2bRoleOnly = false}) {
     final h = <String, String>{'Content-Type': 'application/json'};
-    if (bearer != null && bearer.isNotEmpty) {
-      h['Authorization'] = 'Bearer $bearer';
+    final token = AuthTokenStore.instance.resolveBearer(
+      bearer,
+      b2bRoleOnly: b2bRoleOnly,
+    );
+    if (token != null && token.isNotEmpty) {
+      h['Authorization'] = 'Bearer $token';
     }
     return h;
   }
@@ -135,8 +141,10 @@ class TaxiApiClient {
       throw TaxiApiException(
           _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
     }
-    return DriverPinLoginResponse.fromJson(
+    final body = DriverPinLoginResponse.fromJson(
         jsonDecode(r.body) as Map<String, dynamic>);
+    AuthTokenStore.instance.applyFromDriverPin(body);
+    return body;
   }
 
   Future<Trip> createTrip({
@@ -251,8 +259,9 @@ class TaxiApiClient {
       }
       throw TaxiApiException(code ?? r.body, r.statusCode);
     }
-    return AppLoginResponse.fromJson(
+    final body = AppLoginResponse.fromJson(
         jsonDecode(r.body) as Map<String, dynamic>);
+    return body;
   }
 
   Future<bool> requestPasswordReset({
@@ -543,29 +552,64 @@ class TaxiApiClient {
     required double fare,
     required String sourceCode,
     DateTime? scheduledPickupAt,
+    String? pickupAddress,
+    String? pickupDisplayName,
+    String? destinationAddress,
+    String? destinationDisplayName,
+    double? pickupLat,
+    double? pickupLng,
+    double? destinationLat,
+    double? destinationLng,
+    double? quotedDistanceKm,
+    int? quotedDurationSeconds,
+    double? quotedFareDt,
+    double? quotedBaseFareDt,
+    double? quotedNightSurchargeDt,
+    bool? quotedIsNight,
   }) async {
+    final body = <String, dynamic>{
+      'route': route,
+      'guest_name': guestName,
+      'guest_phone': guestPhone,
+      'hotel_name': hotelName,
+      'flight_eta': flightEta,
+      'room_number': roomNumber,
+      'fare': fare,
+      'source_code': sourceCode,
+      if (scheduledPickupAt != null)
+        'scheduled_pickup_at': scheduledPickupAt.toUtc().toIso8601String(),
+      if ((pickupAddress ?? '').trim().isNotEmpty)
+        'pickup_address': pickupAddress!.trim(),
+      if ((pickupDisplayName ?? '').trim().isNotEmpty)
+        'pickup_display_name': pickupDisplayName!.trim(),
+      if ((destinationAddress ?? '').trim().isNotEmpty)
+        'destination_address': destinationAddress!.trim(),
+      if ((destinationDisplayName ?? '').trim().isNotEmpty)
+        'destination_display_name': destinationDisplayName!.trim(),
+      if (pickupLat != null) 'pickup_lat': pickupLat,
+      if (pickupLng != null) 'pickup_lng': pickupLng,
+      if (destinationLat != null) 'destination_lat': destinationLat,
+      if (destinationLng != null) 'destination_lng': destinationLng,
+      if (quotedDistanceKm != null) 'quoted_distance_km': quotedDistanceKm,
+      if (quotedDurationSeconds != null)
+        'quoted_duration_seconds': quotedDurationSeconds,
+      if (quotedFareDt != null) 'quoted_fare_dt': quotedFareDt,
+      if (quotedBaseFareDt != null) 'quoted_base_fare_dt': quotedBaseFareDt,
+      if (quotedNightSurchargeDt != null)
+        'quoted_night_surcharge_dt': quotedNightSurchargeDt,
+      if (quotedIsNight != null) 'quoted_is_night': quotedIsNight,
+    };
     final r = await _http.post(
       _u('/api/b2b/bookings'),
       headers: _jsonHeaders(bearer: token),
-      body: jsonEncode({
-        'route': route,
-        'guest_name': guestName,
-        'guest_phone': guestPhone,
-        'hotel_name': hotelName,
-        'flight_eta': flightEta,
-        'room_number': roomNumber,
-        'fare': fare,
-        'source_code': sourceCode,
-        if (scheduledPickupAt != null)
-          'scheduled_pickup_at': scheduledPickupAt.toUtc().toIso8601String(),
-      }),
+      body: jsonEncode(body),
     );
     if (r.statusCode != 201) {
       throw TaxiApiException(
           _errorCodeFromBody(r.body) ?? r.body, r.statusCode);
     }
-    final body = jsonDecode(r.body) as Map<String, dynamic>;
-    return Map<String, dynamic>.from(body['booking'] as Map);
+    final decoded = jsonDecode(r.body) as Map<String, dynamic>;
+    return Map<String, dynamic>.from(decoded['booking'] as Map);
   }
 
   Future<Map<String, dynamic>> getB2bMe(String token) async {
@@ -965,12 +1009,26 @@ class TaxiApiClient {
     required String pickup,
     required String destination,
     DateTime? scheduledPickupAt,
+    double? quotedDistanceKm,
+    int? quotedDurationSeconds,
+    double? quotedFareDt,
+    double? quotedBaseFareDt,
+    double? quotedNightSurchargeDt,
+    bool? quotedIsNight,
   }) async {
     final payload = <String, dynamic>{
       'pickup': pickup,
       'destination': destination,
       if (scheduledPickupAt != null)
         'scheduled_pickup_at': scheduledPickupAt.toUtc().toIso8601String(),
+      if (quotedDistanceKm != null) 'quoted_distance_km': quotedDistanceKm,
+      if (quotedDurationSeconds != null)
+        'quoted_duration_seconds': quotedDurationSeconds,
+      if (quotedFareDt != null) 'quoted_fare_dt': quotedFareDt,
+      if (quotedBaseFareDt != null) 'quoted_base_fare_dt': quotedBaseFareDt,
+      if (quotedNightSurchargeDt != null)
+        'quoted_night_surcharge_dt': quotedNightSurchargeDt,
+      if (quotedIsNight != null) 'quoted_is_night': quotedIsNight,
     };
     final r = await _http.post(
       _u('/api/rides'),
@@ -1077,6 +1135,8 @@ class TaxiApiClient {
     required String token,
     required String currentZone,
     bool? isAvailable,
+    double? lat,
+    double? lng,
   }) async {
     final r = await _http.post(
       _u('/api/rides/driver/location'),
@@ -1084,6 +1144,8 @@ class TaxiApiClient {
       body: jsonEncode({
         'current_zone': currentZone,
         if (isAvailable != null) 'is_available': isAvailable,
+        if (lat != null) 'lat': lat,
+        if (lng != null) 'lng': lng,
       }),
     );
     if (r.statusCode != 200) {

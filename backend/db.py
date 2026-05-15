@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from sqlalchemy import func, select
 
@@ -165,7 +165,24 @@ def _ride_dict(r: Ride, *, include_fare_quote: bool = True) -> Dict[str, Any]:
         "created_at": _dt(r.created_at),
         "updated_at": _dt(r.updated_at),
     }
-    if include_fare_quote:
+    # Always expose persisted booking snapshot (Google route at create time).
+    if r.quoted_distance_km is not None:
+        out["quoted_distance_km"] = float(r.quoted_distance_km)
+    if r.quoted_duration_seconds is not None:
+        out["quoted_duration_seconds"] = int(r.quoted_duration_seconds)
+    if r.quoted_fare_dt is not None:
+        out["quoted_fare_dt"] = float(r.quoted_fare_dt)
+    if r.quoted_base_fare_dt is not None:
+        out["quoted_base_fare_dt"] = float(r.quoted_base_fare_dt)
+    if r.quoted_night_surcharge_dt is not None:
+        out["quoted_night_surcharge_dt"] = float(r.quoted_night_surcharge_dt)
+    if r.quoted_is_night is not None:
+        out["quoted_is_night"] = r.quoted_is_night
+
+    # Legacy catalog estimate only when explicitly requested and snapshot is incomplete.
+    if include_fare_quote and (
+        out.get("quoted_fare_dt") is None or out.get("quoted_distance_km") is None
+    ):
         try:
             from ..services import pricing
 
@@ -174,23 +191,18 @@ def _ride_dict(r: Ride, *, include_fare_quote: bool = True) -> Dict[str, Any]:
             q = pricing.fare_quote_for_pickup_destination(
                 r.pickup, r.destination, pricing_time=pt
             )
-            out["quoted_distance_km"] = q["distance_km"]
-            out["quoted_fare_dt"] = q["fare_dt"]
-            out["quoted_base_fare_dt"] = q.get("base_fare_dt")
-            out["quoted_night_surcharge_dt"] = q.get("night_surcharge_dt")
-            out["quoted_is_night"] = q.get("is_night")
+            if out.get("quoted_distance_km") is None:
+                out["quoted_distance_km"] = q["distance_km"]
+            if out.get("quoted_fare_dt") is None:
+                out["quoted_fare_dt"] = q["fare_dt"]
+            if out.get("quoted_base_fare_dt") is None:
+                out["quoted_base_fare_dt"] = q.get("base_fare_dt")
+            if out.get("quoted_night_surcharge_dt") is None:
+                out["quoted_night_surcharge_dt"] = q.get("night_surcharge_dt")
+            if out.get("quoted_is_night") is None:
+                out["quoted_is_night"] = q.get("is_night")
         except Exception:
-            out["quoted_distance_km"] = None
-            out["quoted_fare_dt"] = None
-            out["quoted_base_fare_dt"] = None
-            out["quoted_night_surcharge_dt"] = None
-            out["quoted_is_night"] = None
-    else:
-        out["quoted_distance_km"] = None
-        out["quoted_fare_dt"] = None
-        out["quoted_base_fare_dt"] = None
-        out["quoted_night_surcharge_dt"] = None
-        out["quoted_is_night"] = None
+            pass
     return out
 
 
@@ -755,6 +767,64 @@ def user_by_email(email: str) -> Optional[Dict[str, Any]]:
     return _user_dict(u) if u else None
 
 
+def user_by_phone(phone: str) -> Optional[Dict[str, Any]]:
+    p = (phone or "").strip()
+    if not p:
+        return None
+    u = db.session.scalars(select(User).where(User.phone == p)).first()
+    return _user_dict(u) if u else None
+
+
+def user_by_b2b_source_code(code: str) -> Optional[Dict[str, Any]]:
+    c = (code or "").strip().lower()
+    if not c:
+        return None
+    u = db.session.scalars(
+        select(User).where(User.role == "b2b", User.email.ilike(f"{c}@%"))
+    ).first()
+    if u is not None:
+        return _user_dict(u)
+    rows = db.session.scalars(select(User).where(User.role == "b2b")).all()
+    return _user_dict(rows[0]) if rows else None
+
+
+def ensure_driver_user_for_pin_account(acct: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Link phone+PIN wallet row to a driver app user (create if missing)."""
+    import secrets
+
+    from werkzeug.security import generate_password_hash
+
+    phone = str(acct.get("phone") or "").strip()
+    if not phone:
+        return None
+    existing = user_by_phone(phone)
+    if existing is not None:
+        if driver_by_user_id(int(existing["id"])) is None:
+            driver_create(
+                user_id=int(existing["id"]),
+                display_name=str(acct.get("driver_name") or existing.get("display_name") or "Driver"),
+            )
+        return existing
+    safe_phone = "".join(ch for ch in phone if ch.isalnum())[:24] or "driver"
+    email = f"driver_{safe_phone}@pin.local"
+    if user_by_email(email) is not None:
+        email = f"driver_{safe_phone}_{secrets.token_hex(3)}@pin.local"
+    name = str(acct.get("driver_name") or "Driver").strip() or "Driver"
+    u = User(
+        email=email[:320],
+        password_hash=generate_password_hash(secrets.token_urlsafe(16)),
+        role="driver",
+        display_name=name,
+        phone=phone,
+        is_enabled=True,
+    )
+    db.session.add(u)
+    db.session.commit()
+    db.session.refresh(u)
+    driver_create(user_id=int(u.id), display_name=name)
+    return _user_dict(u)
+
+
 def user_by_id(uid: int) -> Optional[Dict[str, Any]]:
     u = db.session.get(User, uid)
     return _user_dict(u) if u else None
@@ -815,6 +885,12 @@ def ride_insert(
     pickup_lng: float | None = None,
     destination_lat: float | None = None,
     destination_lng: float | None = None,
+    quoted_distance_km: float | None = None,
+    quoted_duration_seconds: int | None = None,
+    quoted_fare_dt: float | None = None,
+    quoted_base_fare_dt: float | None = None,
+    quoted_night_surcharge_dt: float | None = None,
+    quoted_is_night: bool | None = None,
 ) -> Dict[str, Any]:
     now = datetime.now(timezone.utc)
     r = Ride(
@@ -829,6 +905,12 @@ def ride_insert(
         pickup_lng=pickup_lng,
         destination_lat=destination_lat,
         destination_lng=destination_lng,
+        quoted_distance_km=quoted_distance_km,
+        quoted_duration_seconds=quoted_duration_seconds,
+        quoted_fare_dt=quoted_fare_dt,
+        quoted_base_fare_dt=quoted_base_fare_dt,
+        quoted_night_surcharge_dt=quoted_night_surcharge_dt,
+        quoted_is_night=quoted_is_night,
         status=status,
         scheduled_pickup_at=scheduled_pickup_at,
         reservation_status=reservation_status,
@@ -1074,6 +1156,25 @@ def driver_has_scheduled_overlap(
     return db.session.scalars(stmt.limit(1)).first() is not None
 
 
+def driver_user_ids_with_active_ride() -> Set[int]:
+    """Drivers currently on an accepted or ongoing trip (not available for new offers)."""
+    rows = db.session.scalars(
+        select(Driver.user_id)
+        .join(Ride, Ride.driver_id == Driver.id)
+        .where(Ride.status.in_(("accepted", "ongoing")))
+    ).all()
+    return {int(x) for x in rows}
+
+
+def driver_user_ids_disabled() -> Set[int]:
+    rows = db.session.scalars(
+        select(Driver.user_id)
+        .join(User, User.id == Driver.user_id)
+        .where(User.is_enabled.is_(False))
+    ).all()
+    return {int(x) for x in rows}
+
+
 def ride_dispatch_set_candidates(ride_id: int, driver_user_ids: List[int]) -> None:
     db.session.execute(
         RideDispatchCandidate.__table__.delete().where(
@@ -1098,6 +1199,35 @@ def ride_dispatch_candidates_for_ride(ride_id: int) -> List[int]:
         .order_by(RideDispatchCandidate.rank.asc())
     ).all()
     return [int(x) for x in rows]
+
+
+def ride_dispatch_append_candidates(ride_id: int, driver_user_ids: List[int]) -> List[int]:
+    """Append drivers not already on this ride; returns newly added user ids."""
+    existing = set(ride_dispatch_candidates_for_ride(ride_id))
+    max_rank = db.session.scalar(
+        select(func.max(RideDispatchCandidate.rank)).where(
+            RideDispatchCandidate.ride_id == ride_id
+        )
+    )
+    rank = int(max_rank or 0)
+    added: List[int] = []
+    for uid in driver_user_ids:
+        uid_int = int(uid)
+        if uid_int in existing:
+            continue
+        rank += 1
+        db.session.add(
+            RideDispatchCandidate(
+                ride_id=ride_id,
+                driver_user_id=uid_int,
+                rank=rank,
+            )
+        )
+        existing.add(uid_int)
+        added.append(uid_int)
+    if added:
+        db.session.commit()
+    return added
 
 
 def ride_dispatch_pending_for_driver_user(driver_user_id: int) -> List[Dict[str, Any]]:

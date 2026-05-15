@@ -42,12 +42,14 @@ class LoginResponse {
     required this.role,
     this.appAccessToken,
     this.userId,
+    this.refreshToken,
   });
 
   final String accessToken;
   final String role;
   final String? appAccessToken;
   final int? userId;
+  final String? refreshToken;
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
     return LoginResponse(
@@ -55,6 +57,7 @@ class LoginResponse {
       role: json['role'] as String,
       appAccessToken: json['app_access_token'] as String?,
       userId: (json['user_id'] as num?)?.toInt(),
+      refreshToken: json['refresh_token'] as String?,
     );
   }
 }
@@ -76,10 +79,12 @@ class DriverPinLoginResponse {
     this.carColor,
     this.currentZone,
     this.preferredLanguage,
+    this.refreshToken,
   });
 
   final String accessToken;
   final String role;
+  final String? refreshToken;
   final int userId;
   final int? driverId;
   final String driverName;
@@ -113,6 +118,7 @@ class DriverPinLoginResponse {
       carColor: json['car_color'] as String?,
       currentZone: json['current_zone'] as String?,
       preferredLanguage: json['preferred_language'] as String?,
+      refreshToken: json['refresh_token'] as String?,
     );
   }
 }
@@ -144,12 +150,14 @@ class AppLoginResponse {
     required this.role,
     required this.userId,
     this.preferredLanguage,
+    this.refreshToken,
   });
 
   final String accessToken;
   final String role;
   final int userId;
   final String? preferredLanguage;
+  final String? refreshToken;
 
   factory AppLoginResponse.fromJson(Map<String, dynamic> json) {
     return AppLoginResponse(
@@ -157,6 +165,7 @@ class AppLoginResponse {
       role: json['role'] as String,
       userId: (json['user_id'] as num).toInt(),
       preferredLanguage: json['preferred_language'] as String?,
+      refreshToken: json['refresh_token'] as String?,
     );
   }
 }
@@ -213,6 +222,7 @@ class Ride {
     this.b2bTenantName,
     this.b2bFare,
     this.quotedDistanceKm,
+    this.quotedDurationSeconds,
     this.quotedFareDt,
     this.quotedBaseFareDt,
     this.quotedNightSurchargeDt,
@@ -254,8 +264,9 @@ class Ride {
   final String? b2bSourceCode;
   final String? b2bTenantName;
   final double? b2bFare;
-  /// Route-table distance (km) when server attached a fare quote to the ride.
+  /// Locked Google Directions distance at booking (km).
   final double? quotedDistanceKm;
+  final int? quotedDurationSeconds;
   final double? quotedFareDt;
   final double? quotedBaseFareDt;
   final double? quotedNightSurchargeDt;
@@ -299,6 +310,7 @@ class Ride {
       b2bTenantName: json['b2b_tenant_name'] as String?,
       b2bFare: (json['b2b_fare'] as num?)?.toDouble(),
       quotedDistanceKm: (json['quoted_distance_km'] as num?)?.toDouble(),
+      quotedDurationSeconds: (json['quoted_duration_seconds'] as num?)?.toInt(),
       quotedFareDt: (json['quoted_fare_dt'] as num?)?.toDouble(),
       quotedBaseFareDt: (json['quoted_base_fare_dt'] as num?)?.toDouble(),
       quotedNightSurchargeDt:

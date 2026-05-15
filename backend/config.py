@@ -55,7 +55,14 @@ class Config:
     DRIVER_CODE = os.environ.get("DRIVER_CODE", "Driver2026")
     B2B_CODE = os.environ.get("B2B_CODE", "Biz2026")
     OPERATOR_CODE = os.environ.get("OPERATOR_CODE", "Operator2026")
+    # Legacy name kept for compatibility; access tokens use ACCESS_TOKEN_MAX_AGE_SECONDS.
     TOKEN_MAX_AGE_SECONDS = int(os.environ.get("TOKEN_MAX_AGE_SECONDS", "86400"))
+    ACCESS_TOKEN_MAX_AGE_SECONDS = int(
+        os.environ.get("ACCESS_TOKEN_MAX_AGE_SECONDS", "900")
+    )
+    REFRESH_TOKEN_MAX_AGE_SECONDS = int(
+        os.environ.get("REFRESH_TOKEN_MAX_AGE_SECONDS", str(30 * 24 * 3600))
+    )
     # translation_service: google (deep-translator), none|stub|off to skip vendor calls
     TRANSLATION_PROVIDER = os.environ.get("TRANSLATION_PROVIDER", "google").lower()
     TRANSLATION_TIMEOUT_SECONDS = float(os.environ.get("TRANSLATION_TIMEOUT_SECONDS", "5"))

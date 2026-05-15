@@ -42,12 +42,14 @@ class LoginResponse {
     required this.role,
     this.appAccessToken,
     this.userId,
+    this.refreshToken,
   });
 
   final String accessToken;
   final String role;
   final String? appAccessToken;
   final int? userId;
+  final String? refreshToken;
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
     return LoginResponse(
@@ -55,6 +57,7 @@ class LoginResponse {
       role: json['role'] as String,
       appAccessToken: json['app_access_token'] as String?,
       userId: (json['user_id'] as num?)?.toInt(),
+      refreshToken: json['refresh_token'] as String?,
     );
   }
 }
@@ -76,10 +79,12 @@ class DriverPinLoginResponse {
     this.carColor,
     this.currentZone,
     this.preferredLanguage,
+    this.refreshToken,
   });
 
   final String accessToken;
   final String role;
+  final String? refreshToken;
   final int userId;
   final int? driverId;
   final String driverName;
@@ -113,6 +118,7 @@ class DriverPinLoginResponse {
       carColor: json['car_color'] as String?,
       currentZone: json['current_zone'] as String?,
       preferredLanguage: json['preferred_language'] as String?,
+      refreshToken: json['refresh_token'] as String?,
     );
   }
 }
@@ -148,11 +154,13 @@ class AppLoginResponse {
     this.photoUrl,
     this.email,
     this.phone,
+    this.refreshToken,
   });
 
   final String accessToken;
   final String role;
   final int userId;
+  final String? refreshToken;
   final String? preferredLanguage;
   final String? displayName;
   final String? photoUrl;
@@ -164,6 +172,7 @@ class AppLoginResponse {
       accessToken: json['access_token'] as String,
       role: json['role'] as String,
       userId: (json['user_id'] as num).toInt(),
+      refreshToken: json['refresh_token'] as String?,
       preferredLanguage: json['preferred_language'] as String?,
       displayName: json['display_name'] as String?,
       photoUrl: json['photo_url'] as String?,
@@ -228,6 +237,7 @@ class Ride {
     this.createdAt,
     this.updatedAt,
     this.quotedDistanceKm,
+    this.quotedDurationSeconds,
     this.quotedFareDt,
     this.quotedBaseFareDt,
     this.quotedNightSurchargeDt,
@@ -270,9 +280,11 @@ class Ride {
   final String? reservationStatus;
   final String? createdAt;
   final String? updatedAt;
-  /// Server-computed route distance when pickup/destination match the fare catalog (km).
+  /// Locked route distance from Google Directions at booking (km).
   final double? quotedDistanceKm;
-  /// Estimated passenger price in Tunisian dinars (includes night surcharge when applicable).
+  /// Locked driving duration from Google Directions at booking (seconds).
+  final int? quotedDurationSeconds;
+  /// Locked passenger price in Tunisian dinars (includes night surcharge when applicable).
   final double? quotedFareDt;
   final double? quotedBaseFareDt;
   final double? quotedNightSurchargeDt;
@@ -315,6 +327,7 @@ class Ride {
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
       quotedDistanceKm: (json['quoted_distance_km'] as num?)?.toDouble(),
+      quotedDurationSeconds: (json['quoted_duration_seconds'] as num?)?.toInt(),
       quotedFareDt: (json['quoted_fare_dt'] as num?)?.toDouble(),
       quotedBaseFareDt: (json['quoted_base_fare_dt'] as num?)?.toDouble(),
       quotedNightSurchargeDt:
@@ -363,6 +376,8 @@ extension RideQuoteMerge on Ride {
       createdAt: createdAt,
       updatedAt: updatedAt,
       quotedDistanceKm: quotedDistanceKm ?? previous.quotedDistanceKm,
+      quotedDurationSeconds:
+          quotedDurationSeconds ?? previous.quotedDurationSeconds,
       quotedFareDt: quotedFareDt ?? previous.quotedFareDt,
       quotedBaseFareDt: quotedBaseFareDt ?? previous.quotedBaseFareDt,
       quotedNightSurchargeDt:

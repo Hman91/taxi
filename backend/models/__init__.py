@@ -12,6 +12,7 @@ from .message import Message
 from .rating import Rating
 from .ride import Ride
 from .ride_dispatch_candidate import RideDispatchCandidate
+from .refresh_token import RefreshToken
 from .translation import Translation
 from .trip import Trip
 from .user import User
@@ -23,6 +24,7 @@ __all__ = [
     "FareRoute",
     "Ride",
     "RideDispatchCandidate",
+    "RefreshToken",
     "Trip",
     "Rating",
     "Conversation",

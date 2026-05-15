@@ -18,7 +18,9 @@ import '../maps/tunisia_zone_coordinates.dart';
 import '../api/models.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
+import '../l10n/ride_address_display.dart';
 import '../l10n/ride_status_localization.dart';
+import '../utils/ride_locked_quote.dart';
 import '../models/app_notification.dart';
 import '../models/chat_message.dart';
 import '../services/chat_socket_service.dart';
@@ -745,6 +747,7 @@ class _B2bScreenState extends State<B2bScreen> {
   String? _fareQuoteRouteKey;
   bool _b2bTripConfiguredViaMap = false;
   bool _b2bScheduleLaterFromMap = false;
+  CorporateReservationMapResult? _b2bLastMapResult;
   String? _locationText;
   String? _locationError;
   bool _locating = false;
@@ -1178,6 +1181,7 @@ class _B2bScreenState extends State<B2bScreen> {
     setState(() {
       _b2bTripConfiguredViaMap = false;
       _b2bScheduleLaterFromMap = false;
+      _b2bLastMapResult = null;
       _destinationController.clear();
       _routeKey = null;
       _fareQuoteFromMap = null;
@@ -1249,6 +1253,7 @@ class _B2bScreenState extends State<B2bScreen> {
       _destinationController.text = destLabel;
       _fareQuoteFromMap = result.finalFare;
       _fareQuoteRouteKey = result.routeKey;
+      _b2bLastMapResult = result;
       _b2bTripConfiguredViaMap = true;
       _b2bScheduleLaterFromMap = result.scheduleLater;
       if (result.scheduleLater && result.scheduledPickupAt != null) {
@@ -1648,26 +1653,21 @@ class _B2bScreenState extends State<B2bScreen> {
     final guestPhone = _guestPhoneController.text.trim();
     final hotel = _hotelController.text.trim();
     final flightEta = _flightEtaController.text.trim();
-    final DateTime pricingTime =
-        scheduledForApi?.toUtc() ?? DateTime.now().toUtc();
+    final mapSnap = _b2bLastMapResult;
+    if (isGoogleMapsPlatformSupported &&
+        (mapSnap == null || mapSnap.routeKey != route)) {
+      setState(() => _message = _tx('b2bCompleteMapFirst'));
+      return;
+    }
+    final fare = mapSnap?.finalFare ?? _fareQuoteFromMap;
+    if (fare == null || fare <= 0) {
+      setState(() => _message = _tx('fillRequiredFields'));
+      return;
+    }
     setState(() {
       _busy = true;
       _message = null;
     });
-    final double fare;
-    try {
-      final q = await _api.quoteAirport(route, pricingTime: pricingTime);
-      final v = q['final_fare'] as num?;
-      if (v == null) throw StateError('fare_quote');
-      fare = v.toDouble();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _busy = false;
-        _message = e.toString();
-      });
-      return;
-    }
     try {
       final booking = await _api.createB2bBooking(
         token: token,
@@ -1681,6 +1681,20 @@ class _B2bScreenState extends State<B2bScreen> {
         sourceCode:
             (_b2bCode.isNotEmpty ? _b2bCode : _secretController.text.trim()),
         scheduledPickupAt: scheduledForApi,
+        pickupAddress: mapSnap?.pickupAddress,
+        pickupDisplayName: mapSnap?.pickupDisplayName,
+        destinationAddress: mapSnap?.destinationAddress,
+        destinationDisplayName: mapSnap?.destinationDisplayName,
+        pickupLat: mapSnap?.pickupLat,
+        pickupLng: mapSnap?.pickupLng,
+        destinationLat: mapSnap?.destinationLat,
+        destinationLng: mapSnap?.destinationLng,
+        quotedDistanceKm: mapSnap?.quotedDistanceKm,
+        quotedDurationSeconds: mapSnap?.quotedDurationSeconds,
+        quotedFareDt: fare,
+        quotedBaseFareDt: mapSnap?.quotedBaseFareDt,
+        quotedNightSurchargeDt: mapSnap?.quotedNightSurchargeDt,
+        quotedIsNight: mapSnap?.quotedIsNight,
       );
       if (!mounted) return;
       _refreshRides();
@@ -1689,6 +1703,7 @@ class _B2bScreenState extends State<B2bScreen> {
         _scheduledPickupAt = null;
         _b2bTripConfiguredViaMap = false;
         _b2bScheduleLaterFromMap = false;
+        _b2bLastMapResult = null;
         _message = l.b2bBookingSuccessMessage(
           l.requestRideButton,
           booking['id'] as Object,
@@ -3345,12 +3360,12 @@ class _B2bScreenState extends State<B2bScreen> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                  localizedRideRouteRow(l,
-                                                      r.pickup, r.destination),
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      fontSize: 12)),
+                                                '${ridePickupTitle(r, l)} → ${rideDestinationTitle(r, l)}',
+                                                style: const TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.w600,
+                                                    fontSize: 12),
+                                              ),
                                               const SizedBox(height: 2),
                                               Text(
                                                 l.rideStatusFmt(
@@ -3360,24 +3375,57 @@ class _B2bScreenState extends State<B2bScreen> {
                                                     color: _C.textSoft,
                                                     fontSize: 11),
                                               ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                _tx('departDestinationLine',
-                                                    '${localizedPlaceName(l, r.pickup)} • ${_tx('destination')}: ${localizedPlaceName(l, r.destination)}'),
-                                                style: const TextStyle(
-                                                    color: _C.textSoft,
-                                                    fontSize: 11),
-                                              ),
+                                              if (ridePickupAddressLine(
+                                                          r, l) !=
+                                                      null ||
+                                                  rideDestinationAddressLine(
+                                                          r, l) !=
+                                                      null) ...[
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  [
+                                                    if (ridePickupAddressLine(
+                                                            r, l) !=
+                                                        null)
+                                                      ridePickupAddressLine(
+                                                          r, l)!,
+                                                    if (rideDestinationAddressLine(
+                                                            r, l) !=
+                                                        null)
+                                                      rideDestinationAddressLine(
+                                                          r, l)!,
+                                                  ].join('\n'),
+                                                  maxLines: 4,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                      color: _C.textSoft,
+                                                      fontSize: 11),
+                                                ),
+                                              ],
                                               Builder(
                                                 builder: (_) {
-                                                  final route =
-                                                      '${r.pickup}$airportRouteKeySeparator${r.destination}';
-                                                  final fare =
-                                                      _fareForRouteKey(route);
                                                   final km =
-                                                      _routeDistanceKm(route);
+                                                      r.quotedDistanceKm;
+                                                  final fare =
+                                                      rideLockedFareDt(r);
+                                                  final dur =
+                                                      rideLockedDurationLabel(
+                                                          r);
+                                                  final parts = <String>[
+                                                    if (km != null)
+                                                      '${km.toStringAsFixed(1)} km',
+                                                    if (dur != null &&
+                                                        dur.isNotEmpty)
+                                                      dur,
+                                                    if (fare != null)
+                                                      l.fareDt(fare
+                                                          .toStringAsFixed(2)),
+                                                  ];
                                                   return Text(
-                                                    '${km?.toStringAsFixed(1) ?? '-'} km • ${l.fareDt(fare.toStringAsFixed(2))}',
+                                                    parts.isEmpty
+                                                        ? '—'
+                                                        : parts.join(' • '),
                                                     style: const TextStyle(
                                                         color: _C.textSoft,
                                                         fontSize: 11),

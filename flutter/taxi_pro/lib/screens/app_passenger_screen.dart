@@ -18,6 +18,7 @@ import '../config.dart';
 import '../api/models.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
+import '../l10n/ride_address_display.dart';
 import '../l10n/ride_status_localization.dart';
 import '../models/app_notification.dart';
 import '../models/chat_message.dart';
@@ -2236,7 +2237,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  Text(localizedRideRouteRow(l, r.pickup, r.destination),
+                  Text(rideRouteSummaryLine(r, l),
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 13)),
                   const SizedBox(height: 3),

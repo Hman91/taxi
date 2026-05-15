@@ -19,7 +19,9 @@ import '../app_locale.dart'
         userChoseLocaleThisSession,
         appLocale;
 import '../l10n/app_localizations.dart';
+import '../api/auth_token_store.dart';
 import '../l10n/place_localization.dart';
+import '../l10n/ride_address_display.dart';
 import '../l10n/ride_status_localization.dart';
 import '../services/session_store.dart';
 import '../services/taxi_app_service.dart';
@@ -28,6 +30,7 @@ import '../widgets/live_ride_request_summary.dart';
 import '../widgets/management_platform_ui.dart';
 import '../widgets/todays_flight_arrivals_panel.dart';
 import '../widgets/voom_logo.dart';
+import '../utils/ride_quote_map.dart';
 import 'unified_login_screen.dart';
 import 'owner/owner_buttons.dart';
 import 'owner/owner_colors.dart';
@@ -1040,45 +1043,6 @@ class _OwnerScreenState extends State<OwnerScreen>
     return true;
   }
 
-  static const Map<String, ({double lat, double lng})> _zoneCoords = {
-    'مطار قرطاج': (lat: 36.8508, lng: 10.2272),
-    'مطار النفيضة': (lat: 36.0758, lng: 10.4386),
-    'مطار المنستير': (lat: 35.7581, lng: 10.7547),
-    'وسط سوسة': (lat: 35.8256, lng: 10.63699),
-    'الحمامات': (lat: 36.4000, lng: 10.6167),
-    'نابل': (lat: 36.4561, lng: 10.7376),
-    'القنطاوي': (lat: 35.8920, lng: 10.5950),
-  };
-
-  double? _rideDistanceKm(Map<String, dynamic> r) {
-    final q = r['quoted_distance_km'];
-    if (q is num) return q.toDouble();
-    final pickup = (r['pickup'] ?? '').toString().trim();
-    final destination = (r['destination'] ?? '').toString().trim();
-    final a = _zoneCoords[pickup];
-    final b = _zoneCoords[destination];
-    if (a == null || b == null) return null;
-    final dLat = a.lat - b.lat;
-    final dLng = a.lng - b.lng;
-    return math.sqrt(dLat * dLat + dLng * dLng) * 111.0;
-  }
-
-  String _ridePrice(Map<String, dynamic> r) {
-    final b2b = r['b2b_fare'];
-    if (b2b is num) return '${b2b.toStringAsFixed(2)} DT';
-    final quoted = r['quoted_fare_dt'];
-    if (quoted is num) return '${quoted.toStringAsFixed(2)} DT';
-    final f = r['fare'];
-    if (f is num) return '${f.toStringAsFixed(2)} DT';
-    return '-';
-  }
-
-  String _requestLiveTime(Map<String, dynamic> r) {
-    final sched = (r['scheduled_pickup_at'] ?? '').toString().trim();
-    if (sched.isNotEmpty) return sched;
-    return (r['created_at'] ?? '').toString().trim();
-  }
-
   String _rideStatusBucket(String raw) {
     final status = raw.trim().toLowerCase();
     if (status == 'completed' || status == 'done') return 'completed';
@@ -1288,7 +1252,10 @@ class _OwnerScreenState extends State<OwnerScreen>
       }
       rememberCurrentLocaleForRole(AppUiRole.owner);
       _token = r.accessToken;
-      await SessionStore.saveOwnerToken(r.accessToken);
+      await SessionStore.saveOwnerToken(
+        r.accessToken,
+        refreshToken: r.refreshToken,
+      );
       _ownerTabsHydrated.clear();
       await _ensureOwnerTabHydrated(0);
     } catch (e) {
@@ -3409,17 +3376,16 @@ class _OwnerScreenState extends State<OwnerScreen>
             final status = (r['status'] ?? '').toString();
             return _OwnerRideCard(
               ride: r,
-              route: localizedRideRouteRow(
-                l,
-                r['pickup']?.toString() ?? '',
-                r['destination']?.toString() ?? '',
-              ),
+              route: mapRideRouteSummaryLine(r, l),
               status: status,
               statusLabel: _ownerRideStatusLabel(l, status),
               isB2b: isB2b,
-              distance: '${_rideDistanceKm(r)?.toStringAsFixed(1) ?? '-'} km',
-              price: _ridePrice(r),
-              timeLabel: _requestLiveTime(r),
+              distance: () {
+                final km = mapRideDistanceKm(r);
+                return km != null ? '${km.toStringAsFixed(1)} km' : '-';
+              }(),
+              price: mapRidePriceLabel(r),
+              timeLabel: mapRideDurationLabel(r),
               passengerSectionTitle: l.rolePassenger,
               b2bSectionTitle: l.roleB2b,
               driverSectionTitle: _uiText(
@@ -4100,8 +4066,7 @@ class _OwnerScreenState extends State<OwnerScreen>
     _tabController!.addListener(_onOwnerTabChanged);
     final t = widget.initialToken;
     if (t != null && t.isNotEmpty) {
-      _token = t;
-      unawaited(SessionStore.saveOwnerToken(t));
+      _token = AuthTokenStore.instance.accessToken ?? t;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _ownerTabsHydrated.clear();

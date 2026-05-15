@@ -17,7 +17,9 @@ import '../app_locale.dart'
         userChoseLocaleThisSession;
 import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
+import '../api/auth_token_store.dart';
 import '../l10n/ride_address_display.dart';
+import '../utils/ride_locked_quote.dart';
 import '../l10n/ride_status_localization.dart';
 import '../models/app_notification.dart';
 import '../models/chat_message.dart';
@@ -36,6 +38,7 @@ import '../utils/chat_unread_poll.dart'
         rideMayHaveConversation;
 import '../utils/int_from_json.dart';
 import '../widgets/driver_dispatch_location_card.dart';
+import '../widgets/lazy_tab_child.dart';
 import '../widgets/driver_ride_offer_card.dart';
 import '../widgets/todays_flight_arrivals_panel.dart';
 import '../widgets/voom_logo.dart';
@@ -472,9 +475,26 @@ class _DriverRideDetailsCardState extends State<_DriverRideDetailsCard> {
   }
 
   Future<void> _loadQuote() async {
+    final r = widget.ride;
+    if (rideHasLockedQuote(r)) {
+      if (!mounted) return;
+      setState(() {
+        _quote = <String, dynamic>{
+          'quote_mode': 'locked',
+          'distance_km': r.quotedDistanceKm,
+          'directions_duration_seconds': r.quotedDurationSeconds,
+          'final_fare': rideLockedFareDt(r),
+          'base_fare': r.quotedBaseFareDt,
+          'night_surcharge_dt': r.quotedNightSurchargeDt,
+          'is_night': r.quotedIsNight,
+        };
+        _quoteLoading = false;
+      });
+      return;
+    }
     final key =
-        '${widget.ride.pickup.trim()} $airportRouteKeySeparator ${widget.ride.destination.trim()}';
-    final pt = DateTime.tryParse(widget.ride.scheduledPickupAt ?? '');
+        '${r.pickup.trim()} $airportRouteKeySeparator ${r.destination.trim()}';
+    final pt = DateTime.tryParse(r.scheduledPickupAt ?? '');
     try {
       final quote = await widget.api.quoteAirport(key, pricingTime: pt);
       if (!mounted) return;
@@ -502,6 +522,15 @@ class _DriverRideDetailsCardState extends State<_DriverRideDetailsCard> {
   double? get _distanceKm => (_quote?['distance_km'] as num?)?.toDouble();
 
   String get _durationText {
+    final secs = widget.ride.quotedDurationSeconds;
+    if (secs != null && secs > 0) {
+      return formatRideDurationSeconds(secs);
+    }
+    final fromQuote =
+        (_quote?['directions_duration_seconds'] as num?)?.toInt();
+    if (fromQuote != null && fromQuote > 0) {
+      return formatRideDurationSeconds(fromQuote);
+    }
     final distance = _distanceKm;
     if (distance == null) return _quoteLoading ? '...' : '-';
     return '${(distance * 2.52).round().clamp(1, 999)} min';
@@ -522,7 +551,7 @@ class _DriverRideDetailsCardState extends State<_DriverRideDetailsCard> {
             ? l.rolePassenger
             : ride.passengerName!.trim());
     final passengerPhone = (ride.passengerPhone ?? '').trim();
-    final route = localizedRideRouteRow(l, ride.pickup, ride.destination);
+    final route = rideRouteSummaryLine(ride, l);
     final dateSource = (ride.scheduledPickupAt ?? ride.createdAt ?? '').trim();
     final passengerPhoto =
         _driverImageProviderFromString(ride.passengerPhotoUrl);
@@ -1178,7 +1207,7 @@ class _DriverScreenState extends State<DriverScreen>
         _driverMapLng = p.longitude;
         if (zone != null && zone.isNotEmpty) _location = zone;
       });
-      if (push && zone != null && zone.isNotEmpty) await _pushDriverLocation();
+      if (push) await _pushDriverLocation();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -1243,9 +1272,15 @@ class _DriverScreenState extends State<DriverScreen>
         child: const VoomLogo(height: 30),
       );
 
+  StreamSubscription<String?>? _accessTokenSub;
+
   @override
   void initState() {
     super.initState();
+    _accessTokenSub = AuthTokenStore.instance.accessTokenStream.listen((t) {
+      if (!mounted || t == null || t.isEmpty || t == _token) return;
+      setState(() => _token = t);
+    });
     _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -2188,30 +2223,59 @@ class _DriverScreenState extends State<DriverScreen>
     }
   }
 
+  DateTime? _lastLocationPushAt;
+
+  Duration _ridesPollInterval() {
+    final pending = _rides.where((r) => r.status == 'pending').length;
+    if (pending > 0) return const Duration(seconds: 3);
+    if (_isAvailable) return const Duration(seconds: 5);
+    return const Duration(seconds: 8);
+  }
+
   void _startRidesPolling() {
     _ridesPollingTimer?.cancel();
-    Future<void> tick() async {
+    Future<void> loop() async {
       if (!mounted || _token == null) return;
       if (!_busy) {
         await _refreshRides(silent: true);
+        if (_isAvailable && _walletBalance > 0) {
+          final now = DateTime.now();
+          final due = _lastLocationPushAt == null ||
+              now.difference(_lastLocationPushAt!) >
+                  const Duration(seconds: 30);
+          if (due) {
+            _lastLocationPushAt = now;
+            if (_driverMapLat == null || _driverMapLng == null) {
+              await _detectDriverLocation(push: true);
+            } else {
+              await _pushDriverLocation();
+            }
+          }
+        }
       } else {
         await _pollChatUnreadFallback();
       }
+      if (!mounted) return;
+      _ridesPollingTimer = Timer(_ridesPollInterval(), () => unawaited(loop()));
     }
 
-    unawaited(tick());
-    _ridesPollingTimer =
-        Timer.periodic(const Duration(seconds: 4), (_) => unawaited(tick()));
+    unawaited(loop());
   }
 
   Future<void> _pushDriverLocation() async {
     final t = _token;
-    if (t == null || _location.isEmpty) return;
+    if (t == null) return;
+    final zone = _location.trim();
+    final lat = _driverMapLat;
+    final lng = _driverMapLng;
+    if (zone.isEmpty && (lat == null || lng == null)) return;
     try {
       await _api.updateDriverLocation(
         token: t,
-        currentZone: _location,
+        currentZone: zone.isNotEmpty ? zone : 'GPS',
         isAvailable: _isAvailable,
+        lat: lat,
+        lng: lng,
       );
     } catch (e) {
       if (!mounted) return;
@@ -2226,9 +2290,17 @@ class _DriverScreenState extends State<DriverScreen>
     final t = _token;
     if (t == null) return;
     setState(() => _isAvailable = v);
+    if (v && (_driverMapLat == null || _driverMapLng == null)) {
+      await _detectDriverLocation(push: false);
+    }
     try {
       await _api.updateDriverLocation(
-          token: t, currentZone: _location, isAvailable: v);
+        token: t,
+        currentZone: _location.trim().isNotEmpty ? _location : 'GPS',
+        isAvailable: v,
+        lat: _driverMapLat,
+        lng: _driverMapLng,
+      );
       await _refreshGains();
       if (mounted) {
         final l = AppLocalizations.of(context)!;
@@ -2547,6 +2619,7 @@ class _DriverScreenState extends State<DriverScreen>
 
   @override
   void dispose() {
+    _accessTokenSub?.cancel();
     _tabController?.dispose();
     _ridesPollingTimer?.cancel();
     _socket.disconnect();
@@ -2824,7 +2897,7 @@ class _DriverScreenState extends State<DriverScreen>
               return _DriverTripHistoryCard(
                 ride: r,
                 statusLabel: localizedRideStatusLabel(l, r.status),
-                route: localizedRideRouteRow(l, r.pickup, r.destination),
+                route: rideRouteSummaryLine(r, l),
                 passengerLine:
                     '${r.isB2b == true ? l.roleB2b : l.rolePassenger}: $passengerName${passengerPhone.isEmpty ? '' : ' • $passengerPhone'}',
                 metaLine:
@@ -3305,8 +3378,16 @@ class _DriverScreenState extends State<DriverScreen>
                 controller: _tabController,
                 children: [
                   _buildPendingTab(l, pendingOffers),
-                  _buildHistoryTab(l, historyRides),
-                  _buildArrivalsTab(l),
+                  LazyTabChild(
+                    tabIndex: 1,
+                    controller: _tabController!,
+                    builder: () => _buildHistoryTab(l, historyRides),
+                  ),
+                  LazyTabChild(
+                    tabIndex: 2,
+                    controller: _tabController!,
+                    builder: () => _buildArrivalsTab(l),
+                  ),
                 ],
               )),
               if (_message != null)

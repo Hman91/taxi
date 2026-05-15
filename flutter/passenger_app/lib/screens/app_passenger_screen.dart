@@ -12,6 +12,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../api/auth_token_store.dart';
 import '../api/client.dart';
 import '../app_locale.dart';
 import '../config.dart';
@@ -1005,6 +1006,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   bool _obscureSignupPassword = true;
   bool _backendLoginInFlight = false;
   StreamSubscription<GoogleSignInAccount?>? _googleUserSub;
+  StreamSubscription<String?>? _accessTokenSub;
   Timer? _ridesPollingTimer;
 
   /// `null` means show every ride; otherwise filter by API status string.
@@ -1189,27 +1191,10 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   }
 
   Future<({double? km, double? fare})> _resolveRideKmFare(Ride r) async {
-    final pv = r.b2bFare ?? r.quotedFareDt;
-    if (r.quotedDistanceKm != null && pv != null) {
-      return (km: r.quotedDistanceKm, fare: pv);
-    }
-    var km = r.quotedDistanceKm;
-    var fare = pv;
-    final routeKey = _matchFareRouteKey(r.pickup, r.destination);
-    if (routeKey != null) {
-      try {
-        final raw = r.scheduledPickupAt ?? r.createdAt;
-        final pt = DateTime.tryParse(raw ?? '')?.toUtc() ??
-            DateTime.now().toUtc();
-        final q = await _api.quoteAirport(routeKey, pricingTime: pt);
-        km ??= (q['distance_km'] as num?)?.toDouble();
-        if (fare == null) {
-          fare = (q['final_fare'] as num?)?.toDouble() ??
-              (q['base_fare'] as num?)?.toDouble();
-        }
-      } catch (_) {}
-    }
-    return (km: km, fare: fare);
+    return (
+      km: r.quotedDistanceKm,
+      fare: r.b2bFare ?? r.quotedFareDt,
+    );
   }
 
   Widget _rideMetricsStrip({
@@ -1308,6 +1293,10 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   @override
   void initState() {
     super.initState();
+    _accessTokenSub = AuthTokenStore.instance.accessTokenStream.listen((t) {
+      if (!mounted || t == null || t.isEmpty || t == _token) return;
+      setState(() => _token = t);
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       restoreUiRoleLocale(AppUiRole.passenger);
@@ -1361,6 +1350,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
 
   @override
   void dispose() {
+    _accessTokenSub?.cancel();
     _ridesPollingTimer?.cancel();
     _socket.disconnect();
     _googleUserSub?.cancel();
@@ -1373,20 +1363,32 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     super.dispose();
   }
 
+  Duration _ridesPollInterval() {
+    final active = _rides.any((r) {
+      final s = r.status.toLowerCase();
+      return s == 'pending' ||
+          s == 'accepted' ||
+          s == 'ongoing' ||
+          s == 'in_progress' ||
+          s == 'requested';
+    });
+    return active ? const Duration(seconds: 3) : const Duration(seconds: 6);
+  }
+
   void _startRidesPolling() {
     _ridesPollingTimer?.cancel();
-    Future<void> tick() async {
+    Future<void> loop() async {
       if (!mounted || _token == null) return;
       if (!_busy) {
         await _refreshRides(silent: true);
       } else {
         await _pollChatUnreadFallback();
       }
+      if (!mounted) return;
+      _ridesPollingTimer = Timer(_ridesPollInterval(), () => unawaited(loop()));
     }
 
-    unawaited(tick());
-    _ridesPollingTimer =
-        Timer.periodic(const Duration(seconds: 4), (_) => unawaited(tick()));
+    unawaited(loop());
   }
 
   Future<void> _detectPassengerLocation() async {
@@ -2526,6 +2528,12 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
           pickupLng: mapResult.pickupLng,
           destinationLat: mapResult.destinationLat,
           destinationLng: mapResult.destinationLng,
+          quotedDistanceKm: mapResult.quotedDistanceKm,
+          quotedDurationSeconds: mapResult.quotedDurationSeconds,
+          quotedFareDt: mapResult.finalFare,
+          quotedBaseFareDt: mapResult.quotedBaseFareDt,
+          quotedNightSurchargeDt: mapResult.quotedNightSurchargeDt,
+          quotedIsNight: mapResult.quotedIsNight,
         );
         await _refreshRides();
         if (!mounted) return;

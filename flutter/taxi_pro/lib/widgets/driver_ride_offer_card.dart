@@ -9,14 +9,18 @@ import '../l10n/place_localization.dart';
 import '../services/google_directions_service.dart';
 import '../services/google_geocoding_service.dart';
 import '../services/taxi_app_service.dart';
+import '../utils/ride_locked_quote.dart';
 import 'driver_offer_route_map.dart';
 import 'driver_route_map_common.dart';
 import 'night_fare_breakdown.dart';
 
-/// B2B rides bill [Ride.b2bFare]; live GPS/table quotes are for routing only and can differ.
+/// B2B: prefer locked GPS quote at booking; fall back to corporate booking fare.
 void _applyB2bLockedFareToQuote(Map<String, dynamic> quote, Ride ride) {
-  if (ride.isB2b != true || ride.b2bFare == null) return;
-  final T = ride.b2bFare!;
+  if (ride.isB2b != true) return;
+  final T = rideHasLockedQuote(ride) && ride.quotedFareDt != null
+      ? ride.quotedFareDt!
+      : ride.b2bFare;
+  if (T == null) return;
   final qb = ride.quotedBaseFareDt;
   final qn = ride.quotedNightSurchargeDt;
   final qSum = (qb != null && qn != null) ? qb + qn : null;
@@ -133,6 +137,36 @@ class _DriverRideOfferCardState extends State<DriverRideOfferCard> {
   }
 
   Future<void> _loadQuoteAndRoute() async {
+    final r = widget.ride;
+    if (rideHasLockedQuote(r)) {
+      final locked = <String, dynamic>{
+        'quote_mode': 'locked',
+        'distance_km': r.quotedDistanceKm,
+        'directions_duration_seconds': r.quotedDurationSeconds,
+        'final_fare': rideLockedFareDt(r),
+        'base_fare': r.quotedBaseFareDt,
+        'night_surcharge_dt': r.quotedNightSurchargeDt,
+        'is_night': r.quotedIsNight,
+      };
+      _applyB2bLockedFareToQuote(locked, r);
+      List<LatLng>? poly;
+      final pick = RideRouteCoords.pickup(r);
+      final drop = RideRouteCoords.destination(r);
+      final dirs = GoogleDirectionsService();
+      if (pick != null && drop != null && dirs.isConfigured) {
+        final route = await dirs.fetchRoute(pick, drop);
+        if (route != null && route.points.length >= 2) {
+          poly = route.points;
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _quote = locked;
+        _routePolyline = poly;
+        _quoteLoading = false;
+      });
+      return;
+    }
     final pick = RideRouteCoords.pickup(widget.ride);
     final drop = RideRouteCoords.destination(widget.ride);
     final dirs = GoogleDirectionsService();

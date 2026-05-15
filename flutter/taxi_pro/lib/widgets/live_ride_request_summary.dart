@@ -88,7 +88,7 @@ class LiveRideRequestSummary extends StatelessWidget {
               children: [
                 _metricChip('km', distanceLabel),
                 _metricChip('Price', priceLabel),
-                _metricChip('Time', timeLabel),
+                _metricChip('Duration', timeLabel),
               ],
             ),
           ),

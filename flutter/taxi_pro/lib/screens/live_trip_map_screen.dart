@@ -8,6 +8,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../api/models.dart';
 import '../config.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/ride_address_display.dart';
 import '../maps/futuristic_map_style.dart';
 import '../maps/tunisia_zone_coordinates.dart';
 import '../services/google_directions_service.dart';
@@ -70,25 +72,74 @@ class _LiveTripMapScreenState extends State<LiveTripMapScreen>
   @override
   void initState() {
     super.initState();
-    _pickPin = _ridePickupLatLng();
-    _dropPin = _rideDestLatLng();
-    _pickLabel = widget.focusRide?.pickup;
-    _dropLabel = widget.focusRide?.destination;
+    _applyFocusRideSnapshot();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_refreshRoute());
     });
   }
 
-  LatLng? _ridePickupLatLng() {
+  void _applyFocusRideSnapshot() {
     final r = widget.focusRide;
-    if (r == null) return null;
-    return TunisiaZoneCoordinates.lookup(r.pickup);
+    if (r == null) return;
+    _pickPin = _ridePickupLatLng(r);
+    _dropPin = _rideDestLatLng(r);
+    _pickLabel = _storedLine(
+      address: r.pickupAddress,
+      displayName: r.pickupDisplayName,
+      zoneKey: r.pickup,
+    );
+    _dropLabel = _storedLine(
+      address: r.destinationAddress,
+      displayName: r.destinationDisplayName,
+      zoneKey: r.destination,
+    );
   }
 
-  LatLng? _rideDestLatLng() {
-    final r = widget.focusRide;
+  static String _storedLine({
+    required String? address,
+    required String? displayName,
+    required String zoneKey,
+  }) {
+    final a = (address ?? '').trim();
+    if (a.isNotEmpty) return a;
+    final d = (displayName ?? '').trim();
+    if (d.isNotEmpty) return d;
+    return zoneKey.trim();
+  }
+
+  static LatLng? _latLngFromStored(double? lat, double? lng, String zoneKey) {
+    if (lat != null && lng != null && (lat.abs() > 1e-4 || lng.abs() > 1e-4)) {
+      return LatLng(lat, lng);
+    }
+    return TunisiaZoneCoordinates.lookup(zoneKey);
+  }
+
+  LatLng? _ridePickupLatLng([Ride? ride]) {
+    final r = ride ?? widget.focusRide;
     if (r == null) return null;
-    return TunisiaZoneCoordinates.lookup(r.destination);
+    return _latLngFromStored(r.pickupLat, r.pickupLng, r.pickup);
+  }
+
+  LatLng? _rideDestLatLng([Ride? ride]) {
+    final r = ride ?? widget.focusRide;
+    if (r == null) return null;
+    return _latLngFromStored(r.destinationLat, r.destinationLng, r.destination);
+  }
+
+  String _legendPickupLabel(AppLocalizations l) {
+    final manual = (_pickLabel ?? '').trim();
+    if (manual.isNotEmpty) return manual;
+    final r = widget.focusRide;
+    if (r == null) return '—';
+    return ridePickupPrimaryLine(r, l);
+  }
+
+  String _legendDestinationLabel(AppLocalizations l) {
+    final manual = (_dropLabel ?? '').trim();
+    if (manual.isNotEmpty) return manual;
+    final r = widget.focusRide;
+    if (r == null) return '—';
+    return rideDestinationPrimaryLine(r, l);
   }
 
   LatLng? _driverApproxPin() {
@@ -360,7 +411,7 @@ class _LiveTripMapScreenState extends State<LiveTripMapScreen>
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
         infoWindow: InfoWindow(
           title: 'Pickup',
-          snippet: _pickLabel ?? widget.focusRide?.pickup,
+          snippet: (_pickLabel ?? '').trim().isEmpty ? null : _pickLabel,
         ),
       ),
       Marker(
@@ -369,7 +420,7 @@ class _LiveTripMapScreenState extends State<LiveTripMapScreen>
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         infoWindow: InfoWindow(
           title: 'Destination',
-          snippet: _dropLabel ?? widget.focusRide?.destination,
+          snippet: (_dropLabel ?? '').trim().isEmpty ? null : _dropLabel,
         ),
       ),
     };
@@ -671,17 +722,17 @@ class _LiveTripMapScreenState extends State<LiveTripMapScreen>
                         _LegendRow(
                           color: const Color(0xFFAB47BC),
                           label: 'Pickup',
-                          value: _pickLabel ??
-                              widget.focusRide?.pickup ??
-                              '—',
+                          value: _legendPickupLabel(
+                            AppLocalizations.of(context)!,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         _LegendRow(
                           color: const Color(0xFFFF7043),
                           label: 'Destination',
-                          value: _dropLabel ??
-                              widget.focusRide?.destination ??
-                              '—',
+                          value: _legendDestinationLabel(
+                            AppLocalizations.of(context)!,
+                          ),
                         ),
                         const SizedBox(height: 14),
                         Row(
