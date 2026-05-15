@@ -199,6 +199,14 @@ class Ride {
     required this.status,
     required this.pickup,
     required this.destination,
+    this.pickupAddress,
+    this.pickupDisplayName,
+    this.destinationAddress,
+    this.destinationDisplayName,
+    this.pickupLat,
+    this.pickupLng,
+    this.destinationLat,
+    this.destinationLng,
     this.driverName,
     this.driverVehicle,
     this.driverPhone,
@@ -212,6 +220,7 @@ class Ride {
     this.isB2b,
     this.b2bGuestName,
     this.b2bRoomNumber,
+    this.b2bTenantName,
     this.b2bSourceCode,
     this.b2bFare,
     this.scheduledPickupAt,
@@ -220,6 +229,9 @@ class Ride {
     this.updatedAt,
     this.quotedDistanceKm,
     this.quotedFareDt,
+    this.quotedBaseFareDt,
+    this.quotedNightSurchargeDt,
+    this.quotedIsNight,
   });
 
   final int id;
@@ -228,6 +240,16 @@ class Ride {
   final String status;
   final String pickup;
   final String destination;
+  /// Reverse-geocoded or client-captured formatted pickup address (optional).
+  final String? pickupAddress;
+  /// Passenger-facing pickup place name (optional).
+  final String? pickupDisplayName;
+  final String? destinationAddress;
+  final String? destinationDisplayName;
+  final double? pickupLat;
+  final double? pickupLng;
+  final double? destinationLat;
+  final double? destinationLng;
   final String? driverName;
   final String? driverVehicle;
   final String? driverPhone;
@@ -241,6 +263,7 @@ class Ride {
   final bool? isB2b;
   final String? b2bGuestName;
   final String? b2bRoomNumber;
+  final String? b2bTenantName;
   final String? b2bSourceCode;
   final double? b2bFare;
   final String? scheduledPickupAt;
@@ -251,6 +274,9 @@ class Ride {
   final double? quotedDistanceKm;
   /// Estimated passenger price in Tunisian dinars (includes night surcharge when applicable).
   final double? quotedFareDt;
+  final double? quotedBaseFareDt;
+  final double? quotedNightSurchargeDt;
+  final bool? quotedIsNight;
 
   factory Ride.fromJson(Map<String, dynamic> json) {
     return Ride(
@@ -260,6 +286,14 @@ class Ride {
       status: json['status'] as String,
       pickup: json['pickup'] as String,
       destination: json['destination'] as String,
+      pickupAddress: json['pickup_address'] as String?,
+      pickupDisplayName: json['pickup_display_name'] as String?,
+      destinationAddress: json['destination_address'] as String?,
+      destinationDisplayName: json['destination_display_name'] as String?,
+      pickupLat: (json['pickup_lat'] as num?)?.toDouble(),
+      pickupLng: (json['pickup_lng'] as num?)?.toDouble(),
+      destinationLat: (json['destination_lat'] as num?)?.toDouble(),
+      destinationLng: (json['destination_lng'] as num?)?.toDouble(),
       driverName: json['driver_name'] as String?,
       driverVehicle: json['driver_vehicle'] as String?,
       driverPhone: json['driver_phone'] as String?,
@@ -273,6 +307,7 @@ class Ride {
       isB2b: json['is_b2b'] as bool?,
       b2bGuestName: json['b2b_guest_name'] as String?,
       b2bRoomNumber: json['b2b_room_number'] as String?,
+      b2bTenantName: json['b2b_tenant_name'] as String?,
       b2bSourceCode: json['b2b_source_code'] as String?,
       b2bFare: (json['b2b_fare'] as num?)?.toDouble(),
       scheduledPickupAt: json['scheduled_pickup_at'] as String?,
@@ -281,6 +316,10 @@ class Ride {
       updatedAt: json['updated_at'] as String?,
       quotedDistanceKm: (json['quoted_distance_km'] as num?)?.toDouble(),
       quotedFareDt: (json['quoted_fare_dt'] as num?)?.toDouble(),
+      quotedBaseFareDt: (json['quoted_base_fare_dt'] as num?)?.toDouble(),
+      quotedNightSurchargeDt:
+          (json['quoted_night_surcharge_dt'] as num?)?.toDouble(),
+      quotedIsNight: json['quoted_is_night'] as bool?,
     );
   }
 }
@@ -295,6 +334,14 @@ extension RideQuoteMerge on Ride {
       status: status,
       pickup: pickup,
       destination: destination,
+      pickupAddress: pickupAddress ?? previous.pickupAddress,
+      pickupDisplayName: pickupDisplayName ?? previous.pickupDisplayName,
+      destinationAddress: destinationAddress ?? previous.destinationAddress,
+      destinationDisplayName: destinationDisplayName ?? previous.destinationDisplayName,
+      pickupLat: pickupLat ?? previous.pickupLat,
+      pickupLng: pickupLng ?? previous.pickupLng,
+      destinationLat: destinationLat ?? previous.destinationLat,
+      destinationLng: destinationLng ?? previous.destinationLng,
       driverName: driverName,
       driverVehicle: driverVehicle,
       driverPhone: driverPhone,
@@ -308,6 +355,7 @@ extension RideQuoteMerge on Ride {
       isB2b: isB2b,
       b2bGuestName: b2bGuestName,
       b2bRoomNumber: b2bRoomNumber,
+      b2bTenantName: b2bTenantName ?? previous.b2bTenantName,
       b2bSourceCode: b2bSourceCode,
       b2bFare: b2bFare,
       scheduledPickupAt: scheduledPickupAt,
@@ -316,6 +364,10 @@ extension RideQuoteMerge on Ride {
       updatedAt: updatedAt,
       quotedDistanceKm: quotedDistanceKm ?? previous.quotedDistanceKm,
       quotedFareDt: quotedFareDt ?? previous.quotedFareDt,
+      quotedBaseFareDt: quotedBaseFareDt ?? previous.quotedBaseFareDt,
+      quotedNightSurchargeDt:
+          quotedNightSurchargeDt ?? previous.quotedNightSurchargeDt,
+      quotedIsNight: quotedIsNight ?? previous.quotedIsNight,
     );
   }
 }

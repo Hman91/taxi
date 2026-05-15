@@ -1,3 +1,7 @@
+import java.util.Base64
+import java.util.Properties
+import kotlin.text.Charsets
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -29,6 +33,26 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        val dartDefines = mutableMapOf<String, String>()
+        (project.properties["dart-defines"] as? String)?.split(",")?.forEach { encoded ->
+            if (encoded.isBlank()) return@forEach
+            runCatching {
+                val decoded = String(Base64.getDecoder().decode(encoded), Charsets.UTF_8)
+                val eq = decoded.indexOf('=')
+                if (eq > 0) {
+                    dartDefines[decoded.substring(0, eq)] = decoded.substring(eq + 1)
+                }
+            }
+        }
+        val localProps = Properties()
+        rootProject.file("local.properties").takeIf { it.exists() }?.reader(Charsets.UTF_8)?.use {
+            localProps.load(it)
+        }
+        val mapsKey = dartDefines["GOOGLE_MAPS_API_KEY"]
+            ?: localProps.getProperty("GOOGLE_MAPS_API_KEY")
+            ?: ""
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = mapsKey
     }
 
     buildTypes {

@@ -89,6 +89,7 @@
   "adminRideRow": "{pickup} → {destination}",
   "driverLocationRow": "Шир. {lat}, Долг. {lng}",
   "chatScreenTitle": "Чат поездки",
+  "chatConversationShortTitle": "Чат",
   "messageFieldHint": "Сообщение",
   "sendChatMessage": "Отправить",
   "accountDisabledContactAdmin": "Аккаунт отключён. Обратитесь к администратору.",
@@ -349,6 +350,24 @@
   "@driverOfferTimeChip": {
     "placeholders": {
       "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "driverOfferRoutePreviewLabel": "Route preview",
+  "driverOfferPassengerSectionTitle": "Passenger",
+  "driverOfferPassengerNameLabel": "Name",
+  "driverOfferPassengerPhoneLabel": "Phone",
+  "driverOfferB2bSectionTitle": "Corporate",
+  "driverOfferB2bCompanyLabel": "Company",
+  "driverOfferB2bCompanyUnknown": "Corporate account",
+  "driverOfferB2bGuestLabel": "Guest",
+  "driverOfferB2bRoomLabel": "Room",
+  "driverOfferB2bCodeLabel": "Code",
+  "driverOfferB2bAgreedFare": "Corporate fare: {amount} DT",
+  "@driverOfferB2bAgreedFare": {
+    "placeholders": {
+      "amount": {
         "type": "String"
       }
     }
@@ -642,6 +661,7 @@
   "operatorColTakeoffTime": "Время вылета",
   "operatorColExpectedArrival": "Ожидаемое прибытие (сегодня)",
   "operatorColArrivalAirportTn": "Аэропорт прибытия (Тунис)",
+  "flightArrivalsTerminalGate": "Терминал · выход",
   "operatorChooseDriverTopUp": "Выберите водителя для пополнения:",
   "operatorAmountReceivedDt": "Полученная сумма (DT):",
   "operatorRechargeBalance": "Пополнить баланс",
@@ -669,5 +689,5 @@
   },
   "ownerDriverPinWalletsHeading": "Кошельки водителей",
   "ownerDriverPinWalletsEmpty": "Нет загруженных PIN-аккаунтов водителей.",
-  "flightArrivalsSampleDataBanner": "Только примерные рейсы — бэкенд не использует AirLabs. Добавьте AIRLABS_API_KEY в файл `.env` в папке проекта Taxi и перезапустите API."
+  "flightArrivalsSampleDataBanner": "Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server."
 }

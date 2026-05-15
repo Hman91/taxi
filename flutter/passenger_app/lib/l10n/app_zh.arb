@@ -13,7 +13,9 @@
   "tabAirport": "机场",
   "tabGps": "GPS",
   "route": "路线",
-  "nightFare50": "+50% 夜间加价",
+  "nightFare50": "Night rate applied (+50%)",
+  "nightFareScheduleHint": "Night +50% uses 9:00 PM–5:00 AM Tunisia time (Africa/Tunis). Your estimate follows that clock.",
+  "ownerWalletShareHint": "When a trip ends, the owner deducts from the driver's wallet: 10% on passenger rides; B2B adds 5% more (15% total).",
   "rateYourLastRide": "评价上一程",
   "submitRating": "提交评分",
   "thankYouFeedback": "感谢您的反馈！",
@@ -92,6 +94,7 @@
   "chatScreenTitle": "行程聊天",
   "messageFieldHint": "输入消息",
   "sendChatMessage": "发送",
+  "chatConversationShortTitle": "聊天",
   "accountDisabledContactAdmin": "账号已停用，请联系管理员。",
   "signedInWithGoogle": "已使用 Google 登录",
   "passengerGoogleLoginRequired": "乘客必须使用 Google 登录。",
@@ -329,6 +332,20 @@
   "driverRideRequestBannerTitle": "New ride request!",
   "driverOfferFromLabel": "From",
   "driverOfferToLabel": "To",
+  "driverOfferPassengerSectionTitle": "乘客",
+  "driverOfferPassengerNameLabel": "姓名",
+  "driverOfferPassengerPhoneLabel": "电话",
+  "driverOfferB2bCompanyUnknown": "企业账户",
+  "driverOfferB2bGuestLabel": "客人",
+  "driverOfferB2bRoomLabel": "房间",
+  "driverOfferB2bAgreedFare": "企业价：{amount} DT",
+  "@driverOfferB2bAgreedFare": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "driverRejectOfferButton": "Reject",
   "driverOfferFareChip": "{amount} DT",
   "@driverOfferFareChip": {
@@ -670,5 +687,20 @@
   },
   "ownerDriverPinWalletsHeading": "司机钱包",
   "ownerDriverPinWalletsEmpty": "暂无已加载的 PIN 司机账户。",
-  "flightArrivalsSampleDataBanner": "仅为示例航班 — 后端未接入 AirLabs。请在 Taxi 项目目录的 `.env` 中设置 AIRLABS_API_KEY 并重启 API 服务。"
+  "flightArrivalsSampleDataBanner": "Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server.",
+  "passengerLanguageReminderTitle": "选择语言",
+  "passengerLanguageReminderSubtitle": "我们将以此语言显示菜单、价格和帮助。您可以随时在设置中更改。",
+  "passengerLanguageReminderContinue": "继续",
+  "passengerLanguageNameArabic": "阿拉伯语",
+  "passengerLanguageNameGerman": "德语",
+  "passengerLanguageNameSpanish": "西班牙语",
+  "passengerLanguageNameFrench": "法语",
+  "passengerLanguageNameItalian": "意大利语",
+  "passengerLanguageNameRussian": "俄语",
+  "passengerLanguageNameChinese": "中文",
+  "passengerLanguageNameEnglish": "英语",
+  "passengerLanguageRegionMena": "中东与北非",
+  "passengerLanguageRegionAsia": "亚洲",
+  "passengerLanguageRegionEurope": "欧洲",
+  "passengerLanguageRegionGlobal": "全球"
 }

@@ -44,12 +44,37 @@ def create_ride(**kwargs: Any) -> Tuple[Any, int]:
     pickup = (body.get("pickup") or "").strip()
     destination = (body.get("destination") or "").strip()
     scheduled_pickup_at = body.get("scheduled_pickup_at") or body.get("scheduledPickupAt")
+
+    def _opt_str(key_snake: str, key_camel: str) -> str | None:
+        raw = body.get(key_snake) or body.get(key_camel)
+        if raw is None:
+            return None
+        s = str(raw).strip()
+        return s or None
+
+    def _opt_float(key_snake: str, key_camel: str) -> float | None:
+        raw = body.get(key_snake) or body.get(key_camel)
+        if raw is None or raw == "":
+            return None
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
+
     ride, err = rides_service.request_ride(
         uid,
         pickup,
         destination,
         enforce_single_active=(role != "b2b"),
         scheduled_pickup_at=scheduled_pickup_at,
+        pickup_address=_opt_str("pickup_address", "pickupAddress"),
+        pickup_display_name=_opt_str("pickup_display_name", "pickupDisplayName"),
+        destination_address=_opt_str("destination_address", "destinationAddress"),
+        destination_display_name=_opt_str("destination_display_name", "destinationDisplayName"),
+        pickup_lat=_opt_float("pickup_lat", "pickupLat"),
+        pickup_lng=_opt_float("pickup_lng", "pickupLng"),
+        destination_lat=_opt_float("destination_lat", "destinationLat"),
+        destination_lng=_opt_float("destination_lng", "destinationLng"),
     )
     if err:
         code = 400 if err != "active_ride_exists" else 409

@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -17,6 +18,7 @@ import '../config.dart';
 import '../api/models.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
+import '../l10n/ride_address_display.dart';
 import '../l10n/ride_status_localization.dart';
 import '../models/app_notification.dart';
 import '../models/chat_message.dart';
@@ -25,13 +27,18 @@ import '../services/local_notification_service.dart';
 import '../services/session_store.dart';
 import '../services/taxi_app_service.dart';
 import '../widgets/locale_popup_menu.dart';
+import '../widgets/night_fare_breakdown.dart';
 import '../utils/chat_unread_poll.dart';
+import '../utils/airport_place_heuristics.dart';
 import '../utils/int_from_json.dart';
 import '../widgets/passenger_google_sign_in_button.dart';
+import 'live_trip_map_screen.dart';
+import 'passenger_reservation_map_screen.dart';
 import 'passenger_forgot_password_screen.dart';
 import 'passenger_home_screen.dart';
 import 'passenger_signup_screen.dart';
 import 'ride_chat_screen.dart';
+import '../widgets/ride_address_summary_card.dart';
 
 // ── Design tokens ─────────────────────────────────────────────
 class _C {
@@ -210,6 +217,265 @@ const Map<String, Map<String, String>> _passengerUiTranslations = {
     'it': 'Tocca destinazione per scegliere dove andare.',
     'zh': '点击目的地选择你要去的地方。',
     'ru': 'Нажмите на пункт назначения, чтобы выбрать маршрут.',
+  },
+  'pickupPinHint': {
+    'en': 'Pan the map — the centre is your pickup.',
+    'fr': 'Déplacez la carte — le centre définit votre prise en charge.',
+    'ar': 'حرّك الخريطة — المركز هو نقطة الانطلاق.',
+    'de': 'Karte schieben — die Mitte ist deine Abholung.',
+    'es': 'Mueve el mapa — el centro es tu recogida.',
+    'it': 'Sposta la mappa — il centro è il ritiro.',
+    'zh': '拖动地图 — 中心点即为上车位置。',
+    'ru': 'Двигайте карту — центр экрана — точка подачи.',
+  },
+  'openRouteMap': {
+    'en': 'Map',
+    'fr': 'Carte',
+    'ar': 'خريطة',
+    'de': 'Karte',
+    'es': 'Mapa',
+    'it': 'Mappa',
+    'zh': '地图',
+    'ru': 'Карта',
+  },
+  'mapTapDestinationHint': {
+    'en':
+        'Use Airports, Zones, or Restaurants above, then tap a marker — or open Destination below to search.',
+    'fr':
+        'Choisissez Aéroports, Zones ou Restaurants ci‑dessus, touchez un marqueur — ou ouvrez Destination pour chercher.',
+    'ar': 'اختر المطارات أو المناطق أو المطاعم أعلاه واضغط علامة — أو افتح الوجهة للبحث أدناه.',
+    'de':
+        'Wähle Flughäfen, Zonen oder Restaurants oben, tippe auf eine Markierung — oder öffne Ziel unten.',
+    'es':
+        'Usa Aeropuertos, Zonas o Restaurantes arriba y toca un marcador — o abre Destino abajo.',
+    'it':
+        'Scegli Aeroporti, Zone o Ristoranti sopra e tocca un marker — o apri Destinazione sotto.',
+    'zh': '在上方选择机场、区域或餐厅并点击标记 — 或在下方打开目的地搜索。',
+    'ru':
+        'Выберите Аэропорты, Зоны или Рестораны выше и нажмите маркер — или откройте «Куда» ниже.',
+  },
+  'mapBookingFocusedHint': {
+    'en': 'Pickup and destination are set. The map shows only this route — confirm below.',
+    'fr':
+        'Départ et destination sont définis. La carte n’affiche que ce trajet — confirmez ci‑dessous.',
+    'ar': 'تم تحديد الانطلاق والوجهة. الخريطة تعرض هذا المسار فقط — أكّد أدناه.',
+    'de': 'Abholung und Ziel sind gesetzt. Die Karte zeigt nur diese Route — unten bestätigen.',
+    'es': 'Origen y destino listados. El mapa solo muestra esta ruta — confirma abajo.',
+    'it': 'Partenza e destinazione impostate. La mappa mostra solo questo percorso — conferma sotto.',
+    'zh': '已设定上下车点，地图仅显示此路线 — 请在下方确认。',
+    'ru': 'Точки подачи и назначения заданы. На карте только этот маршрут — подтвердите ниже.',
+  },
+  'mapFilterAirports': {
+    'en': 'Airports',
+    'fr': 'Aéroports',
+    'ar': 'المطارات',
+    'de': 'Flughäfen',
+    'es': 'Aeropuertos',
+    'it': 'Aeroporti',
+    'zh': '机场',
+    'ru': 'Аэропорты',
+  },
+  'mapFilterZones': {
+    'en': 'Zones',
+    'fr': 'Zones',
+    'ar': 'المناطق',
+    'de': 'Zonen',
+    'es': 'Zonas',
+    'it': 'Zone',
+    'zh': '区域',
+    'ru': 'Зоны',
+  },
+  'mapFilterRestaurants': {
+    'en': 'Restaurants',
+    'fr': 'Restaurants',
+    'ar': 'مطاعم',
+    'de': 'Restaurants',
+    'es': 'Restaurantes',
+    'it': 'Ristoranti',
+    'zh': '餐厅',
+    'ru': 'Рестораны',
+  },
+  'restaurantSuggestionsHeader': {
+    'en': 'TOURIST RESTAURANTS',
+    'fr': 'RESTAURANTS TOURISTIQUES',
+    'ar': 'مطاعم سياحية',
+    'de': 'TOURISTENRESTAURANTS',
+    'es': 'RESTAURANTES TURÍSTICOS',
+    'it': 'RISTORANTI TURISTICI',
+    'zh': '旅游餐厅',
+    'ru': 'ТУРИСТИЧЕСКИЕ РЕСТОРАНЫ',
+  },
+  'restaurantMapCardSubtitle': {
+    'en': 'Curated pin on the map. Fares use your nearest priced taxi zone.',
+    'fr': 'Repère sur la carte. Les tarifs utilisent la zone taxi tarifée la plus proche.',
+    'ar': 'علامة على الخريطة. الأسعار تعتمد أقرب منطقة تاكسي مُسعّرة.',
+    'de': 'Markierung auf der Karte. Fahrpreise nutzen die nächste tarifierte Taxizone.',
+    'es': 'Marcador en el mapa. Las tarifas usan tu zona de taxi tarificada más cercana.',
+    'it': 'Segnaposto sulla mappa. Le tariffe usano la zona taxi tariffata più vicina.',
+    'zh': '地图上的精选标记；费用按最近计价出租车区域计算。',
+    'ru': 'Метка на карте. Тарифы считаются по ближайшей зоне такси с фиксированной ценой.',
+  },
+  'restaurantUseNearestPricedZone': {
+    'en': 'Use nearest priced taxi destination',
+    'fr': 'Utiliser la destination taxi tarifée la plus proche',
+    'ar': 'استخدام أقرب وجهة تاكسي بسعر ثابت',
+    'de': 'Nächstes tarifiertes Taxiziel verwenden',
+    'es': 'Usar destino de taxi tarificado más cercano',
+    'it': 'Usa destinazione taxi tariffata più vicina',
+    'zh': '使用最近的计价出租车目的地',
+    'ru': 'Ближайшая зона с фиксированным тарифом',
+  },
+  'restaurantInfoDismiss': {
+    'en': 'Close',
+    'fr': 'Fermer',
+    'ar': 'إغلاق',
+    'de': 'Schließen',
+    'es': 'Cerrar',
+    'it': 'Chiudi',
+    'zh': '关闭',
+    'ru': 'Закрыть',
+  },
+  'mapYouPinLabel': {
+    'en': 'YOU',
+    'fr': 'VOUS',
+    'ar': 'أنت',
+    'de': 'DU',
+    'es': 'TÚ',
+    'it': 'TU',
+    'zh': '您',
+    'ru': 'ВЫ',
+  },
+  'mapPickupGpsHint': {
+    'en': 'Pickup is your live GPS position and updates as you move.',
+    'fr': 'La prise en charge suit votre GPS en direct et se met à jour quand vous bougez.',
+    'ar': 'نقطة الانطلاق هي موقعك عبر الـGPS مباشرة وتتحدث مع حركتك.',
+    'de': 'Abholung ist dein Live‑GPS und aktualisiert sich beim Bewegen.',
+    'es': 'La recogida es tu GPS en vivo y se actualiza al moverte.',
+    'it': 'Il ritiro segue il GPS in tempo reale e si aggiorna mentre ti muovi.',
+    'zh': '上车点为您实时 GPS，随移动更新。',
+    'ru': 'Подача по живому GPS и обновляется при движении.',
+  },
+  'mapMarkersPickFilterHint': {
+    'en': 'One category is always active: switch between Airports, Zones, and Restaurants to change markers.',
+    'fr':
+        'Une catégorie est toujours active : passez d’Aéroports à Zones ou Restaurants pour changer les marqueurs.',
+    'ar': 'تبقى فئة واحدة نشطة: بدّل بين المطارات والمناطق والمطاعم لتغيير العلامات.',
+    'de': 'Immer eine Kategorie aktiv: wechsle zwischen Flughäfen, Zonen und Restaurants für andere Marker.',
+    'es': 'Siempre hay una categoría activa: cambia entre Aeropuertos, Zonas y Restaurantes para otros marcadores.',
+    'it': 'È sempre attiva una categoria: passa tra Aeroporti, Zone e Ristoranti per cambiare i marker.',
+    'zh': '始终有一种类别处于活动状态：在机场、区域和餐厅之间切换以更换标记。',
+    'ru': 'Всегда активна одна категория: переключайте Аэропорты, Зоны и Рестораны для смены маркеров.',
+  },
+  'destSearchAutocompleteHint': {
+    'en': 'Type a destination…',
+    'fr': 'Tapez une destination…',
+    'ar': 'اكتب وجهة…',
+    'de': 'Ziel eingeben…',
+    'es': 'Escribe un destino…',
+    'it': 'Digita una destinazione…',
+    'zh': '输入目的地…',
+    'ru': 'Введите пункт назначения…',
+  },
+  'placesSuggestionsHeader': {
+    'en': 'GOOGLE PLACES',
+    'fr': 'GOOGLE PLACES',
+    'ar': 'GOOGLE PLACES',
+    'de': 'GOOGLE PLACES',
+    'es': 'GOOGLE PLACES',
+    'it': 'GOOGLE PLACES',
+    'zh': 'GOOGLE 地点',
+    'ru': 'GOOGLE PLACES',
+  },
+  'catalogDestinationsHeader': {
+    'en': 'SERVICE AREA LIST',
+    'fr': 'LISTE DES DESTINATIONS',
+    'ar': 'قائمة الوجهات',
+    'de': 'GEBIETSLISTE',
+    'es': 'LISTA DE DESTINOS',
+    'it': 'ELENCO DESTINAZIONI',
+    'zh': '服务区域列表',
+    'ru': 'СПИСОК НАПРАВЛЕНИЙ',
+  },
+  'catalogLiveMatchesHeader': {
+    'en': 'MATCHING PLACES',
+    'fr': 'LIEUX CORRESPONDANTS',
+    'ar': 'أماكن مطابقة',
+    'de': 'TREFFER',
+    'es': 'LUGARES COINCIDENTES',
+    'it': 'LUOGHI CORRISPONDENTI',
+    'zh': '匹配地点',
+    'ru': 'СОВПАДЕНИЯ',
+  },
+  'destSearchNoMatches': {
+    'en': 'No destinations match that text. Try another spelling.',
+    'fr': 'Aucune destination ne correspond. Essayez une autre orthographe.',
+    'ar': 'لا توجد وجهة مطابقة. جرّب كتابة مختلفة.',
+    'de': 'Keine passende Destination. Andere Schreibweise versuchen.',
+    'es': 'Ningún destino coincide. Prueba otra forma de escribirlo.',
+    'it': 'Nessuna destinazione corrisponde. Prova un’altra grafia.',
+    'zh': '没有匹配的目的地，请尝试其他拼写。',
+    'ru': 'Нет совпадений. Попробуйте другое написание.',
+  },
+  'destSearchTypeHint': {
+    'en': 'Results update as you type — saved places first, then wider Google results.',
+    'fr': 'Résultats en direct : lieux enregistrés d’abord, puis Google.',
+    'ar': 'النتائج تتحدث مع الكتابة: الأماكن المحفوظة أولاً ثم نتائج أوسع.',
+    'de': 'Live-Ergebnisse: zuerst gespeicherte Orte, dann Google.',
+    'es': 'Resultados al instante: lugares guardados primero, luego Google.',
+    'it': 'Risultati in tempo reale: prima i luoghi salvati, poi Google.',
+    'zh': '输入即更新：先显示已保存地点，再显示 Google 结果。',
+    'ru': 'Обновление при вводе: сначала сохранённые места, затем Google.',
+  },
+  'noRoutesFromYourArea': {
+    'en': 'No priced routes from your current area.',
+    'fr': 'Aucun tarif disponible depuis votre zone actuelle.',
+    'ar': 'لا مسارات مسعّرة من منطقتك الحالية.',
+    'de': 'Keine Tarifstrecken aus deiner aktuellen Region.',
+    'es': 'No hay rutas con tarifa desde tu zona actual.',
+    'it': 'Nessuna tratta tariffata dalla tua zona attuale.',
+    'zh': '当前区域没有定价路线。',
+    'ru': 'Нет тарифных маршрутов из вашей текущей зоны.',
+  },
+  'destinationPlaceOutOfCoverage': {
+    'en': 'That place is outside the bookable destinations for your area.',
+    'fr': 'Ce lieu est hors des destinations réservables depuis votre zone.',
+    'ar': 'هذا المكان خارج الوجهات المتاحة لمنطقتك.',
+    'de': 'Dieser Ort liegt außerhalb der buchbaren Ziele für deine Region.',
+    'es': 'Ese sitio queda fuera de los destinos reservables desde tu zona.',
+    'it': 'Questo luogo è fuori dalle destinazioni prenotabili dalla tua zona.',
+    'zh': '该地点不在您当前区域的可预约目的地内。',
+    'ru': 'Это место вне списка доступных направлений для вашей зоны.',
+  },
+  'placesApiUnavailable': {
+    'en': 'Places search is unavailable (check API key / Places API).',
+    'fr': 'Recherche Places indisponible (clé API / API Places).',
+    'ar': 'بحث الأماكن غير متاح (تحقق من المفتاح وواجهة Places).',
+    'de': 'Places‑Suche nicht verfügbar (API‑Schlüssel / Places API).',
+    'es': 'Búsqueda de Places no disponible (clave API / Places API).',
+    'it': 'Ricerca Places non disponibile (chiave API / Places API).',
+    'zh': '地点搜索不可用（请检查 API 密钥与 Places API）。',
+    'ru': 'Поиск Places недоступен (ключ / Places API).',
+  },
+  'mapRecenterFollow': {
+    'en': 'Follow my position',
+    'fr': 'Suivre ma position',
+    'ar': 'تتبع موقعي',
+    'de': 'Position folgen',
+    'es': 'Seguir mi posición',
+    'it': 'Segui la mia posizione',
+    'zh': '跟随我的位置',
+    'ru': 'Следовать за мной',
+  },
+  'locationPermissionReservationNote': {
+    'en': 'Location permission denied — pickup zone is approximate until GPS is allowed.',
+    'fr':
+        'Autorisation de localisation refusée — la zone de prise en charge est approximative tant que le GPS est bloqué.',
+    'ar': 'تم رفض إذن الموقع — منطقة الانطلاق تقريبية حتى يُفعّل الـGPS.',
+    'de': 'Standort verweigert — Abholzone ist näherungsweise, bis GPS erlaubt ist.',
+    'es': 'Ubicación denegada — la zona de recogida es aproximada hasta permitir GPS.',
+    'it': 'Posizione negata — la zona di ritiro è approssimativa finché non consenti il GPS.',
+    'zh': '未授予定位权限 — 允许 GPS 前上车区域仅为近似。',
+    'ru': 'Доступ к геолокации отклонён — зона подачи приблизительна, пока не разрешите GPS.',
   },
   'reserveDriver': {
     'en': 'Reserve driver',
@@ -710,9 +976,9 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
   final _signupPasswordCtrl = TextEditingController();
   String _signupPhotoData = '';
   Map<String, double> _fares = {};
-  String? _locationText;
   String? _locationPlaceName;
-  double? _nearestZoneDistanceKm;
+  double? _mapLat;
+  double? _mapLng;
   String? _locationError;
   bool _locating = false;
   String? _token;
@@ -854,39 +1120,60 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     return '$m · $c';
   }
 
-  Widget _rideTripCompact(
-          {required String label,
-          required String value,
-          bool isLast = false}) =>
-      Padding(
-        padding: EdgeInsets.only(bottom: isLast ? 0 : 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 64,
-              child: Text(
-                label,
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: _C.charcoal.withOpacity(0.45),
-                    height: 1.35),
-              ),
+  Widget _rideTripCompact({
+    required String label,
+    required String value,
+    String? subtitle,
+    bool isLast = false,
+  }) {
+    final sub = (subtitle ?? '').trim();
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 64,
+            child: Text(
+              label,
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: _C.charcoal.withOpacity(0.45),
+                  height: 1.35),
             ),
-            Expanded(
-              child: Text(
-                value,
-                style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: _C.charcoal,
-                    height: 1.35),
-              ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: _C.charcoal,
+                      height: 1.35),
+                ),
+                if (sub.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    sub,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _C.charcoal.withOpacity(0.62),
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ],
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
+  }
 
   /// Matches stored ride pickup/destination to `/fares/airport` route keys.
   String? _matchFareRouteKey(String pickup, String dest) {
@@ -911,13 +1198,14 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     final routeKey = _matchFareRouteKey(r.pickup, r.destination);
     if (routeKey != null) {
       try {
-        final q = await _api.quoteAirport(routeKey);
+        final raw = r.scheduledPickupAt ?? r.createdAt;
+        final pt = DateTime.tryParse(raw ?? '')?.toUtc() ??
+            DateTime.now().toUtc();
+        final q = await _api.quoteAirport(routeKey, pricingTime: pt);
         km ??= (q['distance_km'] as num?)?.toDouble();
         if (fare == null) {
-          var b = (q['base_fare'] as num?)?.toDouble() ?? 0.0;
-          final h = DateTime.now().hour;
-          if (h >= 21 || h < 5) b *= 1.5;
-          fare = double.parse(b.toStringAsFixed(2));
+          fare = (q['final_fare'] as num?)?.toDouble() ??
+              (q['base_fare'] as num?)?.toDouble();
         }
       } catch (_) {}
     }
@@ -1127,12 +1415,9 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       final nearest = _nearestZoneFor(position.latitude, position.longitude);
       if (!mounted) return;
       setState(() {
-        _locationText =
-            '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
+        _mapLat = position.latitude;
+        _mapLng = position.longitude;
         _locationPlaceName = nearest.zone;
-        _nearestZoneDistanceKm = nearest.distanceMeters == null
-            ? null
-            : nearest.distanceMeters! / 1000.0;
       });
     } catch (e) {
       if (!mounted) return;
@@ -1156,10 +1441,101 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     return (zone: bestZone, distanceMeters: bestDist);
   }
 
-  Color _distanceColor(double km) {
-    if (km < 3.0) return _C.success;
-    if (km <= 10.0) return _C.yellowDeep;
-    return _C.danger;
+  Ride? _firstActiveAppRide() {
+    const active = {'pending', 'accepted', 'ongoing'};
+    for (final r in _rides) {
+      if (active.contains(r.status)) return r;
+    }
+    return null;
+  }
+
+  void _openRideRouteMap(Ride ride) {
+    if (!isGoogleMapsPlatformSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Carte : lancez l’app avec --dart-define=GOOGLE_MAPS_API_KEY=votre_clé '
+            '(Android/iOS). Voir aussi android/local.properties.',
+          ),
+        ),
+      );
+      return;
+    }
+    final gps = (_mapLat != null && _mapLng != null)
+        ? LatLng(_mapLat!, _mapLng!)
+        : null;
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => LiveTripMapScreen(
+          role: LiveTripMapRole.passenger,
+          myGps: gps,
+          focusRide: ride,
+        ),
+      ),
+    );
+  }
+
+  void _openPreviewRouteMap({
+    required String pickup,
+    required String destination,
+  }) {
+    if (!isGoogleMapsPlatformSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Carte : lancez l’app avec --dart-define=GOOGLE_MAPS_API_KEY=votre_clé '
+            '(Android/iOS). Voir aussi android/local.properties.',
+          ),
+        ),
+      );
+      return;
+    }
+    final gps = (_mapLat != null && _mapLng != null)
+        ? LatLng(_mapLat!, _mapLng!)
+        : null;
+    final preview = Ride(
+      id: 0,
+      userId: 0,
+      driverId: null,
+      status: 'pending',
+      pickup: pickup.trim(),
+      destination: destination.trim(),
+    );
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => LiveTripMapScreen(
+          role: LiveTripMapRole.passenger,
+          myGps: gps,
+          focusRide: preview,
+        ),
+      ),
+    );
+  }
+
+  void _openPassengerLiveMap() {
+    if (!isGoogleMapsPlatformSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Carte : lancez l’app avec --dart-define=GOOGLE_MAPS_API_KEY=votre_clé '
+            '(Android/iOS). Voir aussi android/local.properties.',
+          ),
+        ),
+      );
+      return;
+    }
+    final gps = (_mapLat != null && _mapLng != null)
+        ? LatLng(_mapLat!, _mapLng!)
+        : null;
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => LiveTripMapScreen(
+          role: LiveTripMapRole.passenger,
+          myGps: gps,
+          focusRide: _firstActiveAppRide(),
+        ),
+      ),
+    );
   }
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
@@ -1560,18 +1936,46 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
     final l10n = AppLocalizations.of(context)!;
     showDialog<void>(
         context: context,
-        builder: (_) => AlertDialog(
+        builder: (dCtx) => AlertDialog(
               backgroundColor: _C.surface,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20)),
               title: Text(l10n.passengerRideNotificationTitle,
                   style: const TextStyle(fontWeight: FontWeight.w700)),
-              content: Text(
-                  '${l10n.passengerRideNumberLine(ride.id)}\n${l10n.rideStatusFmt(localizedRideStatusLabel(l10n, ride.status))}\n${l10n.ridePickupLabel}: ${localizedPlaceName(l10n, ride.pickup)}\n${l10n.rideDestinationLabel}: ${localizedPlaceName(l10n, ride.destination)}',
-                  style: const TextStyle(color: _C.textMid, height: 1.6)),
+              content: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n.passengerRideNumberLine(ride.id),
+                      style: const TextStyle(
+                        color: _C.textMid,
+                        fontWeight: FontWeight.w700,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.rideStatusFmt(localizedRideStatusLabel(l10n, ride.status)),
+                      style: const TextStyle(color: _C.textMid, height: 1.5),
+                    ),
+                    const SizedBox(height: 14),
+                    RideAddressSummaryCard(ride: ride, l: l10n, compact: true),
+                  ],
+                ),
+              ),
               actions: [
+                if (isGoogleMapsPlatformSupported)
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(dCtx).pop();
+                      _openRideRouteMap(ride);
+                    },
+                    child: Text(_tx('openRouteMap')),
+                  ),
                 TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => Navigator.of(dCtx).pop(),
                     child: Text(l10n.dialogOk))
               ],
             ));
@@ -2078,6 +2482,79 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       return;
     }
 
+    final t0 = _token;
+    if (t0 == null) return;
+
+    if (isGoogleMapsPlatformSupported) {
+      if (!mounted) return;
+      final mapResult = await Navigator.of(context)
+          .push<PassengerReservationMapResult?>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => PassengerReservationMapScreen(
+            api: _api,
+            l: l,
+            allRouteKeys: allRouteKeys,
+            fares: _fares,
+            initialPickupZone: selectedFrom!,
+            passengerGps: (_mapLat != null && _mapLng != null)
+                ? LatLng(_mapLat!, _mapLng!)
+                : null,
+            tx: _tx,
+            formatScheduledDateTime: _formatScheduledDateTime,
+          ),
+        ),
+      );
+      if (mapResult == null || !mounted) return;
+      final routeKey = mapResult.routeKey;
+      final parts = routeKey.split(airportRouteKeySeparator);
+      final pu = parts.first.trim();
+      final de = parts.length > 1 ? parts[1].trim() : '';
+      setState(() => _busy = true);
+      try {
+        await _api.createRide(
+          token: t0,
+          pickup: pu,
+          destination: de,
+          scheduledPickupAt:
+              mapResult.scheduleLater ? mapResult.scheduledPickupAt : null,
+          pickupAddress: mapResult.pickupAddress,
+          pickupDisplayName: mapResult.pickupDisplayName,
+          destinationAddress: mapResult.destinationAddress,
+          destinationDisplayName: mapResult.destinationDisplayName,
+          pickupLat: mapResult.pickupLat,
+          pickupLng: mapResult.pickupLng,
+          destinationLat: mapResult.destinationLat,
+          destinationLng: mapResult.destinationLng,
+        );
+        await _refreshRides();
+        if (!mounted) return;
+        final promoCode = mapResult.promoCode;
+        final title = mapResult.scheduleLater
+            ? 'Scheduled ride requested'
+            : l.notificationRequestSentTitle;
+        final body = mapResult.scheduleLater
+            ? 'We are matching your reservation with available drivers.'
+            : l.notificationRequestSentBody;
+        _pushNotification(
+            title: title,
+            body: body,
+            event: mapResult.scheduleLater
+                ? 'scheduled_ride_searching'
+                : 'ride_request_sent');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(l.requestSentSnackLine(
+                l.fareDt(mapResult.finalFare.toStringAsFixed(3)),
+                promoCode.isEmpty ? '' : ' | $promoCode'))));
+        LocalNotificationService.instance.show(title: title, body: body);
+      } catch (e) {
+        setState(() => _message = e.toString());
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+      return;
+    }
+
     final promoCtrl = TextEditingController();
     String? selectedTo;
     String? selectedRouteKey;
@@ -2122,14 +2599,20 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
         return;
       }
       try {
-        final q = await _api.quoteAirport(key);
-        var fare = (q['base_fare'] as num?)?.toDouble() ?? (_fares[key] ?? 0);
-        if (promoCtrl.text.trim() == 'WELCOME26') fare *= 0.8;
-        final h = DateTime.now().hour;
-        if (h >= 21 || h < 5) fare *= 1.5;
-        q['final_fare'] = double.parse(fare.toStringAsFixed(3));
-        q['route_key'] = key;
-        ss(() => quote = q);
+        final DateTime pricingTime = scheduleLater && scheduledPickupAt != null
+            ? scheduledPickupAt!.toUtc()
+            : DateTime.now().toUtc();
+        final q = await _api.quoteAirport(key, pricingTime: pricingTime);
+        final merged = Map<String, dynamic>.from(q);
+        var finalFare = (merged['final_fare'] as num?)?.toDouble() ??
+            (merged['base_fare'] as num?)?.toDouble() ??
+            (_fares[key] ?? 0);
+        if (promoCtrl.text.trim() == 'WELCOME26') {
+          finalFare *= 0.8;
+        }
+        merged['final_fare'] = double.parse(finalFare.toStringAsFixed(3));
+        merged['route_key'] = key;
+        ss(() => quote = merged);
       } catch (_) {
         ss(() => quote = null);
       }
@@ -2188,10 +2671,29 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                   child: ListView(
                     shrinkWrap: true,
                     children: filtered()
-                        .map((d) => ListTile(
-                              title: Text(localizedPlaceName(l, d)),
-                              onTap: () => Navigator.pop(ctx, d),
-                            ))
+                        .map((d) {
+                          final ap = AirportPlaceHeuristics.zoneKeyLooksLikeAirport(d);
+                          return ListTile(
+                            leading: Icon(
+                              ap ? Icons.flight_takeoff_rounded : Icons.place_outlined,
+                              color: ap ? const Color(0xFF0D47A1) : _C.textMid,
+                            ),
+                            tileColor: ap
+                                ? const Color(0xFFE3F2FD).withValues(alpha: 0.75)
+                                : null,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            title: Text(
+                              localizedPlaceName(l, d),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: ap ? const Color(0xFF0D47A1) : _C.charcoal,
+                              ),
+                            ),
+                            onTap: () => Navigator.pop(ctx, d),
+                          );
+                        })
                         .toList(),
                   ),
                 ),
@@ -2257,6 +2759,32 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                     _tx('reserveRideBody'),
                     style: const TextStyle(color: _C.textSoft, fontSize: 12),
                   ),
+                  if (isGoogleMapsPlatformSupported) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: (selectedTo ?? '').trim().isEmpty
+                            ? null
+                            : () {
+                                final key =
+                                    findRouteKey(selectedFrom, selectedTo);
+                                if (key == null) return;
+                                final parts =
+                                    key.split(airportRouteKeySeparator);
+                                final pu = parts.first.trim();
+                                final de = parts.length > 1
+                                    ? parts[1].trim()
+                                    : '';
+                                if (pu.isEmpty || de.isEmpty) return;
+                                _openPreviewRouteMap(
+                                    pickup: pu, destination: de);
+                              },
+                        icon: const Icon(Icons.map_rounded, size: 18),
+                        label: Text(_tx('openRouteMap')),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   Container(
                     padding: const EdgeInsets.all(4),
@@ -2392,7 +2920,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                         border: Border.all(color: _C.border),
                       ),
                       child: Text(
-                        '${localizedPlaceName(l, selectedTo!)} • ${((quote!['distance_km'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)} km • ${((quote!['base_fare'] as num?)?.toDouble() ?? 0).toStringAsFixed(2)} DT',
+                        '${localizedPlaceName(l, selectedTo!)} • ${((quote!['distance_km'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)} km • ${((quote!['final_fare'] as num?)?.toDouble() ?? 0).toStringAsFixed(2)} DT',
                         style: const TextStyle(
                             fontSize: 13, fontWeight: FontWeight.w600),
                       ),
@@ -2415,28 +2943,24 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                       }),
                   const SizedBox(height: 16),
                   if (quote != null) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      decoration: BoxDecoration(
-                          color: _C.yellowSoft,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: _C.yellowDeep)),
-                      child: Column(children: [
-                        Text(
-                            '${(quote!['final_fare'] as num).toStringAsFixed(2)} DT',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                color: _C.charcoal,
-                                fontSize: 32,
-                                fontWeight: FontWeight.w900)),
-                        const SizedBox(height: 4),
-                        Text(l.passengerFareFinalEstimate,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                color: _C.textSoft, fontSize: 12)),
-                      ]),
+                    NightFareBreakdown(
+                      quote: quote!,
+                      promoLabel: promoCtrl.text.trim() == 'WELCOME26'
+                          ? 'WELCOME26 −20%'
+                          : null,
+                      nightRateLabel: l.nightFare50,
+                      baseLabel: l.fareAmount.split('(').first.trim(),
+                      surchargeLabel: 'Night surcharge',
+                      totalLabel: 'Total',
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
+                    Text(
+                      l.nightFareScheduleHint,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          color: _C.textSoft, fontSize: 11, height: 1.35),
+                    ),
+                    const SizedBox(height: 10),
                   ],
                   Row(children: [
                     Expanded(
@@ -2632,7 +3156,12 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
       _conversationIdByRideId[ride.id] = cid;
       await Navigator.of(context).push<void>(MaterialPageRoute<void>(
           builder: (_) => RideChatScreen(
-              token: t, myUserId: uid, rideId: ride.id, conversationId: cid)));
+                token: t,
+                myUserId: uid,
+                rideId: ride.id,
+                conversationId: cid,
+                minimalTripHeader: true,
+              )));
       if (mounted && _activeChatRideId == ride.id)
         setState(() => _activeChatRideId = null);
       await _primeReadWatermarkAfterChat(
@@ -2784,6 +3313,11 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
             IconButton(
                 onPressed: _busy ? null : _refreshRides,
                 icon: const Icon(Icons.refresh_rounded, color: _C.charcoal)),
+            IconButton(
+              onPressed: _openPassengerLiveMap,
+              tooltip: 'Carte',
+              icon: const Icon(Icons.map_rounded, color: _C.charcoal),
+            ),
             GestureDetector(
               onTap: _logout,
               child: Container(
@@ -3061,60 +3595,7 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 4),
-            // Location
-            _TaxiCard(
-                padding: 0,
-                child: ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  leading: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                              colors: [_C.yellowLight, _C.yellowDeep]),
-                          borderRadius: BorderRadius.circular(16)),
-                      child: const Icon(Icons.my_location_rounded,
-                          color: _C.charcoal, size: 20)),
-                  title: Text(
-                      _locationPlaceName != null
-                          ? localizedPlaceName(l, _locationPlaceName)
-                          : l.passengerLocationCurrent,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14)),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _locationPlaceName != null
-                            ? '($_locationText)'
-                            : (_locationText ??
-                                (_locating
-                                    ? l.passengerLocationDetecting
-                                    : (_locationError ??
-                                        l.passengerLocationUnavailable))),
-                        style:
-                            const TextStyle(color: _C.textSoft, fontSize: 11),
-                      ),
-                      if (_nearestZoneDistanceKm != null &&
-                          (_locationPlaceName ?? '').trim().isNotEmpty)
-                        Text(
-                          _tx('nearestZone',
-                              '${localizedPlaceName(l, _locationPlaceName)} (${_nearestZoneDistanceKm!.toStringAsFixed(1)} km)'),
-                          style: TextStyle(
-                            color: _distanceColor(_nearestZoneDistanceKm!),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                    ],
-                  ),
-                  trailing: IconButton(
-                      onPressed: _locating ? null : _detectPassengerLocation,
-                      icon: const Icon(Icons.refresh_rounded,
-                          color: _C.textMid, size: 18)),
-                )),
+            const SizedBox(height: 16),
             // Book
             _TaxiCard(
                 accent: true,
@@ -3365,10 +3846,12 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                       const SizedBox(height: 10),
                       _rideTripCompact(
                           label: l.ridePickupLabel,
-                          value: localizedPlaceName(l, r.pickup)),
+                          value: ridePickupTitle(r, l),
+                          subtitle: ridePickupAddressLine(r, l)),
                       _rideTripCompact(
                         label: l.rideDestinationLabel,
-                        value: localizedPlaceName(l, r.destination),
+                        value: rideDestinationTitle(r, l),
+                        subtitle: rideDestinationAddressLine(r, l),
                         isLast: true,
                       ),
                       if ((r.scheduledPickupAt ?? '').isNotEmpty) ...[
@@ -3515,6 +3998,35 @@ class _AppPassengerScreenState extends State<AppPassengerScreen> {
                         spacing: 6,
                         runSpacing: 6,
                         children: [
+                          if (isGoogleMapsPlatformSupported)
+                            GestureDetector(
+                              onTap: _busy
+                                  ? null
+                                  : () => _openRideRouteMap(r),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: _C.yellowSoft,
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                      color: _C.yellowDeep.withOpacity(0.45)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.map_rounded,
+                                        color: _C.charcoal, size: 14),
+                                    const SizedBox(width: 5),
+                                    Text(_tx('openRouteMap'),
+                                        style: const TextStyle(
+                                            color: _C.charcoal,
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w800)),
+                                  ],
+                                ),
+                              ),
+                            ),
                           if (r.status != 'completed' &&
                               r.status != 'cancelled')
                             GestureDetector(

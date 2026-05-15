@@ -17,9 +17,10 @@ import '../l10n/place_localization.dart';
 import '../l10n/ride_status_localization.dart';
 import '../services/session_store.dart';
 import '../services/taxi_app_service.dart';
-import '../theme/taxi_app_theme.dart';
 import '../widgets/locale_popup_menu.dart';
+import '../widgets/live_ride_request_summary.dart';
 import '../widgets/management_platform_ui.dart';
+import '../widgets/todays_flight_arrivals_panel.dart';
 import '../widgets/voom_logo.dart';
 import 'unified_login_screen.dart';
 
@@ -46,6 +47,7 @@ class _C {
 const int _operatorInitialRideRows = 18;
 const int _operatorInitialB2bBookingRows = 18;
 const int _operatorListPageStep = 18;
+const int kOperatorPortalTabCount = 6;
 
 Color _operatorRideStatusColor(String status) {
   switch (status.trim().toLowerCase()) {
@@ -180,10 +182,6 @@ class _DarkButton extends StatelessWidget {
   }
 }
 
-Widget _kpiChip({required IconData icon, required String label}) =>
-    ManagementStatusPill(
-        label: label, color: _C.charcoal, background: _C.yellowSoft);
-
 class _StatChip extends StatelessWidget {
   const _StatChip({
     required this.label,
@@ -205,21 +203,6 @@ class _StatChip extends StatelessWidget {
         color: color,
       );
 }
-
-Widget _rowInfoCard({
-  required IconData icon,
-  required Widget content,
-  Widget? trailing,
-  Color iconBg = _C.surfaceAlt,
-  Color iconColor = _C.charcoal,
-}) =>
-    ManagementInfoRowCard(
-      icon: icon,
-      content: content,
-      trailing: trailing,
-      iconBg: iconBg,
-      iconColor: iconColor,
-    );
 
 Widget _b2bStatusPill({required bool enabled}) => ManagementStatusPill(
       label: enabled ? 'Active' : 'Paused',
@@ -243,28 +226,30 @@ class _SectionHead extends StatelessWidget {
 
 class _OperatorRideCard extends StatelessWidget {
   const _OperatorRideCard({
+    required this.ride,
     required this.route,
     required this.status,
     required this.statusLabel,
-    required this.riderType,
-    required this.riderName,
-    required this.driverName,
+    required this.isB2b,
     required this.distance,
     required this.price,
-    required this.createdAt,
-    required this.isB2b,
+    required this.timeLabel,
+    required this.passengerSectionTitle,
+    required this.b2bSectionTitle,
+    required this.driverSectionTitle,
   });
 
+  final Map<String, dynamic> ride;
   final String route;
   final String status;
   final String statusLabel;
-  final String riderType;
-  final String riderName;
-  final String driverName;
+  final bool isB2b;
   final String distance;
   final String price;
-  final String createdAt;
-  final bool isB2b;
+  final String timeLabel;
+  final String passengerSectionTitle;
+  final String b2bSectionTitle;
+  final String driverSectionTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -295,18 +280,6 @@ class _OperatorRideCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    route,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: _C.textStrong,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
                   Wrap(spacing: 6, runSpacing: 6, children: [
                     ManagementStatusPill(
                       label: statusLabel,
@@ -314,107 +287,44 @@ class _OperatorRideCard extends StatelessWidget {
                       background: color.withOpacity(0.10),
                     ),
                     ManagementStatusPill(
-                      label: isB2b ? 'B2B' : riderType,
+                      label: isB2b ? 'B2B' : passengerSectionTitle,
                       color: isB2b ? _C.info : _C.charcoal,
                       background: isB2b ? _C.infoBg : _C.yellowSoft,
                     ),
-                    ManagementStatusPill(
-                      label: price,
-                      color: _C.success,
-                      background: _C.successBg,
-                    ),
                   ]),
+                  if (route.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      route,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _C.textSoft,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
           ]),
-          const SizedBox(height: 12),
-          ManagementResponsiveWrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _OperatorRideInfoTile(
-                icon: Icons.person_outline_rounded,
-                label: riderType,
-                value: riderName.isEmpty ? '-' : riderName,
-              ),
-              _OperatorRideInfoTile(
-                icon: Icons.local_taxi_outlined,
-                label: 'Driver',
-                value: driverName.isEmpty ? '-' : driverName,
-              ),
-              _OperatorRideInfoTile(
-                icon: Icons.route_rounded,
-                label: 'Distance',
-                value: distance,
-              ),
-              _OperatorRideInfoTile(
-                icon: Icons.payments_outlined,
-                label: 'Price',
-                value: price,
-              ),
-              _OperatorRideInfoTile(
-                icon: Icons.schedule_rounded,
-                label: 'Created',
-                value: createdAt.isEmpty ? '-' : createdAt,
-              ),
-            ],
+          LiveRideRequestSummary(
+            ride: ride,
+            distanceLabel: distance,
+            priceLabel: price,
+            timeLabel: timeLabel.isEmpty ? '—' : timeLabel,
+            labelColor: _C.textSoft,
+            valueColor: _C.textStrong,
+            borderColor: _C.border,
+            sectionBg: _C.surfaceAlt.withOpacity(0.55),
+            passengerSectionTitle: passengerSectionTitle,
+            b2bSectionTitle: b2bSectionTitle,
+            driverLabel: driverSectionTitle,
           ),
         ]),
       ),
-    );
-  }
-}
-
-class _OperatorRideInfoTile extends StatelessWidget {
-  const _OperatorRideInfoTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
-      decoration: BoxDecoration(
-        color: _C.surfaceAlt.withOpacity(0.78),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _C.border.withOpacity(0.78)),
-      ),
-      child: Row(children: [
-        Icon(icon, color: _C.textSoft, size: 16),
-        const SizedBox(width: 8),
-        Expanded(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: _C.textSoft,
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: _C.textStrong,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ]),
-        ),
-      ]),
     );
   }
 }
@@ -526,13 +436,11 @@ class _OperatorScreenState extends State<OperatorScreen>
   final _newDriverCarModel = TextEditingController();
   final _newDriverCarColor = TextEditingController();
   String _newDriverPhotoData = '';
-  final _topUpAmountController = TextEditingController(text: '10');
   TabController? _tabController;
   bool _obscureOperatorPassword = true;
   bool _obscureNewDriverPin = true;
   String? _token;
   String? _message;
-  List<Map<String, dynamic>> _trips = [];
   List<Map<String, dynamic>> _adminRides = [];
   List<Map<String, dynamic>> _driverPinAccounts = [];
   List<Map<String, dynamic>> _managedDriverUsers = [];
@@ -548,8 +456,8 @@ class _OperatorScreenState extends State<OperatorScreen>
   String _b2bBookingStatusFilter = 'all';
   int _visibleRideRows = _operatorInitialRideRows;
   int _visibleB2bBookingRows = _operatorInitialB2bBookingRows;
-  int? _topUpAccountId;
   bool _busy = false;
+  final Set<int> _operatorTabsHydrated = {};
   Future<void> _goToHome() async {
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
@@ -672,9 +580,6 @@ class _OperatorScreenState extends State<OperatorScreen>
       .where((r) => _rideStatusBucket((r['status'] ?? '').toString()) == status)
       .length;
 
-  double get _tripVaultRevenue => _trips.fold<double>(
-      0.0, (sum, t) => sum + ((t['fare'] as num?)?.toDouble() ?? 0.0));
-
   bool _isRealManagedDriver(Map<String, dynamic> u) {
     final email = (u['email'] ?? '').toString().toLowerCase();
     if (email.endsWith('@taxipro.local')) return false;
@@ -695,6 +600,8 @@ class _OperatorScreenState extends State<OperatorScreen>
   };
 
   double? _rideDistanceKm(Map<String, dynamic> r) {
+    final q = r['quoted_distance_km'];
+    if (q is num) return q.toDouble();
     final pickup = (r['pickup'] ?? '').toString().trim();
     final destination = (r['destination'] ?? '').toString().trim();
     final a = _zoneCoords[pickup];
@@ -706,9 +613,19 @@ class _OperatorScreenState extends State<OperatorScreen>
   }
 
   String _ridePrice(Map<String, dynamic> r) {
-    final p = r['b2b_fare'] ?? r['fare'];
-    if (p is num) return '${p.toStringAsFixed(2)} DT';
+    final b2b = r['b2b_fare'];
+    if (b2b is num) return '${b2b.toStringAsFixed(2)} DT';
+    final quoted = r['quoted_fare_dt'];
+    if (quoted is num) return '${quoted.toStringAsFixed(2)} DT';
+    final f = r['fare'];
+    if (f is num) return '${f.toStringAsFixed(2)} DT';
     return '-';
+  }
+
+  String _requestLiveTime(Map<String, dynamic> r) {
+    final sched = (r['scheduled_pickup_at'] ?? '').toString().trim();
+    if (sched.isNotEmpty) return sched;
+    return (r['created_at'] ?? '').toString().trim();
   }
 
   String _rideStatusBucket(String raw) {
@@ -906,7 +823,8 @@ class _OperatorScreenState extends State<OperatorScreen>
       rememberCurrentLocaleForRole(AppUiRole.operator);
       _token = r.accessToken;
       await SessionStore.saveOperatorToken(r.accessToken);
-      await _refreshAll();
+      _operatorTabsHydrated.clear();
+      await _ensureOperatorTabHydrated(0);
     } catch (e) {
       setState(() => _message = e.toString());
     } finally {
@@ -914,9 +832,157 @@ class _OperatorScreenState extends State<OperatorScreen>
     }
   }
 
+  void _applyOperatorManagedUsers(List<Map<String, dynamic>> appUsersTyped) {
+    final appDriverUsers = appUsersTyped
+        .where((u) => (u['role'] ?? '') == 'driver')
+        .where(_isRealManagedDriver)
+        .map((u) => {...u, 'source': 'app_user'})
+        .cast<Map<String, dynamic>>()
+        .toList();
+    _managedDriverUsers = appDriverUsers;
+    _managedB2bUsers =
+        appUsersTyped.where((u) => (u['role'] ?? '') == 'b2b').toList();
+  }
+
+  void _onOperatorTabChanged() {
+    final c = _tabController;
+    if (c == null || c.indexIsChanging) return;
+    unawaited(_ensureOperatorTabHydrated(c.index));
+  }
+
+  Future<void> _ensureOperatorTabHydrated(int tab) async {
+    if (_token == null || _operatorTabsHydrated.contains(tab)) return;
+    final ok = await _loadOperatorTabData(tab);
+    if (mounted && ok) setState(() => _operatorTabsHydrated.add(tab));
+  }
+
+  Future<bool> _loadOperatorTabData(int tab) async {
+    final t = _token;
+    if (t == null) return false;
+    Future<T?> safe<T>(Future<T> r) async {
+      try {
+        return await r;
+      } catch (_) {
+        return null;
+      }
+    }
+    if (mounted) setState(() => _busy = true);
+    var ok = true;
+    try {
+      switch (tab) {
+        case 0:
+          if (mounted) setState(() => _message = null);
+          break;
+        case 1:
+          final rides = await safe(_api.listAdminRides(t, limit: 80));
+          if (!mounted) return false;
+          if (rides == null) {
+            setState(() => _message =
+                'Cannot reach API server. Check backend IP/network.');
+            ok = false;
+            break;
+          }
+          setState(() {
+            _adminRides = rides.cast<Map<String, dynamic>>();
+            _visibleRideRows = _operatorInitialRideRows;
+            _message = null;
+          });
+          break;
+        case 2:
+          final pinsF = safe(_api.listAdminDriverPinAccounts(t));
+          final pendF = safe(_api.listAdminPendingUsers(t, limit: 80));
+          final usersF = safe(_api.listAdminUsers(t, limit: 160));
+          await Future.wait([pinsF, pendF, usersF]);
+          final driverPins = await pinsF;
+          final pendingApprovals = await pendF;
+          final appUsers = await usersF;
+          if (!mounted) return false;
+          if (driverPins == null ||
+              pendingApprovals == null ||
+              appUsers == null) {
+            setState(() => _message =
+                'Cannot reach API server. Check backend IP/network.');
+            ok = false;
+            break;
+          }
+          setState(() {
+            _driverPinAccounts = driverPins.cast<Map<String, dynamic>>();
+            _pendingApprovals =
+                pendingApprovals.cast<Map<String, dynamic>>();
+            _applyOperatorManagedUsers(appUsers.cast<Map<String, dynamic>>());
+            _message = null;
+          });
+          break;
+        case 3:
+          final ratingsF = safe(_api.listAdminDriverRatings(t));
+          final usersF = safe(_api.listAdminUsers(t, limit: 160));
+          await Future.wait([ratingsF, usersF]);
+          final ratings = await ratingsF;
+          final appUsers = await usersF;
+          if (!mounted) return false;
+          if (ratings == null || appUsers == null) {
+            setState(() => _message =
+                'Cannot reach API server. Check backend IP/network.');
+            ok = false;
+            break;
+          }
+          setState(() {
+            _driverRatings = ratings.cast<Map<String, dynamic>>();
+            _applyOperatorManagedUsers(appUsers.cast<Map<String, dynamic>>());
+            _message = null;
+          });
+          break;
+        case 4:
+          final fr = await safe(_api.listAdminTunisiaFlightArrivals(t));
+          if (!mounted) return false;
+          if (fr == null) {
+            setState(() => _message =
+                'Cannot reach API server. Check backend IP/network.');
+            ok = false;
+            break;
+          }
+          setState(() {
+            _flightArrivals = fr.flights;
+            _flightDataSource = fr.source;
+            _message = null;
+          });
+          break;
+        case 5:
+          final b2bF = safe(_api.listAdminB2bTenants(t));
+          final bookF = safe(_api.listAdminB2bBookings(t, limit: 80));
+          final usersF = safe(_api.listAdminUsers(t, limit: 160));
+          await Future.wait([b2bF, bookF, usersF]);
+          final b2bTenants = await b2bF;
+          final b2bBookings = await bookF;
+          final appUsers = await usersF;
+          if (!mounted) return false;
+          if (b2bTenants == null || b2bBookings == null || appUsers == null) {
+            setState(() => _message =
+                'Cannot reach API server. Check backend IP/network.');
+            ok = false;
+            break;
+          }
+          setState(() {
+            _adminB2b = b2bTenants.cast<Map<String, dynamic>>();
+            _adminB2bBookings = b2bBookings.cast<Map<String, dynamic>>();
+            _visibleB2bBookingRows = _operatorInitialB2bBookingRows;
+            _applyOperatorManagedUsers(appUsers.cast<Map<String, dynamic>>());
+            _message = null;
+          });
+          break;
+        default:
+          ok = false;
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    return ok;
+  }
+
   Future<void> _refreshAll() async {
     final t = _token;
     if (t == null) return;
+    _operatorTabsHydrated.clear();
     setState(() {
       _busy = true;
       _message = null;
@@ -931,7 +997,6 @@ class _OperatorScreenState extends State<OperatorScreen>
       }
 
       final results = await Future.wait<dynamic>([
-        safe(_api.listTrips(t)),
         safe(_api.listAdminRides(t, limit: 80)),
         safe(_api.listAdminDriverPinAccounts(t)),
         safe(_api.listAdminB2bTenants(t)),
@@ -941,19 +1006,17 @@ class _OperatorScreenState extends State<OperatorScreen>
         safe(_api.listAdminPendingUsers(t, limit: 80)),
         safe(_api.listAdminUsers(t, limit: 160)),
       ]);
-      final trips = results[0] as List<dynamic>?;
-      final rides = results[1] as List<dynamic>?;
-      final driverPins = results[2] as List<dynamic>?;
-      final b2bTenants = results[3] as List<dynamic>?;
-      final b2bBookings = results[4] as List<dynamic>?;
+      final rides = results[0] as List<dynamic>?;
+      final driverPins = results[1] as List<dynamic>?;
+      final b2bTenants = results[2] as List<dynamic>?;
+      final b2bBookings = results[3] as List<dynamic>?;
       final fr =
-          results[5] as ({List<Map<String, dynamic>> flights, String? source})?;
-      final ratings = results[6] as List<dynamic>?;
-      final pendingApprovals = results[7] as List<dynamic>?;
-      final appUsers = results[8] as List<dynamic>?;
+          results[4] as ({List<Map<String, dynamic>> flights, String? source})?;
+      final ratings = results[5] as List<dynamic>?;
+      final pendingApprovals = results[6] as List<dynamic>?;
+      final appUsers = results[7] as List<dynamic>?;
 
-      if (trips == null ||
-          rides == null ||
+      if (rides == null ||
           driverPins == null ||
           b2bTenants == null ||
           b2bBookings == null ||
@@ -966,17 +1029,6 @@ class _OperatorScreenState extends State<OperatorScreen>
         return;
       }
       setState(() {
-        _trips = trips
-            .map(
-              (e) => {
-                'id': e.id,
-                'date': e.date,
-                'route': e.route,
-                'fare': e.fare,
-                'status': e.status,
-              },
-            )
-            .toList();
         _adminRides = rides.cast<Map<String, dynamic>>();
         _driverPinAccounts = driverPins.cast<Map<String, dynamic>>();
         _adminB2b = b2bTenants.cast<Map<String, dynamic>>();
@@ -988,23 +1040,10 @@ class _OperatorScreenState extends State<OperatorScreen>
         _driverRatings = ratings.cast<Map<String, dynamic>>();
         _pendingApprovals = pendingApprovals.cast<Map<String, dynamic>>();
         final appUsersTyped = appUsers.cast<Map<String, dynamic>>();
-        final appDriverUsers = appUsersTyped
-            .where((u) => (u['role'] ?? '') == 'driver')
-            .where(_isRealManagedDriver)
-            .map((u) => {...u, 'source': 'app_user'})
-            .cast<Map<String, dynamic>>()
-            .toList();
-        _managedDriverUsers = appDriverUsers;
-        _managedB2bUsers =
-            appUsersTyped.where((u) => (u['role'] ?? '') == 'b2b').toList();
-        final ids = driverPins
-            .map((e) => (e['id'] as num?)?.toInt())
-            .whereType<int>()
-            .toList();
-        if (_topUpAccountId != null && !ids.contains(_topUpAccountId)) {
-          _topUpAccountId = null;
-        }
-        _topUpAccountId ??= ids.isEmpty ? null : ids.first;
+        _applyOperatorManagedUsers(appUsersTyped);
+        _operatorTabsHydrated
+          ..clear()
+          ..addAll({0, 1, 2, 3, 4, 5});
       });
     } catch (e) {
       final msg = e.toString();
@@ -1448,7 +1487,8 @@ class _OperatorScreenState extends State<OperatorScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: kOperatorPortalTabCount, vsync: this);
+    _tabController!.addListener(_onOperatorTabChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       restoreUiRoleLocale(AppUiRole.operator);
@@ -1456,13 +1496,15 @@ class _OperatorScreenState extends State<OperatorScreen>
       if (t != null && t.isNotEmpty && _token == null) {
         _token = t;
         unawaited(SessionStore.saveOperatorToken(t));
-        _refreshAll();
+        _operatorTabsHydrated.clear();
+        unawaited(_ensureOperatorTabHydrated(0));
       }
     });
   }
 
   @override
   void dispose() {
+    _tabController?.removeListener(_onOperatorTabChanged);
     _tabController?.dispose();
     _secretController.dispose();
     _newDriverPhone.dispose();
@@ -1471,7 +1513,6 @@ class _OperatorScreenState extends State<OperatorScreen>
     _newDriverPin.dispose();
     _newDriverCarModel.dispose();
     _newDriverCarColor.dispose();
-    _topUpAmountController.dispose();
     super.dispose();
   }
 
@@ -1847,57 +1888,6 @@ class _OperatorScreenState extends State<OperatorScreen>
     }
   }
 
-  String _arrivalAirportLabel(Map<String, dynamic> row) {
-    final code = Localizations.localeOf(context).languageCode;
-    if (code == 'ar') {
-      return row['arrival_airport_ar']?.toString() ??
-          row['arrival_airport_en']?.toString() ??
-          '';
-    }
-    return row['arrival_airport_en']?.toString() ??
-        row['arrival_airport_ar']?.toString() ??
-        '';
-  }
-
-  String _departureAirportLabel(Map<String, dynamic> row) {
-    final city = (row['departure_city'] ?? '').toString().trim();
-    final country = (row['departure_country'] ?? '').toString().trim();
-    final iata = (row['departure_iata'] ?? '').toString().trim().toUpperCase();
-    if (city.isNotEmpty && country.isNotEmpty && iata.isNotEmpty) {
-      return '$city, $country ($iata)';
-    }
-    return (row['departure_airport'] ?? '').toString();
-  }
-
-  String _prettyDateTime(String raw) {
-    final s = raw.trim();
-    if (s.isEmpty) return '';
-    final normalized = s.replaceFirst(' - ', 'T').replaceFirst(' ', 'T');
-    final dt = DateTime.tryParse(normalized) ?? DateTime.tryParse(s);
-    if (dt == null) return s;
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    final local = dt.toLocal();
-    final day = local.day.toString().padLeft(2, '0');
-    final mon = months[local.month - 1];
-    final year = local.year.toString();
-    final hh = local.hour.toString().padLeft(2, '0');
-    final mm = local.minute.toString().padLeft(2, '0');
-    return '$day $mon $year – $hh:$mm';
-  }
-
   String _uiText({
     required String en,
     required String ar,
@@ -1917,6 +1907,297 @@ class _OperatorScreenState extends State<OperatorScreen>
     if (code.startsWith('ru')) return ru;
     if (code.startsWith('zh')) return zh;
     return en;
+  }
+
+  Widget _buildOperatorHomeTab(AppLocalizations l) {
+    final tc = _tabController;
+    void go(int i) {
+      if (tc != null) tc.animateTo(i);
+    }
+
+    Widget tile({
+      required IconData icon,
+      required String title,
+      required String subtitle,
+      required int tabIndex,
+      List<Color>? gradient,
+    }) {
+      final g = gradient ??
+          const [Color(0xFFFFF6D5), Color(0xFFFFE08A)];
+      return Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => go(tabIndex),
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              gradient: LinearGradient(
+                colors: g,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: _C.charcoal.withValues(alpha: 0.08)),
+              boxShadow: [
+                BoxShadow(
+                  color: _C.charcoal.withValues(alpha: 0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(icon, color: _C.charcoal, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                            color: _C.charcoal,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: _C.charcoal.withValues(alpha: 0.52),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded,
+                      color: _C.charcoal.withValues(alpha: 0.35)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      color: _C.yellow,
+      onRefresh: _refreshAll,
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final wide = c.maxWidth >= 520;
+          final cross = wide ? 2 : 1;
+          final tiles = <Widget>[
+            tile(
+              icon: Icons.bolt_rounded,
+              title: _uiText(
+                en: 'Live orders',
+                ar: 'طلبات مباشرة',
+                fr: 'Commandes live',
+                es: 'Pedidos en vivo',
+                de: 'Live-Auftraege',
+                it: 'Ordini live',
+                ru: 'Заказы',
+                zh: '实时订单',
+              ),
+              subtitle: _uiText(
+                en: 'Dispatch and ride pipeline',
+                ar: 'الإرسال وقائمة الطلبات',
+                fr: 'Dispatch et file',
+                es: 'Despacho y cola',
+                de: 'Dispatch',
+                it: 'Dispatch',
+                ru: 'Диспетчер',
+                zh: '调度',
+              ),
+              tabIndex: 1,
+            ),
+            tile(
+              icon: Icons.groups_rounded,
+              title: _uiText(
+                en: 'Fleet',
+                ar: 'الأسطول',
+                fr: 'Flotte',
+                es: 'Flota',
+                de: 'Flotte',
+                it: 'Flotta',
+                ru: 'Флот',
+                zh: '车队',
+              ),
+              subtitle: _uiText(
+                en: 'Approvals and driver accounts',
+                ar: 'الموافقات وحسابات السائقين',
+                fr: 'Validations et comptes',
+                es: 'Aprobaciones y cuentas',
+                de: 'Freigaben und Konten',
+                it: 'Approvazioni',
+                ru: 'Заявки и аккаунты',
+                zh: '审批与账号',
+              ),
+              tabIndex: 2,
+              gradient: const [Color(0xFFE8F4FF), Color(0xFFD0E8FF)],
+            ),
+            tile(
+              icon: Icons.star_rate_rounded,
+              title: _uiText(
+                en: 'Ratings',
+                ar: 'التقييمات',
+                fr: 'Notes',
+                es: 'Valoraciones',
+                de: 'Bewertungen',
+                it: 'Valutazioni',
+                ru: 'Рейтинги',
+                zh: '评分',
+              ),
+              subtitle: _uiText(
+                en: 'Driver quality overview',
+                ar: 'نظرة على جودة السائقين',
+                fr: 'Qualite chauffeurs',
+                es: 'Calidad de conductores',
+                de: 'Qualitaet',
+                it: 'Qualita',
+                ru: 'Качество',
+                zh: '质量概览',
+              ),
+              tabIndex: 3,
+              gradient: const [Color(0xFFFFF9E6), Color(0xFFFFEFC2)],
+            ),
+            tile(
+              icon: Icons.flight_land_rounded,
+              title: _uiText(
+                en: "Today's arrivals",
+                ar: 'وصولات اليوم',
+                fr: 'Arrivees du jour',
+                es: 'Llegadas',
+                de: 'Ankuenfte',
+                it: 'Arrivi',
+                ru: 'Прилеты',
+                zh: '今日到达',
+              ),
+              subtitle: _uiText(
+                en: 'Inbound flight board',
+                ar: 'لوحة الوصول',
+                fr: 'Tableau arrivees',
+                es: 'Panel llegadas',
+                de: 'Ankunftstafel',
+                it: 'Tabellone',
+                ru: 'Табло',
+                zh: '进港',
+              ),
+              tabIndex: 4,
+              gradient: const [Color(0xFFE6F7FF), Color(0xFFD0EFFF)],
+            ),
+            tile(
+              icon: Icons.apartment_rounded,
+              title: _uiText(
+                en: 'Hostel B2B',
+                ar: 'حسابات الفنادق',
+                fr: 'Comptes B2B',
+                es: 'Cuentas B2B',
+                de: 'B2B',
+                it: 'B2B',
+                ru: 'B2B',
+                zh: 'B2B',
+              ),
+              subtitle: _uiText(
+                en: 'Tenants and bookings',
+                ar: 'الشركاء والحجوزات',
+                fr: 'Locataires et resa',
+                es: 'Inquilinos',
+                de: 'Mieter',
+                it: 'Tenant',
+                ru: 'Брони',
+                zh: '预订',
+              ),
+              tabIndex: 5,
+              gradient: const [Color(0xFFFFF0F0), Color(0xFFFFE4E4)],
+            ),
+          ];
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+            children: [
+              _Module(
+                accent: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _SectionHead(
+                      _uiText(
+                        en: 'Operator hub',
+                        ar: 'مركز المشغّل',
+                        fr: 'Hub operateur',
+                        es: 'Centro operador',
+                        de: 'Operator-Hub',
+                        it: 'Hub operatore',
+                        ru: 'Пульт оператора',
+                        zh: '运营中心',
+                      ),
+                      subtitle: _uiText(
+                        en: 'Jump to a workspace — data loads when you open it.',
+                        ar: 'انتقل إلى قسم — التحميل عند الفتح',
+                        fr: 'Chargement a la demande',
+                        es: 'Carga bajo demanda',
+                        de: 'Laden bei Bedarf',
+                        it: 'Caricamento on demand',
+                        ru: 'По запросу',
+                        zh: '按需加载',
+                      ),
+                      trailing: _DarkButton(
+                        label: _uiText(
+                          en: 'Refresh all',
+                          ar: 'تحديث الكل',
+                          fr: 'Tout rafraichir',
+                          es: 'Actualizar todo',
+                          de: 'Alles aktualisieren',
+                          it: 'Aggiorna tutto',
+                          ru: 'Обновить все',
+                          zh: '全部刷新',
+                        ),
+                        icon: Icons.refresh_rounded,
+                        onPressed: _busy ? null : _refreshAll,
+                        small: true,
+                        fullWidth: false,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              _SectionHead(
+                _uiText(
+                  en: 'Navigate',
+                  ar: 'تنقّل',
+                  fr: 'Navigation',
+                  es: 'Navegar',
+                  de: 'Navigation',
+                  it: 'Naviga',
+                  ru: 'Разделы',
+                  zh: '导航',
+                ),
+              ),
+              const SizedBox(height: 10),
+              GridView.count(
+                crossAxisCount: cross,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: wide ? 2.25 : 1.85,
+                children: tiles,
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   Widget _buildArrivalsTab(AppLocalizations l) {
@@ -1980,73 +2261,11 @@ class _OperatorScreenState extends State<OperatorScreen>
           )
         else
           _Module(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowColor: WidgetStateProperty.all(_C.charcoal),
-                headingTextStyle: const TextStyle(
-                    color: _C.yellow,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                    letterSpacing: 0.5),
-                border:
-                    TableBorder(horizontalInside: BorderSide(color: _C.border)),
-                columns: [
-                  DataColumn(label: Text(l.operatorColFlightNumber)),
-                  const DataColumn(label: Text('Airline')),
-                  const DataColumn(label: Text('Status')),
-                  const DataColumn(label: Text('Aircraft')),
-                  DataColumn(label: Text(l.operatorColDepartureAirport)),
-                  DataColumn(label: Text(l.operatorColTakeoffTime)),
-                  DataColumn(label: Text(l.operatorColExpectedArrival)),
-                  const DataColumn(label: Text('Last update')),
-                  const DataColumn(label: Text('Speed')),
-                  const DataColumn(label: Text('Altitude')),
-                  DataColumn(label: Text(l.operatorColArrivalAirportTn)),
-                ],
-                rows: _flightArrivals.map((r) {
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(r['flight_number']?.toString() ?? '',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 13))),
-                      DataCell(Text((r['airline'] ?? '').toString(),
-                          style: const TextStyle(fontSize: 13))),
-                      DataCell(Text((r['status'] ?? '').toString(),
-                          style: const TextStyle(fontSize: 13))),
-                      DataCell(Text((r['aircraft'] ?? '').toString(),
-                          style: const TextStyle(fontSize: 13))),
-                      DataCell(Text(_departureAirportLabel(r),
-                          style: const TextStyle(fontSize: 13))),
-                      DataCell(Text(r['takeoff_time']?.toString() ?? '',
-                          style: const TextStyle(fontSize: 13))),
-                      DataCell(Text(
-                        (() {
-                          final raw = _prettyDateTime(
-                              r['expected_arrival']?.toString() ?? '');
-                          return raw.trim().isEmpty ? '-' : raw;
-                        })(),
-                        style: const TextStyle(fontSize: 13),
-                      )),
-                      DataCell(Text(
-                          _prettyDateTime(r['last_update']?.toString() ?? ''),
-                          style: const TextStyle(fontSize: 13))),
-                      DataCell(Text(
-                          (r['speed_kmh'] == null)
-                              ? '-'
-                              : '${r['speed_kmh']} km/h',
-                          style: const TextStyle(fontSize: 13))),
-                      DataCell(Text(
-                          (r['altitude_m'] == null)
-                              ? '-'
-                              : '${r['altitude_m']} m',
-                          style: const TextStyle(fontSize: 13))),
-                      DataCell(Text(_arrivalAirportLabel(r),
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 13))),
-                    ],
-                  );
-                }).toList(),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: TodaysFlightArrivalsCardList(
+                rows: _flightArrivals,
+                theme: FlightArrivalsVisualTokens.management(),
               ),
             ),
           ),
@@ -2208,19 +2427,9 @@ class _OperatorScreenState extends State<OperatorScreen>
               else
                 ...visibleRides.map((r) {
                   final isB2b = r['is_b2b'] == true;
-                  final riderName = (isB2b
-                              ? (r['b2b_guest_name'] ??
-                                  r['passenger_name'] ??
-                                  r['user_id'])
-                              : (r['passenger_name'] ?? r['user_id']))
-                          ?.toString()
-                          .trim() ??
-                      '';
-                  final driverName = (r['driver_name'] ?? r['driver_id'] ?? '')
-                      .toString()
-                      .trim();
                   final status = (r['status'] ?? '').toString();
                   return _OperatorRideCard(
+                    ride: r,
                     route: localizedRideRouteRow(
                       l,
                       r['pickup']?.toString() ?? '',
@@ -2228,14 +2437,22 @@ class _OperatorScreenState extends State<OperatorScreen>
                     ),
                     status: status,
                     statusLabel: _operatorRideStatusLabel(l, status),
-                    riderType: isB2b ? l.roleB2b : l.rolePassenger,
-                    riderName: riderName,
-                    driverName: driverName,
+                    isB2b: isB2b,
                     distance:
                         '${_rideDistanceKm(r)?.toStringAsFixed(1) ?? '-'} km',
                     price: _ridePrice(r),
-                    createdAt: (r['created_at'] ?? '').toString(),
-                    isB2b: isB2b,
+                    timeLabel: _requestLiveTime(r),
+                    passengerSectionTitle: l.rolePassenger,
+                    b2bSectionTitle: l.roleB2b,
+                    driverSectionTitle: _uiText(
+                        en: 'Driver',
+                        ar: 'السائق',
+                        fr: 'Chauffeur',
+                        es: 'Conductor',
+                        de: 'Fahrer',
+                        it: 'Autista',
+                        ru: 'Водитель',
+                        zh: '司机'),
                   );
                 }),
               if (visibleRides.length < filteredRides.length)
@@ -2802,8 +3019,7 @@ class _OperatorScreenState extends State<OperatorScreen>
     );
   }
 
-  Widget _buildDriverManagementTab(AppLocalizations l) {
-    final visibleRatings = _visibleDriverRatings();
+  Widget _buildOperatorFleetTab(AppLocalizations l) {
     return RefreshIndicator(
       color: _C.yellow,
       onRefresh: () async {
@@ -2826,11 +3042,6 @@ class _OperatorScreenState extends State<OperatorScreen>
                       value: '${_driverPinAccounts.length}',
                       icon: Icons.badge_outlined,
                       color: _C.info),
-                  _StatChip(
-                      label: 'Ratings',
-                      value: '${_driverRatings.length}',
-                      icon: Icons.star_outline_rounded,
-                      color: _C.yellowDeep),
                 ],
               ),
               const SizedBox(height: 12),
@@ -3181,7 +3392,22 @@ class _OperatorScreenState extends State<OperatorScreen>
                     )),
             ]),
           ),
-          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOperatorRatingsTab(AppLocalizations l) {
+    final visibleRatings = _visibleDriverRatings();
+    return RefreshIndicator(
+      color: _C.yellow,
+      onRefresh: () async {
+        await _refreshAll();
+      },
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+        children: [
           _Module(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -3268,80 +3494,6 @@ class _OperatorScreenState extends State<OperatorScreen>
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildTripHistoryTab(AppLocalizations l) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _SectionHead(l.operatorTripVaultHeading,
-            subtitle: '${_trips.length} trips'),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _kpiChip(
-                icon: Icons.list_alt,
-                label: l.operatorTripVaultTripsChip(_trips.length)),
-            _kpiChip(
-                icon: Icons.payments,
-                label: l.operatorTripVaultRevenueChip(
-                    _tripVaultRevenue.toStringAsFixed(3))),
-          ],
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: _C.yellow,
-              foregroundColor: _C.charcoal,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(50)),
-            ),
-            onPressed: _busy ? null : _refreshAll,
-            child: Text(l.loginLoadTrips),
-          ),
-        ),
-        const SizedBox(height: 8),
-        _Module(
-          child: _trips.isEmpty
-              ? Text(l.noTripsLoaded,
-                  style: const TextStyle(color: _C.textSoft))
-              : Column(
-                  children: _trips
-                      .map(
-                        (t) => _rowInfoCard(
-                          icon: Icons.receipt_long_rounded,
-                          iconBg: _C.charcoal,
-                          iconColor: _C.yellow,
-                          content: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${t['route']}',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600, fontSize: 13),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                l.operatorTripSubtitle(
-                                  t['date'] as String,
-                                  t['fare'].toString(),
-                                ),
-                                style: const TextStyle(
-                                    color: _C.textSoft, fontSize: 11),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-        ),
-      ],
     );
   }
 
@@ -3555,24 +3707,60 @@ class _OperatorScreenState extends State<OperatorScreen>
                               fontWeight: FontWeight.w500, fontSize: 12),
                           tabs: [
                             Tab(
+                              text: _uiText(
+                                en: 'Home',
+                                ar: 'رئيسية',
+                                fr: 'Accueil',
+                                es: 'Inicio',
+                                de: 'Home',
+                                it: 'Home',
+                                ru: 'Главная',
+                                zh: '首页',
+                              ),
+                            ),
+                            Tab(
+                              text: _uiText(
+                                en: 'Live',
+                                ar: 'مباشر',
+                                fr: 'Live',
+                                es: 'Live',
+                                de: 'Live',
+                                it: 'Live',
+                                ru: 'Онлайн',
+                                zh: '实时',
+                              ),
+                            ),
+                            Tab(
+                              text: _uiText(
+                                en: 'Fleet',
+                                ar: 'أسطول',
+                                fr: 'Flotte',
+                                es: 'Flota',
+                                de: 'Flotte',
+                                it: 'Flotta',
+                                ru: 'Флот',
+                                zh: '车队',
+                              ),
+                            ),
+                            Tab(
+                              text: _uiText(
+                                en: 'Stars',
+                                ar: 'نجوم',
+                                fr: 'Notes',
+                                es: 'Notas',
+                                de: 'Stars',
+                                it: 'Stelle',
+                                ru: 'Рейт',
+                                zh: '评分',
+                              ),
+                            ),
+                            Tab(
                               text:
                                   '✈️  ${_uiText(en: "Today's arrivals", ar: "وصولات اليوم", fr: "Arrivees du jour", es: "Llegadas de hoy", de: "Heutige Ankuenfte", it: "Arrivi di oggi", ru: "Прилеты сегодня", zh: "今日到达")}',
                             ),
                             Tab(
                               text:
-                                  '💸 ${_uiText(en: "Live orders", ar: "طلبات مباشرة", fr: "Commandes en direct", es: "Pedidos en vivo", de: "Live-Auftraege", it: "Ordini live", ru: "Заказы онлайн", zh: "实时订单")}',
-                            ),
-                            Tab(
-                              text:
-                                  '👤 ${_uiText(en: "Driver management", ar: "إدارة السائقين", fr: "Gestion des chauffeurs", es: "Gestion de conductores", de: "Fahrerverwaltung", it: "Gestione autisti", ru: "Управление водителями", zh: "司机管理")}',
-                            ),
-                            Tab(
-                              text:
                                   '🏨 ${_uiText(en: "Hostel Accounts (B2B)", ar: "حسابات الفنادق (B2B)", fr: "Comptes hôtels (B2B)", es: "Cuentas de hotel (B2B)", de: "Hotelkonten (B2B)", it: "Account hotel (B2B)", ru: "Аккаунты отелей (B2B)", zh: "酒店账户 (B2B)")}',
-                            ),
-                            Tab(
-                              text:
-                                  '🗒️ ${_uiText(en: "Trip history", ar: "سجل الرحلات", fr: "Historique des courses", es: "Historial de viajes", de: "Fahrtenverlauf", it: "Storico viaggi", ru: "История поездок", zh: "行程历史")}',
                             ),
                           ],
                         ),
@@ -3582,11 +3770,12 @@ class _OperatorScreenState extends State<OperatorScreen>
                       child: TabBarView(
                         controller: tc,
                         children: [
-                          _buildArrivalsTab(l),
-                          _buildLiveOrdersTab(l),
-                          _buildDriverManagementTab(l),
-                          _buildB2bTab(l),
-                          _buildTripHistoryTab(l),
+                          RepaintBoundary(child: _buildOperatorHomeTab(l)),
+                          RepaintBoundary(child: _buildLiveOrdersTab(l)),
+                          RepaintBoundary(child: _buildOperatorFleetTab(l)),
+                          RepaintBoundary(child: _buildOperatorRatingsTab(l)),
+                          RepaintBoundary(child: _buildArrivalsTab(l)),
+                          RepaintBoundary(child: _buildB2bTab(l)),
                         ],
                       ),
                     ),

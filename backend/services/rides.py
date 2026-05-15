@@ -131,6 +131,14 @@ def request_ride(
     *,
     enforce_single_active: bool = True,
     scheduled_pickup_at: Any = None,
+    pickup_address: str | None = None,
+    pickup_display_name: str | None = None,
+    destination_address: str | None = None,
+    destination_display_name: str | None = None,
+    pickup_lat: float | None = None,
+    pickup_lng: float | None = None,
+    destination_lat: float | None = None,
+    destination_lng: float | None = None,
 ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     pickup = pickup.strip()
     destination = destination.strip()
@@ -148,6 +156,14 @@ def request_ride(
         destination=destination,
         scheduled_pickup_at=scheduled_dt,
         reservation_status="searching" if is_scheduled else None,
+        pickup_address=pickup_address,
+        pickup_display_name=pickup_display_name,
+        destination_address=destination_address,
+        destination_display_name=destination_display_name,
+        pickup_lat=pickup_lat,
+        pickup_lng=pickup_lng,
+        destination_lat=destination_lat,
+        destination_lng=destination_lng,
     )
     if ride is not None:
         top5 = (
@@ -274,10 +290,24 @@ def _deduction_components_for_ride(
     route_key = f"{pickup} ➡️ {dest}"
     gr = pricing.get_airport_route(route_key)
     base_fare = float(gr["base_fare"]) if gr is not None else _FALLBACK_BASE_FARE_DT
+    raw_t = ride_row.get("scheduled_pickup_at") or ride_row.get("created_at")
+    pt = pricing.parse_pricing_time(raw_t)
+    br = pricing.fare_price_breakdown(base_fare, pricing_time=pt)
+    passenger_route_fare = float(br["fare_dt"])
     b2b_booking = db_module.b2b_booking_by_ride_id(int(ride_row["id"]))
     is_b2b = b2b_booking is not None
-    effective_rate = _OWNER_COMMISSION_RATE + (_B2B_EXTRA_COMMISSION_RATE if is_b2b else 0.0)
-    fare_ref = float(b2b_booking["fare"]) if is_b2b else base_fare
+    owner_rate = _OWNER_COMMISSION_RATE
+    b2b_extra_rate = _B2B_EXTRA_COMMISSION_RATE
+    driver_pk = ride_row.get("driver_id")
+    if driver_pk is not None:
+        d = db_module.driver_by_id(int(driver_pk))
+        if d is not None:
+            acct = db_module.driver_pin_account_by_user_id(int(d["user_id"]))
+            if acct is not None:
+                owner_rate = float(acct.get("owner_commission_rate") or 10.0) / 100.0
+                b2b_extra_rate = float(acct.get("b2b_commission_rate") or 5.0) / 100.0
+    effective_rate = owner_rate + (b2b_extra_rate if is_b2b else 0.0)
+    fare_ref = float(b2b_booking["fare"]) if is_b2b else passenger_route_fare
     deduct = round(fare_ref * effective_rate, 3)
     return fare_ref, effective_rate, deduct, is_b2b
 

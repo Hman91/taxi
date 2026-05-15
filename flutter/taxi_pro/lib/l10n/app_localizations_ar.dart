@@ -210,6 +210,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get operatorColArrivalAirportTn => 'مطار الوصول (تونس)';
 
   @override
+  String get flightArrivalsTerminalGate => 'المبنى · البوابة';
+
+  @override
   String get operatorChooseDriverTopUp => 'اختر السائق لشحن الرصيد:';
 
   @override
@@ -400,6 +403,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get chatScreenTitle => 'محادثة الرحلة';
+
+  @override
+  String get chatConversationShortTitle => 'محادثة';
 
   @override
   String get messageFieldHint => 'اكتب رسالة';
@@ -617,6 +623,41 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String driverOfferTimeChip(String minutes) {
     return '$minutes دق';
+  }
+
+  @override
+  String get driverOfferRoutePreviewLabel => 'معاينة المسار';
+
+  @override
+  String get driverOfferPassengerSectionTitle => 'الراكب';
+
+  @override
+  String get driverOfferPassengerNameLabel => 'الاسم';
+
+  @override
+  String get driverOfferPassengerPhoneLabel => 'الهاتف';
+
+  @override
+  String get driverOfferB2bSectionTitle => 'الشركات';
+
+  @override
+  String get driverOfferB2bCompanyLabel => 'الشركة';
+
+  @override
+  String get driverOfferB2bCompanyUnknown => 'حساب شركة';
+
+  @override
+  String get driverOfferB2bGuestLabel => 'الضيف';
+
+  @override
+  String get driverOfferB2bRoomLabel => 'الغرفة';
+
+  @override
+  String get driverOfferB2bCodeLabel => 'الرمز';
+
+  @override
+  String driverOfferB2bAgreedFare(String amount) {
+    return 'أجرة الشركة: $amount د.ت';
   }
 
   @override
@@ -913,5 +954,5 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get flightArrivalsSampleDataBanner =>
-      'رحلات تجريبية فقط — الخادم لا يستخدم AirLabs. أضف AIRLABS_API_KEY إلى ملف `.env` في مجلد مشروع Taxi ثم أعد تشغيل الـ API.';
+      'Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server.';
 }

@@ -89,6 +89,7 @@
   "adminRideRow": "{pickup} → {destination}",
   "driverLocationRow": "Lat {lat}, Lng {lng}",
   "chatScreenTitle": "Chat de course",
+  "chatConversationShortTitle": "Chat",
   "messageFieldHint": "Écrire un message",
   "sendChatMessage": "Envoyer",
   "accountDisabledContactAdmin": "Compte désactivé. Contactez un administrateur.",
@@ -349,6 +350,24 @@
   "@driverOfferTimeChip": {
     "placeholders": {
       "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "driverOfferRoutePreviewLabel": "Route preview",
+  "driverOfferPassengerSectionTitle": "Passenger",
+  "driverOfferPassengerNameLabel": "Name",
+  "driverOfferPassengerPhoneLabel": "Phone",
+  "driverOfferB2bSectionTitle": "Corporate",
+  "driverOfferB2bCompanyLabel": "Company",
+  "driverOfferB2bCompanyUnknown": "Corporate account",
+  "driverOfferB2bGuestLabel": "Guest",
+  "driverOfferB2bRoomLabel": "Room",
+  "driverOfferB2bCodeLabel": "Code",
+  "driverOfferB2bAgreedFare": "Corporate fare: {amount} DT",
+  "@driverOfferB2bAgreedFare": {
+    "placeholders": {
+      "amount": {
         "type": "String"
       }
     }
@@ -642,6 +661,7 @@
   "operatorColTakeoffTime": "Heure de décollage",
   "operatorColExpectedArrival": "Arrivée prévue (aujourd'hui)",
   "operatorColArrivalAirportTn": "Aéroport d'arrivée (Tunisie)",
+  "flightArrivalsTerminalGate": "Terminal · porte",
   "operatorChooseDriverTopUp": "Choisissez le chauffeur à recharger :",
   "operatorAmountReceivedDt": "Montant reçu (DT) :",
   "operatorRechargeBalance": "Recharger le solde",
@@ -669,5 +689,5 @@
   },
   "ownerDriverPinWalletsHeading": "Portefeuilles conducteurs",
   "ownerDriverPinWalletsEmpty": "Aucun compte conducteur PIN chargé.",
-  "flightArrivalsSampleDataBanner": "Vols d'exemple uniquement — le serveur n'utilise pas AirLabs. Ajoutez AIRLABS_API_KEY dans un fichier `.env` à la racine du projet Taxi, puis redémarrez l'API."
+  "flightArrivalsSampleDataBanner": "Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server."
 }

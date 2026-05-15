@@ -89,6 +89,7 @@
   "adminRideRow": "{pickup} → {destination}",
   "driverLocationRow": "Breite {lat}, Länge {lng}",
   "chatScreenTitle": "Fahrt-Chat",
+  "chatConversationShortTitle": "Chat",
   "messageFieldHint": "Nachricht eingeben",
   "sendChatMessage": "Senden",
   "accountDisabledContactAdmin": "Konto deaktiviert. Wenden Sie sich an einen Administrator.",
@@ -349,6 +350,24 @@
   "@driverOfferTimeChip": {
     "placeholders": {
       "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "driverOfferRoutePreviewLabel": "Route preview",
+  "driverOfferPassengerSectionTitle": "Passenger",
+  "driverOfferPassengerNameLabel": "Name",
+  "driverOfferPassengerPhoneLabel": "Phone",
+  "driverOfferB2bSectionTitle": "Corporate",
+  "driverOfferB2bCompanyLabel": "Company",
+  "driverOfferB2bCompanyUnknown": "Corporate account",
+  "driverOfferB2bGuestLabel": "Guest",
+  "driverOfferB2bRoomLabel": "Room",
+  "driverOfferB2bCodeLabel": "Code",
+  "driverOfferB2bAgreedFare": "Corporate fare: {amount} DT",
+  "@driverOfferB2bAgreedFare": {
+    "placeholders": {
+      "amount": {
         "type": "String"
       }
     }
@@ -642,6 +661,7 @@
   "operatorColTakeoffTime": "Abflugzeit",
   "operatorColExpectedArrival": "Erwartete Ankunft (heute)",
   "operatorColArrivalAirportTn": "Ankunftsflughafen (Tunesien)",
+  "flightArrivalsTerminalGate": "Terminal · Gate",
   "operatorChooseDriverTopUp": "Fahrer zum Aufladen wählen:",
   "operatorAmountReceivedDt": "Erhaltener Betrag (DT):",
   "operatorRechargeBalance": "Guthaben aufladen",
@@ -669,5 +689,5 @@
   },
   "ownerDriverPinWalletsHeading": "Fahrer-Wallets",
   "ownerDriverPinWalletsEmpty": "Keine PIN-Fahrerkonten geladen.",
-  "flightArrivalsSampleDataBanner": "Nur Beispiel-Flüge — das Backend nutzt AirLabs nicht. Legen Sie AIRLABS_API_KEY in einer `.env` im Taxi-Projektordner ab und starten Sie die API neu."
+  "flightArrivalsSampleDataBanner": "Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server."
 }

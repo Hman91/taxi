@@ -73,8 +73,8 @@ abstract class AppLocalizations {
 
   final String localeName;
 
-  static AppLocalizations? of(BuildContext context) {
-    return Localizations.of<AppLocalizations>(context, AppLocalizations);
+  static AppLocalizations of(BuildContext context) {
+    return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
   static const LocalizationsDelegate<AppLocalizations> delegate =
@@ -140,51 +140,6 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get language;
 
-  /// Title shown in the passenger first-launch language reminder.
-  String get passengerLanguageReminderTitle;
-
-  /// Subtitle shown in the passenger first-launch language reminder.
-  String get passengerLanguageReminderSubtitle;
-
-  /// Primary action in the passenger language reminder.
-  String get passengerLanguageReminderContinue;
-
-  /// Localized label for English in the passenger language reminder.
-  String get passengerLanguageNameEnglish;
-
-  /// Localized label for French in the passenger language reminder.
-  String get passengerLanguageNameFrench;
-
-  /// Localized label for Arabic in the passenger language reminder.
-  String get passengerLanguageNameArabic;
-
-  /// Localized label for German in the passenger language reminder.
-  String get passengerLanguageNameGerman;
-
-  /// Localized label for Spanish in the passenger language reminder.
-  String get passengerLanguageNameSpanish;
-
-  /// Localized label for Italian in the passenger language reminder.
-  String get passengerLanguageNameItalian;
-
-  /// Localized label for Chinese in the passenger language reminder.
-  String get passengerLanguageNameChinese;
-
-  /// Localized label for Russian in the passenger language reminder.
-  String get passengerLanguageNameRussian;
-
-  /// Localized global region label in the passenger language reminder.
-  String get passengerLanguageRegionGlobal;
-
-  /// Localized Europe region label in the passenger language reminder.
-  String get passengerLanguageRegionEurope;
-
-  /// Localized MENA region label in the passenger language reminder.
-  String get passengerLanguageRegionMena;
-
-  /// Localized Asia region label in the passenger language reminder.
-  String get passengerLanguageRegionAsia;
-
   /// No description provided for @rolePassenger.
   ///
   /// In en, this message translates to:
@@ -221,7 +176,10 @@ abstract class AppLocalizations {
   /// **'Passenger'**
   String get passengerTitle;
 
-  /// In-app bar action to open the password-reset flow for passengers.
+  /// No description provided for @passengerForgotPasswordAppBar.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password'**
   String get passengerForgotPasswordAppBar;
 
   /// No description provided for @tabAirport.
@@ -245,8 +203,20 @@ abstract class AppLocalizations {
   /// No description provided for @nightFare50.
   ///
   /// In en, this message translates to:
-  /// **'+50% night fare'**
+  /// **'Night rate applied (+50%)'**
   String get nightFare50;
+
+  /// No description provided for @nightFareScheduleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Night +50% uses 9:00 PM–5:00 AM Tunisia time (Africa/Tunis). Your estimate follows that clock.'**
+  String get nightFareScheduleHint;
+
+  /// No description provided for @ownerWalletShareHint.
+  ///
+  /// In en, this message translates to:
+  /// **'When a trip ends, the owner deducts from the driver\'s wallet: 10% on passenger rides; B2B adds 5% more (15% total).'**
+  String get ownerWalletShareHint;
 
   /// No description provided for @rateYourLastRide.
   ///
@@ -902,6 +872,12 @@ abstract class AppLocalizations {
   /// **'Send'**
   String get sendChatMessage;
 
+  /// No description provided for @chatConversationShortTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get chatConversationShortTitle;
+
   /// No description provided for @accountDisabledContactAdmin.
   ///
   /// In en, this message translates to:
@@ -1237,6 +1213,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'To'**
   String get driverOfferToLabel;
+
+  /// No description provided for @driverOfferPassengerSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Passenger'**
+  String get driverOfferPassengerSectionTitle;
+
+  /// No description provided for @driverOfferPassengerNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get driverOfferPassengerNameLabel;
+
+  /// No description provided for @driverOfferPassengerPhoneLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get driverOfferPassengerPhoneLabel;
+
+  /// No description provided for @driverOfferB2bCompanyUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Corporate account'**
+  String get driverOfferB2bCompanyUnknown;
+
+  /// No description provided for @driverOfferB2bGuestLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Guest'**
+  String get driverOfferB2bGuestLabel;
+
+  /// No description provided for @driverOfferB2bRoomLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Room'**
+  String get driverOfferB2bRoomLabel;
+
+  /// No description provided for @driverOfferB2bAgreedFare.
+  ///
+  /// In en, this message translates to:
+  /// **'Corporate fare: {amount} DT'**
+  String driverOfferB2bAgreedFare(String amount);
 
   /// No description provided for @driverRejectOfferButton.
   ///
@@ -1740,8 +1758,98 @@ abstract class AppLocalizations {
   /// No description provided for @flightArrivalsSampleDataBanner.
   ///
   /// In en, this message translates to:
-  /// **'Sample flights only — AirLabs isn’t loading. Put AIRLABS_API_KEY in `taxi/.env` OR `backend/.env`, save, then restart the API server.'**
+  /// **'Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server.'**
   String get flightArrivalsSampleDataBanner;
+
+  /// No description provided for @passengerLanguageReminderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your language'**
+  String get passengerLanguageReminderTitle;
+
+  /// No description provided for @passengerLanguageReminderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We show menus, prices, and help in this language. You can change it anytime in settings.'**
+  String get passengerLanguageReminderSubtitle;
+
+  /// No description provided for @passengerLanguageReminderContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get passengerLanguageReminderContinue;
+
+  /// No description provided for @passengerLanguageNameArabic.
+  ///
+  /// In en, this message translates to:
+  /// **'Arabic'**
+  String get passengerLanguageNameArabic;
+
+  /// No description provided for @passengerLanguageNameGerman.
+  ///
+  /// In en, this message translates to:
+  /// **'German'**
+  String get passengerLanguageNameGerman;
+
+  /// No description provided for @passengerLanguageNameSpanish.
+  ///
+  /// In en, this message translates to:
+  /// **'Spanish'**
+  String get passengerLanguageNameSpanish;
+
+  /// No description provided for @passengerLanguageNameFrench.
+  ///
+  /// In en, this message translates to:
+  /// **'French'**
+  String get passengerLanguageNameFrench;
+
+  /// No description provided for @passengerLanguageNameItalian.
+  ///
+  /// In en, this message translates to:
+  /// **'Italian'**
+  String get passengerLanguageNameItalian;
+
+  /// No description provided for @passengerLanguageNameRussian.
+  ///
+  /// In en, this message translates to:
+  /// **'Russian'**
+  String get passengerLanguageNameRussian;
+
+  /// No description provided for @passengerLanguageNameChinese.
+  ///
+  /// In en, this message translates to:
+  /// **'Chinese'**
+  String get passengerLanguageNameChinese;
+
+  /// No description provided for @passengerLanguageNameEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get passengerLanguageNameEnglish;
+
+  /// No description provided for @passengerLanguageRegionMena.
+  ///
+  /// In en, this message translates to:
+  /// **'Middle East & North Africa'**
+  String get passengerLanguageRegionMena;
+
+  /// No description provided for @passengerLanguageRegionAsia.
+  ///
+  /// In en, this message translates to:
+  /// **'Asia'**
+  String get passengerLanguageRegionAsia;
+
+  /// No description provided for @passengerLanguageRegionEurope.
+  ///
+  /// In en, this message translates to:
+  /// **'Europe'**
+  String get passengerLanguageRegionEurope;
+
+  /// No description provided for @passengerLanguageRegionGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldwide'**
+  String get passengerLanguageRegionGlobal;
 }
 
 class _AppLocalizationsDelegate

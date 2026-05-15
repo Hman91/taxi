@@ -69,11 +69,19 @@ class TaxiApiClient {
     return fares.map((k, v) => MapEntry(k, (v as num).toDouble()));
   }
 
-  Future<Map<String, dynamic>> quoteAirport(String routeKey) async {
+  Future<Map<String, dynamic>> quoteAirport(String routeKey,
+      {DateTime? pricingTime}) async {
+    final body = <String, dynamic>{
+      'mode': 'airport',
+      'route_key': routeKey,
+    };
+    if (pricingTime != null) {
+      body['pricing_time'] = pricingTime.toUtc().toIso8601String();
+    }
     final r = await _http.post(
       _u('/api/fares/quote'),
       headers: _jsonHeaders(),
-      body: jsonEncode({'mode': 'airport', 'route_key': routeKey}),
+      body: jsonEncode(body),
     );
     if (r.statusCode != 200) {
       throw TaxiApiException(r.body, r.statusCode);
@@ -81,10 +89,14 @@ class TaxiApiClient {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> quoteGps({double? distanceKm}) async {
+  Future<Map<String, dynamic>> quoteGps(
+      {double? distanceKm, DateTime? pricingTime}) async {
     final body = <String, dynamic>{'mode': 'gps'};
     if (distanceKm != null) {
       body['distance_km'] = distanceKm;
+    }
+    if (pricingTime != null) {
+      body['pricing_time'] = pricingTime.toUtc().toIso8601String();
     }
     final r = await _http.post(
       _u('/api/fares/quote'),

@@ -6,6 +6,7 @@ import '../api/models.dart';
 import '../l10n/app_localizations.dart';
 import '../services/local_notification_service.dart';
 import '../services/taxi_app_service.dart';
+import '../widgets/night_fare_breakdown.dart';
 import 'ride_chat_screen.dart';
 
 class PassengerScreen extends StatefulWidget {
@@ -174,21 +175,17 @@ class _PassengerScreenState extends State<PassengerScreen> {
     try {
       final q = await _api.quoteAirport(key);
       final promoCode = _promoController.text.trim();
-      final baseFare = (q['base_fare'] as num).toDouble();
-      final isNight = _isNightNow();
-      var finalFare = baseFare;
+      var finalFare = (q['final_fare'] as num).toDouble();
       if (promoCode == 'WELCOME26') {
         finalFare = finalFare * 0.8;
       }
-      if (isNight) {
-        finalFare = finalFare * 1.5;
-      }
-      _setStateIfMounted(() => _airportQuote = q);
-      if (_airportQuote == null) return;
-      _airportQuote!['promo_code'] = promoCode;
-      _airportQuote!['is_promo_applied'] = promoCode == 'WELCOME26';
-      _airportQuote!['is_night'] = isNight;
-      _airportQuote!['final_fare'] = double.parse(finalFare.toStringAsFixed(3));
+      _setStateIfMounted(() {
+        _airportQuote = Map<String, dynamic>.from(q);
+        _airportQuote!['promo_code'] = promoCode;
+        _airportQuote!['is_promo_applied'] = promoCode == 'WELCOME26';
+        _airportQuote!['final_fare'] =
+            double.parse(finalFare.toStringAsFixed(3));
+      });
     } catch (e) {
       _setStateIfMounted(() => _error = e.toString());
     }
@@ -356,21 +353,15 @@ class _PassengerScreenState extends State<PassengerScreen> {
               textAlign: TextAlign.center,
             ),
           const SizedBox(height: 6),
-          Text(
-            '${q['final_fare']} DT',
-            style: Theme.of(context).textTheme.headlineMedium,
-            textAlign: TextAlign.center,
+          NightFareBreakdown(
+            quote: q,
+            afterPromoTotal: (q['final_fare'] as num?)?.toDouble(),
+            promoLabel: q['is_promo_applied'] == true ? 'WELCOME26 −20%' : null,
+            nightRateLabel: l.nightFare50,
+            baseLabel: l.fareAmount.split('(').first.trim(),
+            surchargeLabel: 'Night surcharge',
+            totalLabel: 'Total',
           ),
-          if (q['is_promo_applied'] == true)
-            Text(
-              'WELCOME26 -20%',
-              style: TextStyle(
-                  color: Colors.green.shade700, fontWeight: FontWeight.w600),
-              textAlign: TextAlign.center,
-            ),
-          if (q['is_night'] == true)
-            Text(l.nightFare50,
-                style: const TextStyle(color: Colors.deepOrange)),
           const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: _activeRequest == null ? () => _requestRide() : null,
@@ -615,11 +606,6 @@ class _PassengerScreenState extends State<PassengerScreen> {
     return (fare / 1.45).clamp(5, 180);
   }
 
-  bool _isNightNow() {
-    final h = DateTime.now().hour;
-    return h >= 21 || h < 5;
-  }
-
   Future<void> _requestRide() async {
     final key = _routeKey;
     final q = _airportQuote;
@@ -710,6 +696,7 @@ class _PassengerScreenState extends State<PassengerScreen> {
             myUserId: uid,
             rideId: req.rideId,
             conversationId: info.conversationId,
+            minimalTripHeader: true,
           ),
         ),
       );

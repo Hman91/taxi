@@ -52,7 +52,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get route => 'Route';
 
   @override
-  String get nightFare50 => '+50% night fare';
+  String get nightFare50 => 'Night rate applied (+50%)';
 
   @override
   String get rateYourLastRide => 'Rate your last ride';
@@ -208,6 +208,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get operatorColArrivalAirportTn => 'Arrival airport (Tunisia)';
+
+  @override
+  String get flightArrivalsTerminalGate => 'Terminal · Gate';
 
   @override
   String get operatorChooseDriverTopUp => 'Choose the driver to top up:';
@@ -400,6 +403,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatScreenTitle => 'Ride chat';
+
+  @override
+  String get chatConversationShortTitle => 'Chat';
 
   @override
   String get messageFieldHint => 'Type a message';
@@ -623,6 +629,41 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String driverOfferTimeChip(String minutes) {
     return '$minutes min';
+  }
+
+  @override
+  String get driverOfferRoutePreviewLabel => 'Route preview';
+
+  @override
+  String get driverOfferPassengerSectionTitle => 'Passenger';
+
+  @override
+  String get driverOfferPassengerNameLabel => 'Name';
+
+  @override
+  String get driverOfferPassengerPhoneLabel => 'Phone';
+
+  @override
+  String get driverOfferB2bSectionTitle => 'Corporate';
+
+  @override
+  String get driverOfferB2bCompanyLabel => 'Company';
+
+  @override
+  String get driverOfferB2bCompanyUnknown => 'Corporate account';
+
+  @override
+  String get driverOfferB2bGuestLabel => 'Guest';
+
+  @override
+  String get driverOfferB2bRoomLabel => 'Room';
+
+  @override
+  String get driverOfferB2bCodeLabel => 'Code';
+
+  @override
+  String driverOfferB2bAgreedFare(String amount) {
+    return 'Corporate fare: $amount DT';
   }
 
   @override
@@ -921,5 +962,5 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get flightArrivalsSampleDataBanner =>
-      'Sample flights only — AirLabs isn’t loading. Put AIRLABS_API_KEY in `taxi/.env` OR `backend/.env`, save, then restart the API server.';
+      'Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server.';
 }

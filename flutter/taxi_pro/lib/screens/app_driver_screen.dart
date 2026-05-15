@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../api/client.dart';
 import '../api/models.dart';
@@ -53,6 +54,8 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
   String? _locationText;
   String? _locationError;
   bool _locating = false;
+  double? _driverMapLat;
+  double? _driverMapLng;
   double? _nearestZoneDistanceKm;
   String? _driverPhotoUrl;
   String? _driverCarModel;
@@ -155,6 +158,8 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
       setState(() {
         _locationText =
             '${p.latitude.toStringAsFixed(6)}, ${p.longitude.toStringAsFixed(6)}';
+        _driverMapLat = p.latitude;
+        _driverMapLng = p.longitude;
         _nearestZoneDistanceKm = nearest.distanceMeters == null
             ? null
             : nearest.distanceMeters! / 1000.0;
@@ -862,6 +867,7 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
             rideId: ride.id,
             conversationId: cid,
             showDriverQuickReplies: true,
+            minimalTripHeader: true,
           ),
         ),
       );
@@ -1291,13 +1297,14 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
                       ),
                       if (r.isB2b == true)
                         Text(
-                          'B2B • ${r.b2bGuestName ?? '-'} • Room ${r.b2bRoomNumber ?? '-'}'
-                          ' • ${r.b2bSourceCode ?? '-'}'
+                          'B2B • ${(r.b2bTenantName ?? '').trim().isNotEmpty ? r.b2bTenantName!.trim() : 'Corporate'} • ${r.b2bGuestName ?? '-'}'
+                          '${(r.b2bRoomNumber ?? '').trim().isNotEmpty ? ' • Room ${r.b2bRoomNumber}' : ''}'
                           ' • ${((r.b2bFare ?? 0)).toStringAsFixed(3)} DT',
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
-                      if ((r.passengerName ?? '').trim().isNotEmpty ||
-                          (r.passengerPhone ?? '').trim().isNotEmpty)
+                      if (r.isB2b != true &&
+                          ((r.passengerName ?? '').trim().isNotEmpty ||
+                              (r.passengerPhone ?? '').trim().isNotEmpty))
                         Text(
                           'Passenger: ${(r.passengerName ?? '').trim().isEmpty ? '-' : r.passengerName}'
                           ' • ${(r.passengerPhone ?? '').trim().isEmpty ? '-' : r.passengerPhone}',
@@ -1320,6 +1327,9 @@ class _AppDriverScreenState extends State<AppDriverScreen> {
                   busy: _busy,
                   onAccept: () => _accept(r),
                   onReject: () => _declineOffer(r),
+                  driverGps: (_driverMapLat != null && _driverMapLng != null)
+                      ? LatLng(_driverMapLat!, _driverMapLng!)
+                      : null,
                 ),
               ),
             ),

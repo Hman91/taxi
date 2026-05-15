@@ -3,7 +3,44 @@ import 'package:flutter/material.dart';
 import '../api/models.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
+import '../l10n/ride_address_display.dart';
 import '../services/taxi_app_service.dart';
+
+/// B2B rides bill [Ride.b2bFare]; live quotes can differ from the locked corporate total.
+void _applyB2bLockedFareToQuote(Map<String, dynamic> quote, Ride ride) {
+  if (ride.isB2b != true || ride.b2bFare == null) return;
+  final T = ride.b2bFare!;
+  final qb = ride.quotedBaseFareDt;
+  final qn = ride.quotedNightSurchargeDt;
+  final qSum = (qb != null && qn != null) ? qb + qn : null;
+  var isNight = ride.quotedIsNight == true ||
+      (qn != null && qn > 0.0001);
+  if (!isNight) {
+    isNight = quote['is_night'] == true;
+  }
+  const eps = 0.05;
+  late double base;
+  late double sur;
+  if (qSum != null && (qSum - T).abs() <= eps) {
+    base = qb!;
+    sur = T - base;
+    if (sur < 0) {
+      sur = 0;
+      base = T;
+    }
+    isNight = sur > 0.0001;
+  } else if (isNight) {
+    base = T / 1.5;
+    sur = T - base;
+  } else {
+    base = T;
+    sur = 0;
+  }
+  quote['final_fare'] = T;
+  quote['base_fare'] = base;
+  quote['night_surcharge_dt'] = sur;
+  quote['is_night'] = sur > 0.0001;
+}
 
 /// Dark ride-offer card (pickup / destination, fare chips, accept / reject).
 class DriverRideOfferCard extends StatefulWidget {
@@ -46,9 +83,11 @@ class _DriverRideOfferCardState extends State<DriverRideOfferCard> {
   Future<void> _loadQuote() async {
     final key =
         '${widget.ride.pickup.trim()} $airportRouteKeySeparator ${widget.ride.destination.trim()}';
+    final pt = DateTime.tryParse(widget.ride.scheduledPickupAt ?? '');
     try {
-      final q = await widget.api.quoteAirport(key);
+      final q = await widget.api.quoteAirport(key, pricingTime: pt);
       if (!mounted) return;
+      _applyB2bLockedFareToQuote(q, widget.ride);
       setState(() {
         _quote = q;
         _quoteLoading = false;
@@ -67,9 +106,11 @@ class _DriverRideOfferCardState extends State<DriverRideOfferCard> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context)!;
-    final pickupLabel = localizedPlaceName(loc, widget.ride.pickup);
-    final destLabel = localizedPlaceName(loc, widget.ride.destination);
+    final loc = AppLocalizations.of(context);
+    final pickupLabel = ridePickupTitle(widget.ride, loc);
+    final pickupAddr = ridePickupAddressLine(widget.ride, loc);
+    final destLabel = rideDestinationTitle(widget.ride, loc);
+    final destAddr = rideDestinationAddressLine(widget.ride, loc);
 
     final fare = _quote == null
         ? null
@@ -120,64 +161,157 @@ class _DriverRideOfferCardState extends State<DriverRideOfferCard> {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _LocationBlock(
-                    label: loc.driverOfferFromLabel,
-                    place: pickupLabel,
-                    leading: const Icon(
-                      Icons.location_on_rounded,
-                      color: DriverRideOfferCard._accentRed,
-                      size: 22,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _LocationBlock(
-                    label: loc.driverOfferToLabel,
-                    place: destLabel,
-                    leading: const Text(
-                      '🏁',
-                      style: TextStyle(fontSize: 20),
-                    ),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 10),
+            _DarkCompactAddress(
+              label: loc.driverOfferFromLabel,
+              title: pickupLabel,
+              subtitle: (pickupAddr ?? '').trim().isEmpty
+                  ? null
+                  : (pickupAddr ?? '').trim(),
+              borderAccent: DriverRideOfferCard._accentRed.withOpacity(0.45),
+              icon: Icons.my_location_rounded,
+              iconColor: DriverRideOfferCard._accentRed,
+            ),
+            const SizedBox(height: 6),
+            _DarkCompactAddress(
+              label: loc.driverOfferToLabel,
+              title: destLabel,
+              subtitle: (destAddr ?? '').trim().isEmpty
+                  ? null
+                  : (destAddr ?? '').trim(),
+              borderAccent: const Color(0xFFFFA726).withOpacity(0.5),
+              icon: Icons.flag_rounded,
+              iconColor: const Color(0xFFFFA726),
             ),
             if (widget.ride.isB2b == true) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1F2937),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  'B2B: ${widget.ride.b2bGuestName ?? '-'}'
-                  ' • Room ${widget.ride.b2bRoomNumber ?? '-'}'
-                  ' • ${widget.ride.b2bSourceCode ?? '-'}',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: DriverRideOfferCard._borderGold.withOpacity(0.22),
                   ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.apartment_rounded,
+                          size: 16,
+                          color: DriverRideOfferCard._titleGold,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            (widget.ride.b2bTenantName ?? '').trim().isNotEmpty
+                                ? widget.ride.b2bTenantName!.trim()
+                                : loc.driverOfferB2bCompanyUnknown,
+                            style: const TextStyle(
+                              color: DriverRideOfferCard._titleGold,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13,
+                              height: 1.2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${loc.driverOfferB2bGuestLabel}: ${(widget.ride.b2bGuestName ?? '').trim().isEmpty ? '—' : widget.ride.b2bGuestName!.trim()}',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.72),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                      ),
+                    ),
+                    if ((widget.ride.b2bRoomNumber ?? '').trim().isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '${loc.driverOfferB2bRoomLabel}: ${widget.ride.b2bRoomNumber!.trim()}',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.72),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    if (widget.ride.b2bFare != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        loc.driverOfferB2bAgreedFare(
+                          widget.ride.b2bFare!.toStringAsFixed(3),
+                        ),
+                        style: const TextStyle(
+                          color: DriverRideOfferCard._titleGold,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
-            if ((widget.ride.passengerName ?? '').trim().isNotEmpty ||
-                (widget.ride.passengerPhone ?? '').trim().isNotEmpty) ...[
+            if (widget.ride.isB2b != true &&
+                ((widget.ride.passengerName ?? '').trim().isNotEmpty ||
+                    (widget.ride.passengerPhone ?? '').trim().isNotEmpty)) ...[
               const SizedBox(height: 8),
-              Text(
-                'Passenger: ${(widget.ride.passengerName ?? '').trim().isEmpty ? '-' : widget.ride.passengerName}'
-                ' • ${(widget.ride.passengerPhone ?? '').trim().isEmpty ? '-' : widget.ride.passengerPhone}',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1F2937),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_outline_rounded,
+                          size: 16,
+                          color: Colors.white.withOpacity(0.75),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          loc.driverOfferPassengerSectionTitle,
+                          style: const TextStyle(
+                            color: DriverRideOfferCard._titleGold,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 10.5,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${loc.driverOfferPassengerNameLabel}: ${(widget.ride.passengerName ?? '').trim().isEmpty ? '—' : widget.ride.passengerName!.trim()}',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.72),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${loc.driverOfferPassengerPhoneLabel}: ${(widget.ride.passengerPhone ?? '').trim().isEmpty ? '—' : widget.ride.passengerPhone!.trim()}',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.72),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -208,6 +342,30 @@ class _DriverRideOfferCardState extends State<DriverRideOfferCard> {
                         '${_etaMinutes(distanceKm)}',
                       )
                     : null,
+              ),
+              if (_quote != null && _quote!['is_night'] == true) ...[
+                const SizedBox(height: 8),
+                Text(
+                  loc.nightFare50,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: DriverRideOfferCard._titleGold,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  loc.ownerWalletShareHint,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.white.withOpacity(0.65),
+                    height: 1.35,
+                  ),
+                ),
               ),
             const SizedBox(height: 16),
             Directionality(
@@ -281,53 +439,89 @@ class _DriverRideOfferCardState extends State<DriverRideOfferCard> {
   String _formatAmount(double v) => v.toStringAsFixed(3);
 }
 
-class _LocationBlock extends StatelessWidget {
-  const _LocationBlock({
+class _DarkCompactAddress extends StatelessWidget {
+  const _DarkCompactAddress({
     required this.label,
-    required this.place,
-    required this.leading,
+    required this.title,
+    this.subtitle,
+    required this.borderAccent,
+    required this.icon,
+    required this.iconColor,
   });
 
   final String label;
-  final String place;
-  final Widget leading;
+  final String title;
+  final String? subtitle;
+  final Color borderAccent;
+  final IconData icon;
+  final Color iconColor;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.45),
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 7, 10, 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1B2233),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderAccent.withOpacity(0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 15, color: iconColor),
           ),
-        ),
-        const SizedBox(height: 6),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: leading,
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                place,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  height: 1.25,
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.42),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.7,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 2),
+                Text(
+                  title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: DriverRideOfferCard._titleGold,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    height: 1.2,
+                  ),
+                ),
+                if (subtitle != null && subtitle!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.65),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      height: 1.15,
+                    ),
+                  ),
+                ],
+              ],
             ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }

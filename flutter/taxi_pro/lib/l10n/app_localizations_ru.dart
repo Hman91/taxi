@@ -212,6 +212,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get operatorColArrivalAirportTn => 'Аэропорт прибытия (Тунис)';
 
   @override
+  String get flightArrivalsTerminalGate => 'Терминал · выход';
+
+  @override
   String get operatorChooseDriverTopUp => 'Выберите водителя для пополнения:';
 
   @override
@@ -403,6 +406,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get chatScreenTitle => 'Чат поездки';
+
+  @override
+  String get chatConversationShortTitle => 'Чат';
 
   @override
   String get messageFieldHint => 'Сообщение';
@@ -626,6 +632,41 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String driverOfferTimeChip(String minutes) {
     return '$minutes min';
+  }
+
+  @override
+  String get driverOfferRoutePreviewLabel => 'Route preview';
+
+  @override
+  String get driverOfferPassengerSectionTitle => 'Passenger';
+
+  @override
+  String get driverOfferPassengerNameLabel => 'Name';
+
+  @override
+  String get driverOfferPassengerPhoneLabel => 'Phone';
+
+  @override
+  String get driverOfferB2bSectionTitle => 'Corporate';
+
+  @override
+  String get driverOfferB2bCompanyLabel => 'Company';
+
+  @override
+  String get driverOfferB2bCompanyUnknown => 'Corporate account';
+
+  @override
+  String get driverOfferB2bGuestLabel => 'Guest';
+
+  @override
+  String get driverOfferB2bRoomLabel => 'Room';
+
+  @override
+  String get driverOfferB2bCodeLabel => 'Code';
+
+  @override
+  String driverOfferB2bAgreedFare(String amount) {
+    return 'Corporate fare: $amount DT';
   }
 
   @override
@@ -927,5 +968,5 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get flightArrivalsSampleDataBanner =>
-      'Только примерные рейсы — бэкенд не использует AirLabs. Добавьте AIRLABS_API_KEY в файл `.env` в папке проекта Taxi и перезапустите API.';
+      'Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server.';
 }

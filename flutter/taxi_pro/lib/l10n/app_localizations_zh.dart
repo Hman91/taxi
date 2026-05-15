@@ -209,6 +209,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get operatorColArrivalAirportTn => '到达机场（突尼斯）';
 
   @override
+  String get flightArrivalsTerminalGate => '航站楼 · 登机口';
+
+  @override
   String get operatorChooseDriverTopUp => '选择要充值的司机:';
 
   @override
@@ -398,6 +401,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatScreenTitle => '行程聊天';
+
+  @override
+  String get chatConversationShortTitle => '聊天';
 
   @override
   String get messageFieldHint => '输入消息';
@@ -618,6 +624,41 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String driverOfferTimeChip(String minutes) {
     return '$minutes min';
+  }
+
+  @override
+  String get driverOfferRoutePreviewLabel => 'Route preview';
+
+  @override
+  String get driverOfferPassengerSectionTitle => 'Passenger';
+
+  @override
+  String get driverOfferPassengerNameLabel => 'Name';
+
+  @override
+  String get driverOfferPassengerPhoneLabel => 'Phone';
+
+  @override
+  String get driverOfferB2bSectionTitle => 'Corporate';
+
+  @override
+  String get driverOfferB2bCompanyLabel => 'Company';
+
+  @override
+  String get driverOfferB2bCompanyUnknown => 'Corporate account';
+
+  @override
+  String get driverOfferB2bGuestLabel => 'Guest';
+
+  @override
+  String get driverOfferB2bRoomLabel => 'Room';
+
+  @override
+  String get driverOfferB2bCodeLabel => 'Code';
+
+  @override
+  String driverOfferB2bAgreedFare(String amount) {
+    return 'Corporate fare: $amount DT';
   }
 
   @override
@@ -912,5 +953,5 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get flightArrivalsSampleDataBanner =>
-      '仅为示例航班 — 后端未接入 AirLabs。请在 Taxi 项目目录的 `.env` 中设置 AIRLABS_API_KEY 并重启 API 服务。';
+      'Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server.';
 }

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../app_locale.dart'
     show
@@ -12,6 +13,8 @@ import '../app_locale.dart'
         userChoseLocaleThisSession,
         appLocale;
 import '../config.dart';
+import '../maps/tunisia_tourist_restaurants.dart';
+import '../maps/tunisia_zone_coordinates.dart';
 import '../api/models.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
@@ -32,6 +35,8 @@ import '../utils/int_from_json.dart';
 import '../theme/taxi_app_theme.dart';
 import '../widgets/locale_popup_menu.dart';
 import '../widgets/voom_logo.dart';
+import 'b2b_corporate_map_l10n.dart';
+import 'corporate_reservation_map_screen.dart';
 import 'ride_chat_screen.dart';
 import 'unified_login_screen.dart';
 
@@ -454,6 +459,66 @@ const Map<String, Map<String, String>> _b2bUiTranslations = {
     'zh': '正在寻找司机...',
     'ru': 'Ищем водителя...',
   },
+  'fillRequiredFields': {
+    'en': 'Please fill all required fields.',
+    'fr': 'Veuillez remplir tous les champs obligatoires.',
+    'ar': 'يرجى ملء كل الحقول المطلوبة.',
+    'de': 'Bitte alle Pflichtfelder ausfüllen.',
+    'es': 'Completa todos los campos obligatorios.',
+    'it': 'Compila tutti i campi obbligatori.',
+    'zh': '请填写所有必填字段。',
+    'ru': 'Заполните все обязательные поля.',
+  },
+  'b2bGpsForMapPickupHint': {
+    'en': 'Pickup on the next step uses your live GPS and updates automatically.',
+    'fr': 'À l’étape suivante, la prise en charge suit votre GPS en direct et se met à jour automatiquement.',
+    'ar': 'في الخطوة التالية، يُستخدم موقعك عبر الـGPS مباشرة ويتحدث تلقائياً.',
+    'de': 'In der nächsten Abholung nutzt die App dein Live‑GPS und aktualisiert automatisch.',
+    'es': 'En el siguiente paso, la recogida usa tu GPS en vivo y se actualiza sola.',
+    'it': 'Nel passaggio successivo il ritiro usa il GPS in tempo reale e si aggiorna da solo.',
+    'zh': '下一步上车点将使用实时 GPS 并自动更新。',
+    'ru': 'На следующем шаге подача по живому GPS и обновляется автоматически.',
+  },
+  'b2bContinueToMap': {
+    'en': 'Continue to map & destination',
+    'fr': 'Continuer vers la carte et la destination',
+    'ar': 'متابعة إلى الخريطة والوجهة',
+    'de': 'Weiter zur Karte & Ziel',
+    'es': 'Continuar al mapa y destino',
+    'it': 'Continua a mappa e destinazione',
+    'zh': '继续前往地图与目的地',
+    'ru': 'Далее: карта и пункт назначения',
+  },
+  'b2bChangeRouteMap': {
+    'en': 'Change route on map',
+    'fr': 'Modifier l’itinéraire sur la carte',
+    'ar': 'تغيير المسار على الخريطة',
+    'de': 'Route auf der Karte ändern',
+    'es': 'Cambiar ruta en el mapa',
+    'it': 'Modifica percorso sulla mappa',
+    'zh': '在地图上更改路线',
+    'ru': 'Изменить маршрут на карте',
+  },
+  'b2bRideNowSelected': {
+    'en': 'Pickup: as soon as possible',
+    'fr': 'Prise en charge : dès que possible',
+    'ar': 'الانطلاق: في أقرب وقت',
+    'de': 'Abholung: so bald wie möglich',
+    'es': 'Recogida: lo antes posible',
+    'it': 'Ritiro: appena possibile',
+    'zh': '上车：尽快',
+    'ru': 'Подача: как можно скорее',
+  },
+  'b2bCompleteMapFirst': {
+    'en': 'Open the map and confirm your route first.',
+    'fr': 'Ouvrez la carte et confirmez d’abord votre trajet.',
+    'ar': 'افتح الخريطة وأكّد مسارك أولاً.',
+    'de': 'Öffne die Karte und bestätige zuerst die Route.',
+    'es': 'Abre el mapa y confirma primero la ruta.',
+    'it': 'Apri la mappa e conferma prima il percorso.',
+    'zh': '请先打开地图并确认路线。',
+    'ru': 'Сначала откройте карту и подтвердите маршрут.',
+  },
 };
 
 InputDecoration _fd(String label, {IconData? icon}) => InputDecoration(
@@ -676,6 +741,10 @@ class _B2bScreenState extends State<B2bScreen> {
   final _roomController = TextEditingController();
   Map<String, double> _fares = {};
   String? _routeKey;
+  double? _fareQuoteFromMap;
+  String? _fareQuoteRouteKey;
+  bool _b2bTripConfiguredViaMap = false;
+  bool _b2bScheduleLaterFromMap = false;
   String? _locationText;
   String? _locationError;
   bool _locating = false;
@@ -829,7 +898,7 @@ class _B2bScreenState extends State<B2bScreen> {
 
   String _tx(String key, [Object? value]) {
     final code = Localizations.localeOf(context).languageCode.toLowerCase();
-    final table = _b2bUiTranslations[key];
+    final table = _b2bUiTranslations[key] ?? kB2bCorporateMapUiTranslations[key];
     return (table?[code] ?? table?['en'] ?? key)
         .replaceAll('{value}', '${value ?? ''}');
   }
@@ -973,19 +1042,6 @@ class _B2bScreenState extends State<B2bScreen> {
             ? null
             : nearest.distanceMeters! / 1000.0;
         _nearestZoneName = nearest.zone;
-        if ((nearest.zone ?? '').trim().isNotEmpty) {
-          final starts = _fares.keys
-              .map((k) => k.split(airportRouteKeySeparator).first.trim())
-              .toSet();
-          if (starts.contains(nearest.zone!.trim())) {
-            final keys = _filteredRouteKeys()
-                .where((k) =>
-                    k.split(airportRouteKeySeparator).first.trim() ==
-                    nearest.zone!.trim())
-                .toList();
-            if (keys.isNotEmpty) _routeKey = keys.first;
-          }
-        }
       });
     } catch (e) {
       if (!mounted) return;
@@ -1010,20 +1066,197 @@ class _B2bScreenState extends State<B2bScreen> {
     return filtered;
   }
 
-  void _syncRouteSelectionForCurrentOption() {
+  void _pruneInvalidRouteSelection() {
     final keys = _filteredRouteKeys();
     if (keys.isEmpty) {
       _routeKey = null;
       _destinationController.clear();
+      _fareQuoteFromMap = null;
+      _fareQuoteRouteKey = null;
       return;
     }
-    if (_routeKey == null || !keys.contains(_routeKey)) {
-      _routeKey = keys.first;
+    if (_routeKey != null && !keys.contains(_routeKey)) {
+      _routeKey = null;
+      _destinationController.clear();
+      _fareQuoteFromMap = null;
+      _fareQuoteRouteKey = null;
     }
-    final parts = (_routeKey ?? '').split(airportRouteKeySeparator);
-    if (parts.length >= 2) {
-      _destinationController.text = parts[1].trim();
+  }
+
+  List<String> _catalogDestinationsForOrigin(String origin) {
+    final o = origin.trim();
+    if (o.isEmpty) return const [];
+    final out = <String>{};
+    for (final k in _fares.keys) {
+      final parts = k.split(airportRouteKeySeparator);
+      if (parts.length >= 2 && parts.first.trim() == o) {
+        out.add(parts[1].trim());
+      }
     }
+    return out.toList();
+  }
+
+  String? _nearestCatalogDestinationForLatLng(LatLng p, String origin) {
+    final candidates = _catalogDestinationsForOrigin(origin);
+    if (candidates.isEmpty) return null;
+    String? best;
+    var bestM = double.infinity;
+    for (final d in candidates) {
+      final c = TunisiaZoneCoordinates.lookup(d);
+      if (c == null) continue;
+      final m = Geolocator.distanceBetween(
+        p.latitude,
+        p.longitude,
+        c.latitude,
+        c.longitude,
+      );
+      if (m < bestM) {
+        bestM = m;
+        best = d;
+      }
+    }
+    if (best == null || bestM > 120000) return null;
+    return best;
+  }
+
+  String? _routeKeyForRestaurantByName(String raw) {
+    final t = raw.trim();
+    if (t.isEmpty) return null;
+    TunisiaTouristRestaurant? hit;
+    for (final r in TunisiaTouristRestaurants.all) {
+      if (r.name.trim() == t) {
+        hit = r;
+        break;
+      }
+    }
+    if (hit == null) return null;
+    final origin = (_nearestZoneName ?? '').trim();
+    if (origin.isEmpty) return null;
+    final near = _nearestCatalogDestinationForLatLng(hit.position, origin);
+    if (near == null) return null;
+    for (final k in _fares.keys) {
+      final p = k.split(airportRouteKeySeparator);
+      if (p.length >= 2 &&
+          p.first.trim() == origin &&
+          p[1].trim() == near) {
+        return k;
+      }
+    }
+    return null;
+  }
+
+  String? _resolveAnyRouteForDestinationText(String display) {
+    return _resolveRouteFromDestination(display) ??
+        _routeKeyForRestaurantByName(display);
+  }
+
+  String _destinationListTitle(AppLocalizations l, String s) {
+    for (final r in TunisiaTouristRestaurants.all) {
+      if (r.name == s) return r.name;
+    }
+    return localizedPlaceName(l, s);
+  }
+
+  Future<void> _continueToB2bCorporateMap() async {
+    final guest = _guestController.text.trim();
+    final room = _roomController.text.trim();
+    if (guest.isEmpty || room.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_tx('fillRequiredFields'))),
+        );
+      }
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await _detectB2bLocation();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    if (!mounted) return;
+    setState(() {
+      _b2bTripConfiguredViaMap = false;
+      _b2bScheduleLaterFromMap = false;
+      _destinationController.clear();
+      _routeKey = null;
+      _fareQuoteFromMap = null;
+      _fareQuoteRouteKey = null;
+      _scheduledPickupAt = null;
+    });
+    await _openCorporateReservationMap();
+  }
+
+  Future<void> _openCorporateReservationMap() async {
+    final l = AppLocalizations.of(context)!;
+    final allKeys = _fares.keys.toList()
+      ..sort(
+        (a, b) => localizedRouteKeyForDisplay(l, a)
+            .compareTo(localizedRouteKeyForDisplay(l, b)),
+      );
+    if (allKeys.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_tx('noRoutesFromYourArea'))),
+        );
+      }
+      return;
+    }
+    final preferred = (_nearestZoneName ?? '').trim();
+    var initial = preferred;
+    if (initial.isEmpty ||
+        !allKeys.any(
+          (k) =>
+              k.split(airportRouteKeySeparator).first.trim() == initial,
+        )) {
+      initial =
+          allKeys.first.split(airportRouteKeySeparator).first.trim();
+    }
+    LatLng? passengerGps;
+    final loc = _locationText;
+    if (loc != null) {
+      final parts = loc.split(',');
+      if (parts.length == 2) {
+        final la = double.tryParse(parts[0].trim());
+        final ln = double.tryParse(parts[1].trim());
+        if (la != null && ln != null) {
+          passengerGps = LatLng(la, ln);
+        }
+      }
+    }
+    if (!mounted) return;
+    final result = await Navigator.of(context)
+        .push<CorporateReservationMapResult>(
+      MaterialPageRoute(
+        builder: (ctx) => CorporateReservationMapScreen(
+          api: _api,
+          l: l,
+          allRouteKeys: allKeys,
+          fares: _fares,
+          initialPickupZone: initial,
+          passengerGps: passengerGps,
+          tx: _tx,
+          formatScheduledDateTime: _formatSchedule,
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+    final destLabel = (result.destinationDisplayName ?? '').trim().isNotEmpty
+        ? result.destinationDisplayName!.trim()
+        : result.routeKey.split(airportRouteKeySeparator).last.trim();
+    setState(() {
+      _routeKey = result.routeKey;
+      _destinationController.text = destLabel;
+      _fareQuoteFromMap = result.finalFare;
+      _fareQuoteRouteKey = result.routeKey;
+      _b2bTripConfiguredViaMap = true;
+      _b2bScheduleLaterFromMap = result.scheduleLater;
+      if (result.scheduleLater && result.scheduledPickupAt != null) {
+        _scheduledPickupAt = result.scheduledPickupAt;
+      } else {
+        _scheduledPickupAt = null;
+      }
+    });
   }
 
   List<String> _destinationChoices() {
@@ -1044,14 +1277,33 @@ class _B2bScreenState extends State<B2bScreen> {
   List<String> _destinationSuggestions() {
     final query = _destinationController.text.trim().toLowerCase();
     final base = _destinationChoices();
-    if (query.isEmpty) return base.take(10).toList();
     final l = AppLocalizations.of(context)!;
-    return base
-        .where((d) =>
-            d.toLowerCase().contains(query) ||
-            localizedPlaceName(l, d).toLowerCase().contains(query))
-        .take(12)
+    final restNames = TunisiaTouristRestaurants.all
+        .where((r) =>
+            query.isEmpty ||
+            r.name.toLowerCase().contains(query) ||
+            r.id.toLowerCase().contains(query))
+        .map((r) => r.name)
         .toList();
+    final merged = <String>{...base, ...restNames};
+    final list = merged.toList();
+    String sortLabel(String v) {
+      for (final r in TunisiaTouristRestaurants.all) {
+        if (r.name == v) return r.name;
+      }
+      return localizedPlaceName(l, v);
+    }
+
+    if (query.isEmpty) {
+      list.sort((a, b) => sortLabel(a).compareTo(sortLabel(b)));
+      return list.take(14).toList();
+    }
+    list.retainWhere((d) {
+      if (d.toLowerCase().contains(query)) return true;
+      return localizedPlaceName(l, d).toLowerCase().contains(query);
+    });
+    list.sort((a, b) => sortLabel(a).compareTo(sortLabel(b)));
+    return list.take(14).toList();
   }
 
   String? _resolveRouteFromDestination(String destination) {
@@ -1094,12 +1346,6 @@ class _B2bScreenState extends State<B2bScreen> {
       return fuzzy.first;
     }
     return null;
-  }
-
-  String? _routeForSuggestion(String suggestion) {
-    final dest = suggestion.trim();
-    if (dest.isEmpty) return null;
-    return _resolveRouteFromDestination(dest);
   }
 
   double? _routeDistanceKm(String? routeKey) {
@@ -1347,7 +1593,7 @@ class _B2bScreenState extends State<B2bScreen> {
       setState(() {
         _ok = true;
         _fares = fares;
-        _syncRouteSelectionForCurrentOption();
+        _pruneInvalidRouteSelection();
         if (_b2bCode.isEmpty) _b2bCode = _secretController.text.trim();
       });
       _hydrateB2bProfileFromToken(_appToken ?? _token);
@@ -1365,44 +1611,84 @@ class _B2bScreenState extends State<B2bScreen> {
     }
   }
 
-  void _bookGuest() {
+  Future<void> _bookGuest() async {
     final l = AppLocalizations.of(context)!;
     final guest = _guestController.text.trim();
     final destination = _destinationController.text.trim();
-    final route = _resolveRouteFromDestination(destination) ?? _routeKey;
+    final route = _resolveAnyRouteForDestinationText(destination) ?? _routeKey;
     final token = _token;
-    if (guest.isEmpty ||
-        destination.isEmpty ||
-        route == null ||
-        token == null ||
-        _scheduledPickupAt == null) {
+    if (token == null) {
       setState(() => _message = l.loginFirst);
       return;
+    }
+    if (guest.isEmpty || destination.isEmpty || route == null) {
+      setState(() => _message = _tx('fillRequiredFields'));
+      return;
+    }
+    DateTime? scheduledForApi;
+    if (isGoogleMapsPlatformSupported) {
+      if (!_b2bTripConfiguredViaMap) {
+        setState(() => _message = _tx('b2bCompleteMapFirst'));
+        return;
+      }
+      scheduledForApi =
+          _b2bScheduleLaterFromMap ? _scheduledPickupAt : null;
+      if (_b2bScheduleLaterFromMap && scheduledForApi == null) {
+        setState(() => _message = _tx('fillRequiredFields'));
+        return;
+      }
+    } else {
+      if (_scheduledPickupAt == null) {
+        setState(() => _message = _tx('fillRequiredFields'));
+        return;
+      }
+      scheduledForApi = _scheduledPickupAt;
     }
     final room = _roomController.text.trim();
     final guestPhone = _guestPhoneController.text.trim();
     final hotel = _hotelController.text.trim();
     final flightEta = _flightEtaController.text.trim();
-    final fare = _fareForRouteKey(route);
-    _api
-        .createB2bBooking(
-      token: token,
-      route: route,
-      guestName: guest,
-      guestPhone: guestPhone,
-      hotelName: hotel,
-      flightEta: flightEta,
-      roomNumber: room,
-      fare: fare,
-      sourceCode:
-          (_b2bCode.isNotEmpty ? _b2bCode : _secretController.text.trim()),
-      scheduledPickupAt: _scheduledPickupAt,
-    )
-        .then((booking) {
+    final DateTime pricingTime =
+        scheduledForApi?.toUtc() ?? DateTime.now().toUtc();
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    final double fare;
+    try {
+      final q = await _api.quoteAirport(route, pricingTime: pricingTime);
+      final v = q['final_fare'] as num?;
+      if (v == null) throw StateError('fare_quote');
+      fare = v.toDouble();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _message = e.toString();
+      });
+      return;
+    }
+    try {
+      final booking = await _api.createB2bBooking(
+        token: token,
+        route: route,
+        guestName: guest,
+        guestPhone: guestPhone,
+        hotelName: hotel,
+        flightEta: flightEta,
+        roomNumber: room,
+        fare: fare,
+        sourceCode:
+            (_b2bCode.isNotEmpty ? _b2bCode : _secretController.text.trim()),
+        scheduledPickupAt: scheduledForApi,
+      );
       if (!mounted) return;
       _refreshRides();
       setState(() {
+        _busy = false;
         _scheduledPickupAt = null;
+        _b2bTripConfiguredViaMap = false;
+        _b2bScheduleLaterFromMap = false;
         _message = l.b2bBookingSuccessMessage(
           l.requestRideButton,
           booking['id'] as Object,
@@ -1410,10 +1696,13 @@ class _B2bScreenState extends State<B2bScreen> {
           localizedRouteKeyForDisplay(l, route),
         );
       });
-    }).catchError((e) {
+    } catch (e) {
       if (!mounted) return;
-      setState(() => _message = e.toString());
-    });
+      setState(() {
+        _busy = false;
+        _message = e.toString();
+      });
+    }
   }
 
   void _connectRealtime(String token) {
@@ -1744,6 +2033,7 @@ class _B2bScreenState extends State<B2bScreen> {
             rideId: ride.id,
             conversationId: cid,
             showDriverQuickReplies: false,
+            minimalTripHeader: true,
           ),
         ),
       );
@@ -1834,8 +2124,12 @@ class _B2bScreenState extends State<B2bScreen> {
       if (mounted) setState(() {});
     });
     _destinationController.addListener(() {
-      final resolved =
-          _resolveRouteFromDestination(_destinationController.text);
+      final text = _destinationController.text;
+      final resolved = _resolveAnyRouteForDestinationText(text);
+      if (_fareQuoteRouteKey != null && resolved != _fareQuoteRouteKey) {
+        _fareQuoteFromMap = null;
+        _fareQuoteRouteKey = null;
+      }
       if (resolved != null && resolved != _routeKey && mounted) {
         setState(() => _routeKey = resolved);
       }
@@ -1880,7 +2174,7 @@ class _B2bScreenState extends State<B2bScreen> {
     setState(() {
       _ok = true;
       _fares = fares;
-      _syncRouteSelectionForCurrentOption();
+      _pruneInvalidRouteSelection();
     });
     await _detectB2bLocation();
   }
@@ -1923,7 +2217,15 @@ class _B2bScreenState extends State<B2bScreen> {
       }
     }).toList();
     if (_routeKey != null && !routeKeys.contains(_routeKey)) {
-      _routeKey = routeKeys.isNotEmpty ? routeKeys.first : null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _routeKey = null;
+          _fareQuoteFromMap = null;
+          _fareQuoteRouteKey = null;
+          _destinationController.clear();
+        });
+      });
     }
     return Scaffold(
       backgroundColor: _C.bgWarm,
@@ -2335,6 +2637,7 @@ class _B2bScreenState extends State<B2bScreen> {
                                     icon: Icons.meeting_room_outlined,
                                   ),
                                 ),
+                                if (!isGoogleMapsPlatformSupported) ...[
                                 const SizedBox(height: 8),
                                 Row(
                                   children: [
@@ -2438,12 +2741,35 @@ class _B2bScreenState extends State<B2bScreen> {
                                               setState(() {
                                                 _destinationController.clear();
                                                 _routeKey = null;
+                                                _fareQuoteFromMap = null;
+                                                _fareQuoteRouteKey = null;
                                               });
                                             },
                                             icon: const Icon(
                                                 Icons.close_rounded,
                                                 size: 18),
                                           ),
+                                  ),
+                                ),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: TextButton.icon(
+                                    onPressed: (_busy ||
+                                            !isGoogleMapsPlatformSupported)
+                                        ? null
+                                        : () => unawaited(
+                                              _openCorporateReservationMap(),
+                                            ),
+                                    icon: const Icon(Icons.map_outlined,
+                                        size: 18, color: _C.yellowDeep),
+                                    label: Text(
+                                      _tx('openRouteMap'),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12,
+                                        color: _C.charcoal,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -2519,12 +2845,17 @@ class _B2bScreenState extends State<B2bScreen> {
                                                       _destinationSuggestions()[
                                                           index];
                                                   final route =
-                                                      _routeForSuggestion(s);
+                                                      _resolveAnyRouteForDestinationText(
+                                                          s);
                                                   final km =
                                                       _routeDistanceKm(route);
                                                   final fare = route == null
                                                       ? null
                                                       : _fareForRouteKey(route);
+                                                  final isRestaurant =
+                                                      _routeKeyForRestaurantByName(
+                                                              s) !=
+                                                          null;
                                                   return ListTile(
                                                     dense: true,
                                                     contentPadding:
@@ -2537,7 +2868,10 @@ class _B2bScreenState extends State<B2bScreen> {
                                                       width: 34,
                                                       height: 34,
                                                       decoration: BoxDecoration(
-                                                        color: _C.yellow,
+                                                        color: isRestaurant
+                                                            ? const Color(
+                                                                0xFF00695C)
+                                                            : _C.yellow,
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(14),
@@ -2549,19 +2883,26 @@ class _B2bScreenState extends State<B2bScreen> {
                                                             blurRadius: 14,
                                                             offset:
                                                                 const Offset(
-                                                                    0, 6),
+                                                                    0, 6,
+                                                                ),
                                                           ),
                                                         ],
                                                       ),
-                                                      child: const Icon(
-                                                        Icons
-                                                            .location_on_outlined,
-                                                        color: _C.charcoal,
+                                                      child: Icon(
+                                                        isRestaurant
+                                                            ? Icons
+                                                                .restaurant_rounded
+                                                            : Icons
+                                                                .location_on_outlined,
+                                                        color: isRestaurant
+                                                            ? Colors.white
+                                                            : _C.charcoal,
                                                         size: 17,
                                                       ),
                                                     ),
                                                     title: Text(
-                                                      localizedPlaceName(l, s),
+                                                      _destinationListTitle(
+                                                          l, s),
                                                       style: const TextStyle(
                                                         fontSize: 13,
                                                         fontWeight:
@@ -2592,14 +2933,19 @@ class _B2bScreenState extends State<B2bScreen> {
                                                     onTap: () {
                                                       _destinationController
                                                           .text = s;
-                                                      final resolved = route ??
-                                                          _resolveRouteFromDestination(
+                                                      final resolved =
+                                                          _resolveAnyRouteForDestinationText(
                                                               s);
-                                                      if (resolved != null) {
-                                                        setState(() =>
-                                                            _routeKey =
-                                                                resolved);
-                                                      }
+                                                      setState(() {
+                                                        _fareQuoteFromMap =
+                                                            null;
+                                                        _fareQuoteRouteKey =
+                                                            null;
+                                                        if (resolved !=
+                                                            null) {
+                                                          _routeKey = resolved;
+                                                        }
+                                                      });
                                                       _destinationFocus
                                                           .unfocus();
                                                     },
@@ -2633,7 +2979,7 @@ class _B2bScreenState extends State<B2bScreen> {
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            '${_routeDistanceKm(_routeKey)?.toStringAsFixed(1) ?? '-'} km • ${l.fareDt(_fareForRouteKey(_routeKey).toStringAsFixed(2))} ${l.b2bFareAdminPercentSuffix}',
+                                            '${_routeDistanceKm(_routeKey)?.toStringAsFixed(1) ?? '-'} km • ${l.fareDt(((_fareQuoteFromMap != null && _routeKey == _fareQuoteRouteKey) ? _fareQuoteFromMap! : _fareForRouteKey(_routeKey)).toStringAsFixed(2))} ${l.b2bFareAdminPercentSuffix}',
                                             style: const TextStyle(
                                                 color: _C.textSoft,
                                                 fontSize: 11),
@@ -2707,7 +3053,7 @@ class _B2bScreenState extends State<B2bScreen> {
                                           borderRadius:
                                               BorderRadius.circular(50)),
                                     ),
-                                    onPressed: _busy ? null : _bookGuest,
+                                    onPressed: _busy ? null : () => unawaited(_bookGuest()),
                                     child: Text(
                                       l.requestRideButton,
                                       style: const TextStyle(
@@ -2715,6 +3061,212 @@ class _B2bScreenState extends State<B2bScreen> {
                                     ),
                                   ),
                                 ),
+                                ] else ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _locationText != null
+                                                ? _tx('gpsLine', _locationText)
+                                                : (_locationError ??
+                                                    (_locating
+                                                        ? l.passengerLocationDetecting
+                                                        : l.passengerLocationUnavailable)),
+                                            style: const TextStyle(
+                                                color: _C.textSoft,
+                                                fontSize: 11),
+                                          ),
+                                          if (_nearestZoneDistanceKm != null &&
+                                              (_nearestZoneName ?? '')
+                                                  .trim()
+                                                  .isNotEmpty)
+                                            Text(
+                                              _tx('nearestZone',
+                                                  '${localizedPlaceName(l, _nearestZoneName)} (${_nearestZoneDistanceKm!.toStringAsFixed(1)} km)'),
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: _distanceColor(
+                                                    _nearestZoneDistanceKm!),
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      onPressed: (_locating || _busy)
+                                          ? null
+                                          : () =>
+                                              unawaited(_detectB2bLocation()),
+                                      icon: const Icon(
+                                          Icons.my_location_rounded,
+                                          size: 18),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _tx('b2bGpsForMapPickupHint'),
+                                  style: const TextStyle(
+                                      color: _C.textSoft, fontSize: 11),
+                                ),
+                                if (!_b2bTripConfiguredViaMap) ...[
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: _C.yellow,
+                                        foregroundColor: _C.charcoal,
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(50)),
+                                      ),
+                                      onPressed: (_busy || _locating)
+                                          ? null
+                                          : () => unawaited(
+                                                _continueToB2bCorporateMap(),
+                                              ),
+                                      child: Text(
+                                        _tx('b2bContinueToMap'),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w800),
+                                      ),
+                                    ),
+                                  ),
+                                ] else ...[
+                                  const SizedBox(height: 12),
+                                  _rowInfoCard(
+                                    icon: Icons.place_outlined,
+                                    content: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _tx('destination'),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 11,
+                                            color: _C.textSoft,
+                                          ),
+                                        ),
+                                        Text(
+                                          _destinationController.text.trim(),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 13,
+                                            color: _C.charcoal,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (_routeKey != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: _rowInfoCard(
+                                        icon: Icons.route_rounded,
+                                        content: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              localizedRouteKeyForDisplay(
+                                                  l, _routeKey!),
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 12),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '${_routeDistanceKm(_routeKey)?.toStringAsFixed(1) ?? '-'} km • ${l.fareDt(((_fareQuoteFromMap != null && _routeKey == _fareQuoteRouteKey) ? _fareQuoteFromMap! : _fareForRouteKey(_routeKey)).toStringAsFixed(2))} ${l.b2bFareAdminPercentSuffix}',
+                                              style: const TextStyle(
+                                                  color: _C.textSoft,
+                                                  fontSize: 11),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: _rowInfoCard(
+                                      icon: Icons.schedule_rounded,
+                                      content: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _tx('scheduledPickup'),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 11,
+                                              color: _C.textSoft,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            (_b2bScheduleLaterFromMap &&
+                                                    _scheduledPickupAt != null)
+                                                ? _formatSchedule(
+                                                    _scheduledPickupAt!)
+                                                : _tx('b2bRideNowSelected'),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 12,
+                                              color: _C.charcoal,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: TextButton.icon(
+                                      onPressed: _busy
+                                          ? null
+                                          : () => unawaited(
+                                                _openCorporateReservationMap(),
+                                              ),
+                                      icon: const Icon(Icons.map_outlined,
+                                          size: 18, color: _C.yellowDeep),
+                                      label: Text(
+                                        _tx('b2bChangeRouteMap'),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 12,
+                                          color: _C.charcoal,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: _C.yellow,
+                                        foregroundColor: _C.charcoal,
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(50)),
+                                      ),
+                                      onPressed: _busy ? null : () => unawaited(_bookGuest()),
+                                      child: Text(
+                                        l.requestRideButton,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w800),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                               ],
                             ),
                           ),

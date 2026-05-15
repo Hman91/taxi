@@ -25,52 +25,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get language => 'Lingua';
 
   @override
-  String get passengerLanguageReminderTitle => 'Scegli la tua lingua';
-
-  @override
-  String get passengerLanguageReminderSubtitle =>
-      'Imposta la tua esperienza preferita su Voom.';
-
-  @override
-  String get passengerLanguageReminderContinue => 'Continua';
-
-  @override
-  String get passengerLanguageNameEnglish => 'Inglese';
-
-  @override
-  String get passengerLanguageNameFrench => 'Francese';
-
-  @override
-  String get passengerLanguageNameArabic => 'Arabo';
-
-  @override
-  String get passengerLanguageNameGerman => 'Tedesco';
-
-  @override
-  String get passengerLanguageNameSpanish => 'Spagnolo';
-
-  @override
-  String get passengerLanguageNameItalian => 'Italiano';
-
-  @override
-  String get passengerLanguageNameChinese => 'Cinese';
-
-  @override
-  String get passengerLanguageNameRussian => 'Russo';
-
-  @override
-  String get passengerLanguageRegionGlobal => 'Globale';
-
-  @override
-  String get passengerLanguageRegionEurope => 'Europa';
-
-  @override
-  String get passengerLanguageRegionMena => 'Medio Oriente e Nord Africa';
-
-  @override
-  String get passengerLanguageRegionAsia => 'Asia';
-
-  @override
   String get rolePassenger => 'Passeggero';
 
   @override
@@ -101,7 +55,15 @@ class AppLocalizationsIt extends AppLocalizations {
   String get route => 'Percorso';
 
   @override
-  String get nightFare50 => '+50% tariffa notturna';
+  String get nightFare50 => 'Night rate applied (+50%)';
+
+  @override
+  String get nightFareScheduleHint =>
+      'Night +50% uses 9:00 PM–5:00 AM Tunisia time (Africa/Tunis). Your estimate follows that clock.';
+
+  @override
+  String get ownerWalletShareHint =>
+      'When a trip ends, the owner deducts from the driver\'s wallet: 10% on passenger rides; B2B adds 5% more (15% total).';
 
   @override
   String get rateYourLastRide => 'Valuta l\'ultima corsa';
@@ -458,6 +420,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get sendChatMessage => 'Invia';
 
   @override
+  String get chatConversationShortTitle => 'Chat';
+
+  @override
   String get accountDisabledContactAdmin =>
       'Account disabilitato. Contatta un amministratore.';
 
@@ -657,6 +622,29 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get driverOfferToLabel => 'To';
+
+  @override
+  String get driverOfferPassengerSectionTitle => 'Passeggero';
+
+  @override
+  String get driverOfferPassengerNameLabel => 'Nome';
+
+  @override
+  String get driverOfferPassengerPhoneLabel => 'Telefono';
+
+  @override
+  String get driverOfferB2bCompanyUnknown => 'Account aziendale';
+
+  @override
+  String get driverOfferB2bGuestLabel => 'Ospite';
+
+  @override
+  String get driverOfferB2bRoomLabel => 'Camera';
+
+  @override
+  String driverOfferB2bAgreedFare(String amount) {
+    return 'Tariffa aziendale: $amount DT';
+  }
 
   @override
   String get driverRejectOfferButton => 'Reject';
@@ -975,5 +963,51 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get flightArrivalsSampleDataBanner =>
-      'Solo voli di esempio: il backend non usa AirLabs. Impostate AIRLABS_API_KEY nel file `.env` nella cartella del progetto Taxi e riavviate l\'API.';
+      'Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server.';
+
+  @override
+  String get passengerLanguageReminderTitle => 'Scegli la lingua';
+
+  @override
+  String get passengerLanguageReminderSubtitle =>
+      'Mostreremo menu, prezzi e assistenza in questa lingua. Puoi modificarla in qualsiasi momento nelle impostazioni.';
+
+  @override
+  String get passengerLanguageReminderContinue => 'Continua';
+
+  @override
+  String get passengerLanguageNameArabic => 'Arabo';
+
+  @override
+  String get passengerLanguageNameGerman => 'Tedesco';
+
+  @override
+  String get passengerLanguageNameSpanish => 'Spagnolo';
+
+  @override
+  String get passengerLanguageNameFrench => 'Francese';
+
+  @override
+  String get passengerLanguageNameItalian => 'Italiano';
+
+  @override
+  String get passengerLanguageNameRussian => 'Russo';
+
+  @override
+  String get passengerLanguageNameChinese => 'Cinese';
+
+  @override
+  String get passengerLanguageNameEnglish => 'Inglese';
+
+  @override
+  String get passengerLanguageRegionMena => 'Medio Oriente e Nord Africa';
+
+  @override
+  String get passengerLanguageRegionAsia => 'Asia';
+
+  @override
+  String get passengerLanguageRegionEurope => 'Europa';
+
+  @override
+  String get passengerLanguageRegionGlobal => 'In tutto il mondo';
 }

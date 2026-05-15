@@ -13,7 +13,9 @@
   "tabAirport": "Аэропорт",
   "tabGps": "GPS",
   "route": "Маршрут",
-  "nightFare50": "+50% ночной тариф",
+  "nightFare50": "Night rate applied (+50%)",
+  "nightFareScheduleHint": "Night +50% uses 9:00 PM–5:00 AM Tunisia time (Africa/Tunis). Your estimate follows that clock.",
+  "ownerWalletShareHint": "When a trip ends, the owner deducts from the driver's wallet: 10% on passenger rides; B2B adds 5% more (15% total).",
   "rateYourLastRide": "Оцените последнюю поездку",
   "submitRating": "Отправить оценку",
   "thankYouFeedback": "Спасибо за отзыв!",
@@ -92,6 +94,7 @@
   "chatScreenTitle": "Чат поездки",
   "messageFieldHint": "Сообщение",
   "sendChatMessage": "Отправить",
+  "chatConversationShortTitle": "Чат",
   "accountDisabledContactAdmin": "Аккаунт отключён. Обратитесь к администратору.",
   "signedInWithGoogle": "Вход выполнен через Google",
   "passengerGoogleLoginRequired": "Для пассажиров требуется вход через Google.",
@@ -329,6 +332,20 @@
   "driverRideRequestBannerTitle": "New ride request!",
   "driverOfferFromLabel": "From",
   "driverOfferToLabel": "To",
+  "driverOfferPassengerSectionTitle": "Пассажир",
+  "driverOfferPassengerNameLabel": "Имя",
+  "driverOfferPassengerPhoneLabel": "Телефон",
+  "driverOfferB2bCompanyUnknown": "Корпоративный аккаунт",
+  "driverOfferB2bGuestLabel": "Гость",
+  "driverOfferB2bRoomLabel": "Номер",
+  "driverOfferB2bAgreedFare": "Корпоративный тариф: {amount} DT",
+  "@driverOfferB2bAgreedFare": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "driverRejectOfferButton": "Reject",
   "driverOfferFareChip": "{amount} DT",
   "@driverOfferFareChip": {
@@ -670,5 +687,20 @@
   },
   "ownerDriverPinWalletsHeading": "Кошельки водителей",
   "ownerDriverPinWalletsEmpty": "Нет загруженных PIN-аккаунтов водителей.",
-  "flightArrivalsSampleDataBanner": "Только примерные рейсы — бэкенд не использует AirLabs. Добавьте AIRLABS_API_KEY в файл `.env` в папке проекта Taxi и перезапустите API."
+  "flightArrivalsSampleDataBanner": "Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server.",
+  "passengerLanguageReminderTitle": "Выберите язык",
+  "passengerLanguageReminderSubtitle": "Меню, цены и справка будут на этом языке. Изменить можно в любой момент в настройках.",
+  "passengerLanguageReminderContinue": "Продолжить",
+  "passengerLanguageNameArabic": "Арабский",
+  "passengerLanguageNameGerman": "Немецкий",
+  "passengerLanguageNameSpanish": "Испанский",
+  "passengerLanguageNameFrench": "Французский",
+  "passengerLanguageNameItalian": "Итальянский",
+  "passengerLanguageNameRussian": "Русский",
+  "passengerLanguageNameChinese": "Китайский",
+  "passengerLanguageNameEnglish": "Английский",
+  "passengerLanguageRegionMena": "Ближний Восток и Северная Африка",
+  "passengerLanguageRegionAsia": "Азия",
+  "passengerLanguageRegionEurope": "Европа",
+  "passengerLanguageRegionGlobal": "По всему миру"
 }

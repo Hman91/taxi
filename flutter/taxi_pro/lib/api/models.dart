@@ -187,6 +187,14 @@ class Ride {
     required this.status,
     required this.pickup,
     required this.destination,
+    this.pickupAddress,
+    this.pickupDisplayName,
+    this.destinationAddress,
+    this.destinationDisplayName,
+    this.pickupLat,
+    this.pickupLng,
+    this.destinationLat,
+    this.destinationLng,
     this.driverName,
     this.driverVehicle,
     this.driverPhone,
@@ -202,7 +210,13 @@ class Ride {
     this.b2bGuestName,
     this.b2bRoomNumber,
     this.b2bSourceCode,
+    this.b2bTenantName,
     this.b2bFare,
+    this.quotedDistanceKm,
+    this.quotedFareDt,
+    this.quotedBaseFareDt,
+    this.quotedNightSurchargeDt,
+    this.quotedIsNight,
     this.scheduledPickupAt,
     this.reservationStatus,
     this.createdAt,
@@ -215,6 +229,14 @@ class Ride {
   final String status;
   final String pickup;
   final String destination;
+  final String? pickupAddress;
+  final String? pickupDisplayName;
+  final String? destinationAddress;
+  final String? destinationDisplayName;
+  final double? pickupLat;
+  final double? pickupLng;
+  final double? destinationLat;
+  final double? destinationLng;
   final String? driverName;
   final String? driverVehicle;
   final String? driverPhone;
@@ -230,7 +252,14 @@ class Ride {
   final String? b2bGuestName;
   final String? b2bRoomNumber;
   final String? b2bSourceCode;
+  final String? b2bTenantName;
   final double? b2bFare;
+  /// Route-table distance (km) when server attached a fare quote to the ride.
+  final double? quotedDistanceKm;
+  final double? quotedFareDt;
+  final double? quotedBaseFareDt;
+  final double? quotedNightSurchargeDt;
+  final bool? quotedIsNight;
   final String? scheduledPickupAt;
   final String? reservationStatus;
   final String? createdAt;
@@ -244,6 +273,14 @@ class Ride {
       status: json['status'] as String,
       pickup: json['pickup'] as String,
       destination: json['destination'] as String,
+      pickupAddress: json['pickup_address'] as String?,
+      pickupDisplayName: json['pickup_display_name'] as String?,
+      destinationAddress: json['destination_address'] as String?,
+      destinationDisplayName: json['destination_display_name'] as String?,
+      pickupLat: (json['pickup_lat'] as num?)?.toDouble(),
+      pickupLng: (json['pickup_lng'] as num?)?.toDouble(),
+      destinationLat: (json['destination_lat'] as num?)?.toDouble(),
+      destinationLng: (json['destination_lng'] as num?)?.toDouble(),
       driverName: json['driver_name'] as String?,
       driverVehicle: json['driver_vehicle'] as String?,
       driverPhone: json['driver_phone'] as String?,
@@ -259,7 +296,14 @@ class Ride {
       b2bGuestName: json['b2b_guest_name'] as String?,
       b2bRoomNumber: json['b2b_room_number'] as String?,
       b2bSourceCode: json['b2b_source_code'] as String?,
+      b2bTenantName: json['b2b_tenant_name'] as String?,
       b2bFare: (json['b2b_fare'] as num?)?.toDouble(),
+      quotedDistanceKm: (json['quoted_distance_km'] as num?)?.toDouble(),
+      quotedFareDt: (json['quoted_fare_dt'] as num?)?.toDouble(),
+      quotedBaseFareDt: (json['quoted_base_fare_dt'] as num?)?.toDouble(),
+      quotedNightSurchargeDt:
+          (json['quoted_night_surcharge_dt'] as num?)?.toDouble(),
+      quotedIsNight: json['quoted_is_night'] as bool?,
       scheduledPickupAt: json['scheduled_pickup_at'] as String?,
       reservationStatus: json['reservation_status'] as String?,
       createdAt: json['created_at'] as String?,

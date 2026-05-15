@@ -197,7 +197,7 @@ abstract class AppLocalizations {
   /// No description provided for @nightFare50.
   ///
   /// In en, this message translates to:
-  /// **'+50% night fare'**
+  /// **'Night rate applied (+50%)'**
   String get nightFare50;
 
   /// No description provided for @rateYourLastRide.
@@ -475,6 +475,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Arrival airport (Tunisia)'**
   String get operatorColArrivalAirportTn;
+
+  /// No description provided for @flightArrivalsTerminalGate.
+  ///
+  /// In en, this message translates to:
+  /// **'Terminal · Gate'**
+  String get flightArrivalsTerminalGate;
 
   /// No description provided for @operatorChooseDriverTopUp.
   ///
@@ -841,6 +847,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Ride chat'**
   String get chatScreenTitle;
+
+  /// No description provided for @chatConversationShortTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get chatConversationShortTitle;
 
   /// No description provided for @messageFieldHint.
   ///
@@ -1213,6 +1225,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{minutes} min'**
   String driverOfferTimeChip(String minutes);
+
+  /// No description provided for @driverOfferRoutePreviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Route preview'**
+  String get driverOfferRoutePreviewLabel;
+
+  /// No description provided for @driverOfferPassengerSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Passenger'**
+  String get driverOfferPassengerSectionTitle;
+
+  /// No description provided for @driverOfferPassengerNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get driverOfferPassengerNameLabel;
+
+  /// No description provided for @driverOfferPassengerPhoneLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get driverOfferPassengerPhoneLabel;
+
+  /// No description provided for @driverOfferB2bSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Corporate'**
+  String get driverOfferB2bSectionTitle;
+
+  /// No description provided for @driverOfferB2bCompanyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Company'**
+  String get driverOfferB2bCompanyLabel;
+
+  /// No description provided for @driverOfferB2bCompanyUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Corporate account'**
+  String get driverOfferB2bCompanyUnknown;
+
+  /// No description provided for @driverOfferB2bGuestLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Guest'**
+  String get driverOfferB2bGuestLabel;
+
+  /// No description provided for @driverOfferB2bRoomLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Room'**
+  String get driverOfferB2bRoomLabel;
+
+  /// No description provided for @driverOfferB2bCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Code'**
+  String get driverOfferB2bCodeLabel;
+
+  /// No description provided for @driverOfferB2bAgreedFare.
+  ///
+  /// In en, this message translates to:
+  /// **'Corporate fare: {amount} DT'**
+  String driverOfferB2bAgreedFare(String amount);
 
   /// No description provided for @snackDriverRideTakenOther.
   ///
@@ -1692,7 +1770,7 @@ abstract class AppLocalizations {
   /// No description provided for @flightArrivalsSampleDataBanner.
   ///
   /// In en, this message translates to:
-  /// **'Sample flights only — AirLabs isn’t loading. Put AIRLABS_API_KEY in `taxi/.env` OR `backend/.env`, save, then restart the API server.'**
+  /// **'Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server.'**
   String get flightArrivalsSampleDataBanner;
 }
 

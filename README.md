@@ -55,6 +55,7 @@ On connect, the server joins the client to **`user:<user_id>`** for targeted pus
 | `PORT` | Listen port | `5000` |
 | `TRANSLATION_PROVIDER` | `google` \| `none` \| `stub` \| `off` | `google` |
 | `TRANSLATION_TIMEOUT_SECONDS` | Vendor call timeout | `5` |
+| `AVIATION_EDGE_API_KEY` | Live Tunisia airport arrivals (operator/owner/driver dashboard); optional | _(empty → demo sample rows)_ |
 | `SMOKE_API_BASE` | Default base URL for `smoke_api.py` (optional) | `http://127.0.0.1:5000` |
 
 **Local work after deploying to production**

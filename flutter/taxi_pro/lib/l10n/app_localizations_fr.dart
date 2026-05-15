@@ -212,6 +212,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get operatorColArrivalAirportTn => 'Aéroport d\'arrivée (Tunisie)';
 
   @override
+  String get flightArrivalsTerminalGate => 'Terminal · porte';
+
+  @override
   String get operatorChooseDriverTopUp =>
       'Choisissez le chauffeur à recharger :';
 
@@ -406,6 +409,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get chatScreenTitle => 'Chat de course';
+
+  @override
+  String get chatConversationShortTitle => 'Chat';
 
   @override
   String get messageFieldHint => 'Écrire un message';
@@ -631,6 +637,41 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String driverOfferTimeChip(String minutes) {
     return '$minutes min';
+  }
+
+  @override
+  String get driverOfferRoutePreviewLabel => 'Route preview';
+
+  @override
+  String get driverOfferPassengerSectionTitle => 'Passenger';
+
+  @override
+  String get driverOfferPassengerNameLabel => 'Name';
+
+  @override
+  String get driverOfferPassengerPhoneLabel => 'Phone';
+
+  @override
+  String get driverOfferB2bSectionTitle => 'Corporate';
+
+  @override
+  String get driverOfferB2bCompanyLabel => 'Company';
+
+  @override
+  String get driverOfferB2bCompanyUnknown => 'Corporate account';
+
+  @override
+  String get driverOfferB2bGuestLabel => 'Guest';
+
+  @override
+  String get driverOfferB2bRoomLabel => 'Room';
+
+  @override
+  String get driverOfferB2bCodeLabel => 'Code';
+
+  @override
+  String driverOfferB2bAgreedFare(String amount) {
+    return 'Corporate fare: $amount DT';
   }
 
   @override
@@ -933,5 +974,5 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get flightArrivalsSampleDataBanner =>
-      'Vols d\'exemple uniquement — le serveur n\'utilise pas AirLabs. Ajoutez AIRLABS_API_KEY dans un fichier `.env` à la racine du projet Taxi, puis redémarrez l\'API.';
+      'Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server.';
 }

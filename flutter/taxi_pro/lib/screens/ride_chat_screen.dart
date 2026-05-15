@@ -65,6 +65,7 @@ class RideChatScreen extends StatefulWidget {
     required this.rideId,
     required this.conversationId,
     this.showDriverQuickReplies = false,
+    this.minimalTripHeader = false,
   });
 
   final String token;
@@ -72,6 +73,9 @@ class RideChatScreen extends StatefulWidget {
   final int rideId;
   final int conversationId;
   final bool showDriverQuickReplies;
+
+  /// When true, hides ride-specific header chrome (ride title, message count, ride id) for a cleaner chat.
+  final bool minimalTripHeader;
 
   @override
   State<RideChatScreen> createState() => _RideChatScreenState();
@@ -352,33 +356,43 @@ class _RideChatScreenState extends State<RideChatScreen> {
         elevation: 0,
         foregroundColor: _C.charcoal,
         centerTitle: true,
-        title: Column(
-          children: [
-            Text(
-              l.chatScreenTitle,
-              style: const TextStyle(
+        title: widget.minimalTripHeader
+            ? Text(
+                l.chatConversationShortTitle,
+                style: const TextStyle(
                   fontWeight: FontWeight.w900,
                   color: _C.charcoal,
-                  fontSize: 16),
-            ),
-            const Text(
-              'Live conversation',
-              style: TextStyle(
-                  color: _C.textStrong,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 10.5),
-            ),
-          ],
-        ),
+                  fontSize: 17,
+                  letterSpacing: -0.2,
+                ),
+              )
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l.chatScreenTitle,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: _C.charcoal,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const Text(
+                    'Live conversation',
+                    style: TextStyle(
+                      color: _C.textStrong,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 10.5,
+                    ),
+                  ),
+                ],
+              ),
         actions: [
-          TextButton.icon(
-            style: TextButton.styleFrom(
-              foregroundColor: _C.charcoal,
-              textStyle: const TextStyle(fontWeight: FontWeight.w700),
-            ),
+          IconButton(
+            tooltip: l.language,
             onPressed: () => _syncLanguage(context),
-            icon: const Icon(Icons.translate, size: 18),
-            label: Text(l.language),
+            icon: const Icon(Icons.translate_rounded, size: 22),
+            color: _C.charcoal,
           ),
         ],
       ),
@@ -392,79 +406,81 @@ class _RideChatScreenState extends State<RideChatScreen> {
         ),
         child: Column(
           children: [
-            Container(
-              margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFFFFF), Color(0xFFFFF8E0)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(26),
-                border: Border.all(color: _C.border),
-                boxShadow: [
-                  BoxShadow(
-                    color: _C.charcoal.withOpacity(0.07),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
+            if (!widget.minimalTripHeader)
+              Container(
+                margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFFFFF), Color(0xFFFFF8E0)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ],
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(color: _C.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _C.charcoal.withOpacity(0.07),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Row(children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: _C.successBg,
+                      borderRadius: BorderRadius.circular(17),
+                      border: Border.all(color: _C.success.withOpacity(0.18)),
+                    ),
+                    child: const Icon(Icons.forum_rounded,
+                        color: _C.success, size: 21),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l.chatScreenTitle,
+                            style: const TextStyle(
+                              color: _C.textStrong,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_messages.length} messages · Ride #${widget.rideId}',
+                            style: const TextStyle(
+                              color: _C.textSoft,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ]),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: _C.successBg,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: _C.success.withOpacity(0.18)),
+                    ),
+                    child: const Text(
+                      'Online',
+                      style: TextStyle(
+                          color: _C.success,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ]),
               ),
-              child: Row(children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: _C.successBg,
-                    borderRadius: BorderRadius.circular(17),
-                    border: Border.all(color: _C.success.withOpacity(0.18)),
-                  ),
-                  child: const Icon(Icons.forum_rounded,
-                      color: _C.success, size: 21),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l.chatScreenTitle,
-                          style: const TextStyle(
-                            color: _C.textStrong,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${_messages.length} messages · Ride #${widget.rideId}',
-                          style: const TextStyle(
-                            color: _C.textSoft,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ]),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: _C.successBg,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: _C.success.withOpacity(0.18)),
-                  ),
-                  child: const Text(
-                    'Online',
-                    style: TextStyle(
-                        color: _C.success,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w900),
-                  ),
-                ),
-              ]),
-            ),
+            if (widget.minimalTripHeader) const SizedBox(height: 6),
             if (_loading)
               LinearProgressIndicator(
                 minHeight: 2,
@@ -498,7 +514,9 @@ class _RideChatScreenState extends State<RideChatScreen> {
               ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                padding: widget.minimalTripHeader
+                    ? const EdgeInsets.fromLTRB(10, 4, 10, 6)
+                    : const EdgeInsets.fromLTRB(12, 10, 12, 8),
                 child: _module(
                   child: ListView.builder(
                     controller: _scroll,

@@ -14,7 +14,7 @@
   "tabAirport": "Airport",
   "tabGps": "GPS",
   "route": "Route",
-  "nightFare50": "+50% night fare",
+  "nightFare50": "Night rate applied (+50%)",
   "rateYourLastRide": "Rate your last ride",
   "submitRating": "Submit rating",
   "thankYouFeedback": "Thank you for your feedback!",
@@ -126,6 +126,7 @@
   "operatorColTakeoffTime": "Take-off time",
   "operatorColExpectedArrival": "Expected arrival (today)",
   "operatorColArrivalAirportTn": "Arrival airport (Tunisia)",
+  "flightArrivalsTerminalGate": "Terminal · Gate",
   "operatorChooseDriverTopUp": "Choose the driver to top up:",
   "operatorAmountReceivedDt": "Amount received (DT):",
   "operatorRechargeBalance": "Recharge the balance",
@@ -224,6 +225,7 @@
     }
   },
   "chatScreenTitle": "Ride chat",
+  "chatConversationShortTitle": "Chat",
   "messageFieldHint": "Type a message",
   "sendChatMessage": "Send",
   "accountDisabledContactAdmin": "Account disabled. Contact an administrator.",
@@ -382,6 +384,24 @@
   "@driverOfferTimeChip": {
     "placeholders": {
       "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "driverOfferRoutePreviewLabel": "Route preview",
+  "driverOfferPassengerSectionTitle": "Passenger",
+  "driverOfferPassengerNameLabel": "Name",
+  "driverOfferPassengerPhoneLabel": "Phone",
+  "driverOfferB2bSectionTitle": "Corporate",
+  "driverOfferB2bCompanyLabel": "Company",
+  "driverOfferB2bCompanyUnknown": "Corporate account",
+  "driverOfferB2bGuestLabel": "Guest",
+  "driverOfferB2bRoomLabel": "Room",
+  "driverOfferB2bCodeLabel": "Code",
+  "driverOfferB2bAgreedFare": "Corporate fare: {amount} DT",
+  "@driverOfferB2bAgreedFare": {
+    "placeholders": {
+      "amount": {
         "type": "String"
       }
     }
@@ -669,5 +689,5 @@
   },
   "ownerDriverPinWalletsHeading": "Driver wallets",
   "ownerDriverPinWalletsEmpty": "No PIN driver accounts loaded.",
-  "flightArrivalsSampleDataBanner": "Sample flights only — AirLabs isn’t loading. Put AIRLABS_API_KEY in `taxi/.env` OR `backend/.env`, save, then restart the API server."
+  "flightArrivalsSampleDataBanner": "Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server."
 }

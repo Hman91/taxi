@@ -66,7 +66,7 @@ def _driver_dict(d: Driver) -> Dict[str, Any]:
     }
 
 
-def _ride_dict(r: Ride) -> Dict[str, Any]:
+def _ride_dict(r: Ride, *, include_fare_quote: bool = True) -> Dict[str, Any]:
     driver_name = None
     driver_vehicle = None
     driver_phone = None
@@ -79,6 +79,7 @@ def _ride_dict(r: Ride) -> Dict[str, Any]:
     ).first()
     passenger_name = None
     passenger_phone = None
+    passenger_email = None
     passenger_photo_url = None
     u = db.session.get(User, int(r.user_id))
     if u is not None:
@@ -90,6 +91,7 @@ def _ride_dict(r: Ride) -> Dict[str, Any]:
             if email:
                 passenger_name = email.split("@", 1)[0]
         passenger_phone = (u.phone or "").strip() or None
+        passenger_email = (u.email or "").strip() or None
         passenger_photo_url = (u.photo_url or "").strip() or None
     if b2b_booking is not None:
         passenger_name = b2b_booking.guest_name or passenger_name
@@ -99,6 +101,14 @@ def _ride_dict(r: Ride) -> Dict[str, Any]:
                 passenger_phone = room_blob.split("Phone:", 1)[1].split("|", 1)[0].strip()
             except Exception:
                 passenger_phone = None
+    b2b_tenant_name = None
+    if b2b_booking is not None and b2b_booking.tenant_id is not None:
+        tnt = db.session.get(B2BTenant, int(b2b_booking.tenant_id))
+        if tnt is not None:
+            label = (tnt.label or "").strip()
+            hotel = (tnt.hotel or "").strip()
+            code = (tnt.code or "").strip()
+            b2b_tenant_name = label or hotel or code or None
     if r.driver_id is not None:
         d = db.session.get(Driver, int(r.driver_id))
         if d is not None:
@@ -124,6 +134,14 @@ def _ride_dict(r: Ride) -> Dict[str, Any]:
         "status": r.status,
         "pickup": r.pickup,
         "destination": r.destination,
+        "pickup_address": r.pickup_address,
+        "pickup_display_name": r.pickup_display_name,
+        "destination_address": r.destination_address,
+        "destination_display_name": r.destination_display_name,
+        "pickup_lat": r.pickup_lat,
+        "pickup_lng": r.pickup_lng,
+        "destination_lat": r.destination_lat,
+        "destination_lng": r.destination_lng,
         "scheduled_pickup_at": _dt(r.scheduled_pickup_at),
         "reservation_status": r.reservation_status,
         "driver_name": driver_name,
@@ -135,25 +153,44 @@ def _ride_dict(r: Ride) -> Dict[str, Any]:
         "driver_current_zone": driver_current_zone,
         "passenger_name": passenger_name,
         "passenger_phone": passenger_phone,
+        "passenger_email": passenger_email,
         "passenger_photo_url": passenger_photo_url,
         "is_rated": rating_exists_for_ride(int(r.id)),
         "is_b2b": b2b_booking is not None,
         "b2b_guest_name": b2b_booking.guest_name if b2b_booking is not None else None,
         "b2b_room_number": b2b_booking.room_number if b2b_booking is not None else None,
         "b2b_source_code": b2b_booking.source_code if b2b_booking is not None else None,
+        "b2b_tenant_name": b2b_tenant_name,
         "b2b_fare": float(b2b_booking.fare) if b2b_booking is not None else None,
         "created_at": _dt(r.created_at),
         "updated_at": _dt(r.updated_at),
     }
-    try:
-        from ..services import pricing
+    if include_fare_quote:
+        try:
+            from ..services import pricing
 
-        q = pricing.fare_quote_for_pickup_destination(r.pickup, r.destination)
-        out["quoted_distance_km"] = q["distance_km"]
-        out["quoted_fare_dt"] = q["fare_dt"]
-    except Exception:
+            ref = r.scheduled_pickup_at or r.created_at
+            pt = pricing.parse_pricing_time(ref)
+            q = pricing.fare_quote_for_pickup_destination(
+                r.pickup, r.destination, pricing_time=pt
+            )
+            out["quoted_distance_km"] = q["distance_km"]
+            out["quoted_fare_dt"] = q["fare_dt"]
+            out["quoted_base_fare_dt"] = q.get("base_fare_dt")
+            out["quoted_night_surcharge_dt"] = q.get("night_surcharge_dt")
+            out["quoted_is_night"] = q.get("is_night")
+        except Exception:
+            out["quoted_distance_km"] = None
+            out["quoted_fare_dt"] = None
+            out["quoted_base_fare_dt"] = None
+            out["quoted_night_surcharge_dt"] = None
+            out["quoted_is_night"] = None
+    else:
         out["quoted_distance_km"] = None
         out["quoted_fare_dt"] = None
+        out["quoted_base_fare_dt"] = None
+        out["quoted_night_surcharge_dt"] = None
+        out["quoted_is_night"] = None
     return out
 
 
@@ -770,12 +807,28 @@ def ride_insert(
     status: str = "pending",
     scheduled_pickup_at: datetime | None = None,
     reservation_status: str | None = None,
+    pickup_address: str | None = None,
+    pickup_display_name: str | None = None,
+    destination_address: str | None = None,
+    destination_display_name: str | None = None,
+    pickup_lat: float | None = None,
+    pickup_lng: float | None = None,
+    destination_lat: float | None = None,
+    destination_lng: float | None = None,
 ) -> Dict[str, Any]:
     now = datetime.now(timezone.utc)
     r = Ride(
         user_id=user_id,
         pickup=pickup,
         destination=destination,
+        pickup_address=(pickup_address or "").strip() or None,
+        pickup_display_name=(pickup_display_name or "").strip() or None,
+        destination_address=(destination_address or "").strip() or None,
+        destination_display_name=(destination_display_name or "").strip() or None,
+        pickup_lat=pickup_lat,
+        pickup_lng=pickup_lng,
+        destination_lat=destination_lat,
+        destination_lng=destination_lng,
         status=status,
         scheduled_pickup_at=scheduled_pickup_at,
         reservation_status=reservation_status,

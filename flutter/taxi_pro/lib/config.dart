@@ -1,5 +1,19 @@
 import 'package:flutter/foundation.dart';
 
+/// Google Maps / Places / Directions REST key (same project as enabled APIs).
+///
+/// Pass at build time:
+/// `flutter run --dart-define=GOOGLE_MAPS_API_KEY=your_key`
+///
+/// Android also reads `GOOGLE_MAPS_API_KEY` from `local.properties` (see `android/app/build.gradle.kts`)
+/// so the native Maps SDK receives the key via manifest placeholders.
+const String googleMapsApiKey =
+    String.fromEnvironment('GOOGLE_MAPS_API_KEY', defaultValue: '');
+
+/// Maps SDK is wired for Android/iOS; web build shows a lightweight fallback unless you add Maps JS.
+bool get isGoogleMapsPlatformSupported =>
+    !kIsWeb && googleMapsApiKey.trim().isNotEmpty;
+
 /// Google OAuth **Web application** client ID (same as backend `GOOGLE_OAUTH_CLIENT_ID`).
 /// Used as `serverClientId` on Android/iOS so the ID token audience matches backend verification.
 const String googleOAuthWebClientId =

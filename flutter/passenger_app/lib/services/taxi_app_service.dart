@@ -12,11 +12,13 @@ class TaxiAppService {
 
   Future<Map<String, double>> getAirportFares() => _client.getAirportFares();
 
-  Future<Map<String, dynamic>> quoteAirport(String routeKey) =>
-      _client.quoteAirport(routeKey);
+  Future<Map<String, dynamic>> quoteAirport(String routeKey,
+          {DateTime? pricingTime}) =>
+      _client.quoteAirport(routeKey, pricingTime: pricingTime);
 
-  Future<Map<String, dynamic>> quoteGps({double? distanceKm}) =>
-      _client.quoteGps(distanceKm: distanceKm);
+  Future<Map<String, dynamic>> quoteGps(
+          {double? distanceKm, DateTime? pricingTime}) =>
+      _client.quoteGps(distanceKm: distanceKm, pricingTime: pricingTime);
 
   Future<LoginResponse> login({required String role, required String secret}) =>
       _client.login(role: role, secret: secret);
@@ -84,12 +86,28 @@ class TaxiAppService {
     required String pickup,
     required String destination,
     DateTime? scheduledPickupAt,
+    String? pickupAddress,
+    String? pickupDisplayName,
+    String? destinationAddress,
+    String? destinationDisplayName,
+    double? pickupLat,
+    double? pickupLng,
+    double? destinationLat,
+    double? destinationLng,
   }) =>
       _client.createRide(
         token: token,
         pickup: pickup,
         destination: destination,
         scheduledPickupAt: scheduledPickupAt,
+        pickupAddress: pickupAddress,
+        pickupDisplayName: pickupDisplayName,
+        destinationAddress: destinationAddress,
+        destinationDisplayName: destinationDisplayName,
+        pickupLat: pickupLat,
+        pickupLng: pickupLng,
+        destinationLat: destinationLat,
+        destinationLng: destinationLng,
       );
 
   Future<GuestRideCreateResponse> createGuestRide({

@@ -13,7 +13,9 @@
   "tabAirport": "Aéroport",
   "tabGps": "GPS",
   "route": "Trajet",
-  "nightFare50": "+50 % tarif de nuit",
+  "nightFare50": "Tarif de nuit (+50 %)",
+  "nightFareScheduleHint": "Le surcout nuit +50 % s'applique 21h–5h (heure de Tunisie, Africa/Tunis). Votre estimation suit cette horloge.",
+  "ownerWalletShareHint": "A la fin de la course, le proprietaire preleve sur le portefeuille du chauffeur : 10 % (passager) ; B2B +5 % (15 % au total).",
   "rateYourLastRide": "Notez votre dernière course",
   "submitRating": "Envoyer la note",
   "thankYouFeedback": "Merci pour votre avis !",
@@ -92,6 +94,7 @@
   "chatScreenTitle": "Chat de course",
   "messageFieldHint": "Écrire un message",
   "sendChatMessage": "Envoyer",
+  "chatConversationShortTitle": "Chat",
   "accountDisabledContactAdmin": "Compte désactivé. Contactez un administrateur.",
   "signedInWithGoogle": "Connecté avec Google",
   "passengerGoogleLoginRequired": "La connexion avec Google est obligatoire pour les passagers.",
@@ -329,6 +332,20 @@
   "driverRideRequestBannerTitle": "New ride request!",
   "driverOfferFromLabel": "From",
   "driverOfferToLabel": "To",
+  "driverOfferPassengerSectionTitle": "Passager",
+  "driverOfferPassengerNameLabel": "Nom",
+  "driverOfferPassengerPhoneLabel": "Téléphone",
+  "driverOfferB2bCompanyUnknown": "Compte entreprise",
+  "driverOfferB2bGuestLabel": "Invité",
+  "driverOfferB2bRoomLabel": "Chambre",
+  "driverOfferB2bAgreedFare": "Tarif entreprise : {amount} DT",
+  "@driverOfferB2bAgreedFare": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "driverRejectOfferButton": "Reject",
   "driverOfferFareChip": "{amount} DT",
   "@driverOfferFareChip": {
@@ -670,5 +687,20 @@
   },
   "ownerDriverPinWalletsHeading": "Portefeuilles conducteurs",
   "ownerDriverPinWalletsEmpty": "Aucun compte conducteur PIN chargé.",
-  "flightArrivalsSampleDataBanner": "Vols d'exemple uniquement — le serveur n'utilise pas AirLabs. Ajoutez AIRLABS_API_KEY dans un fichier `.env` à la racine du projet Taxi, puis redémarrez l'API."
+  "flightArrivalsSampleDataBanner": "Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server.",
+  "passengerLanguageReminderTitle": "Choisissez votre langue",
+  "passengerLanguageReminderSubtitle": "Nous afficherons menus, prix et aide dans cette langue. Vous pourrez la modifier à tout moment dans les réglages.",
+  "passengerLanguageReminderContinue": "Continuer",
+  "passengerLanguageNameArabic": "Arabe",
+  "passengerLanguageNameGerman": "Allemand",
+  "passengerLanguageNameSpanish": "Espagnol",
+  "passengerLanguageNameFrench": "Français",
+  "passengerLanguageNameItalian": "Italien",
+  "passengerLanguageNameRussian": "Russe",
+  "passengerLanguageNameChinese": "Chinois",
+  "passengerLanguageNameEnglish": "Anglais",
+  "passengerLanguageRegionMena": "Moyen-Orient et Afrique du Nord",
+  "passengerLanguageRegionAsia": "Asie",
+  "passengerLanguageRegionEurope": "Europe",
+  "passengerLanguageRegionGlobal": "Dans le monde"
 }

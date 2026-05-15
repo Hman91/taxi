@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
 // owner_screen.dart — TUNISIAN TAXI YELLOW THEME
-// Refactored: modular treasury · decoupled driver mgmt · styled B2B
+// Refactored: owner/* widgets · lazy tab hydration · settings place search
 // All original logic preserved — only UI/structure improved
 // ═══════════════════════════════════════════════════════════════
 
@@ -23,34 +23,18 @@ import '../l10n/place_localization.dart';
 import '../l10n/ride_status_localization.dart';
 import '../services/session_store.dart';
 import '../services/taxi_app_service.dart';
-import '../theme/taxi_app_theme.dart';
 import '../widgets/locale_popup_menu.dart';
+import '../widgets/live_ride_request_summary.dart';
 import '../widgets/management_platform_ui.dart';
+import '../widgets/todays_flight_arrivals_panel.dart';
 import '../widgets/voom_logo.dart';
 import 'unified_login_screen.dart';
-
-// ── Design tokens ─────────────────────────────────────────────
-class _C {
-  static const yellow = Color(0xFFFFC200);
-  static const yellowLight = Color(0xFFFFD84D);
-  static const yellowSoft = Color(0xFFFFF8E0);
-  static const yellowDeep = Color(0xFFE6A800);
-  static const charcoal = Color(0xFF1A1A1A);
-  static const charcoalMid = Color(0xFF2C2C2C);
-  static const bgWarm = Color(0xFFF8F5EC);
-  static const surface = Color(0xFFFFFFFF);
-  static const surfaceAlt = Color(0xFFF5F1E8);
-  static const border = Color(0xFFDDD8C8);
-  static const textStrong = Color(0xFF111111);
-  static const textMid = Color(0xFF3F3F3F);
-  static const textSoft = Color(0xFF5C5C5C);
-  static const danger = Color(0xFFB91C1C);
-  static const dangerBg = Color(0xFFFFE4E4);
-  static const success = Color(0xFF1A7A4A);
-  static const successBg = Color(0xFFD4EDDA);
-  static const info = Color(0xFF1E3A8A);
-  static const infoBg = Color(0xFFDEEBFF);
-}
+import 'owner/owner_buttons.dart';
+import 'owner/owner_colors.dart';
+import 'owner/owner_field_decoration.dart';
+import 'owner/owner_layout_widgets.dart';
+import 'owner/owner_portal_nav.dart';
+import 'owner/owner_settings_tab.dart';
 
 const int _ownerInitialRideRows = 18;
 const int _ownerInitialB2bBookingRows = 18;
@@ -67,20 +51,20 @@ Color _ownerRideStatusColor(String status) {
     case 'scheduled':
     case 'requested':
     case 'pending':
-      return _C.yellowDeep;
+      return OwnerColors.yellowDeep;
     case 'ongoing':
     case 'in_progress':
-      return _C.info;
+      return OwnerColors.info;
     case 'completed':
     case 'done':
-      return _C.success;
+      return OwnerColors.success;
     case 'refused':
     case 'rejected':
     case 'cancelled':
     case 'canceled':
-      return _C.danger;
+      return OwnerColors.danger;
     default:
-      return _C.textSoft;
+      return OwnerColors.textSoft;
   }
 }
 
@@ -106,179 +90,6 @@ IconData _ownerRideStatusIcon(String status) {
     default:
       return Icons.radio_button_checked_rounded;
   }
-}
-
-// ── Shared UI helpers ─────────────────────────────────────────
-
-class _YellowButton extends StatelessWidget {
-  const _YellowButton(
-      {required this.label,
-      required this.onPressed,
-      this.icon,
-      this.small = false,
-      this.fullWidth = true});
-  final String label;
-  final VoidCallback? onPressed;
-  final IconData? icon;
-  final bool small;
-  final bool fullWidth;
-
-  @override
-  Widget build(BuildContext context) {
-    final disabled = onPressed == null;
-    final child = Container(
-      height: small ? 38 : 48,
-      width: fullWidth ? double.infinity : null,
-      padding: fullWidth ? null : const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: disabled ? _C.yellowSoft : _C.yellow,
-        borderRadius: BorderRadius.circular(50),
-        boxShadow: disabled
-            ? []
-            : [
-                BoxShadow(
-                    color: _C.yellow.withOpacity(0.4),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4))
-              ],
-      ),
-      child: Center(
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (icon != null) ...[
-          Icon(icon, color: _C.charcoal, size: small ? 14 : 18),
-          const SizedBox(width: 6)
-        ],
-        Text(label,
-            style: TextStyle(
-                color: _C.charcoal,
-                fontWeight: FontWeight.w900,
-                fontSize: small ? 12 : 14,
-                letterSpacing: 0.2)),
-      ])),
-    );
-    return GestureDetector(onTap: onPressed, child: child);
-  }
-}
-
-class _DarkButton extends StatelessWidget {
-  const _DarkButton(
-      {required this.label,
-      required this.onPressed,
-      this.icon,
-      this.small = false,
-      this.fullWidth = true});
-  final String label;
-  final VoidCallback? onPressed;
-  final IconData? icon;
-  final bool small;
-  final bool fullWidth;
-
-  @override
-  Widget build(BuildContext context) {
-    final disabled = onPressed == null;
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        height: small ? 38 : 48,
-        width: fullWidth ? double.infinity : null,
-        padding: fullWidth ? null : const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: disabled ? const Color(0xFFCCCCCC) : _C.charcoal,
-          borderRadius: BorderRadius.circular(50),
-          boxShadow: disabled
-              ? []
-              : [
-                  BoxShadow(
-                      color: _C.charcoal.withOpacity(0.25),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3))
-                ],
-        ),
-        child: Center(
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (icon != null) ...[
-            Icon(icon, color: Colors.white, size: small ? 14 : 18),
-            const SizedBox(width: 6)
-          ],
-          Text(label,
-              style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: small ? 12 : 14,
-                  letterSpacing: 0.2)),
-        ])),
-      ),
-    );
-  }
-}
-
-InputDecoration _fd(String label, {IconData? icon, String? suffix}) =>
-    InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: _C.textMid, fontSize: 13),
-      prefixIcon:
-          icon != null ? Icon(icon, color: _C.charcoal, size: 18) : null,
-      suffixText: suffix,
-      filled: true,
-      fillColor: _C.surfaceAlt,
-      enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _C.border, width: 1.4)),
-      focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _C.yellow, width: 2)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    );
-
-// ── Section heading with yellow accent bar ────────────────────
-class _SectionHead extends StatelessWidget {
-  const _SectionHead(this.title, {this.subtitle, this.trailing});
-  final String title;
-  final String? subtitle;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) => ManagementSectionHeader(
-        title,
-        subtitle: subtitle,
-        trailing: trailing,
-      );
-}
-
-// ── Module card container ─────────────────────────────────────
-class _Module extends StatelessWidget {
-  const _Module({required this.child, this.padding = 16, this.accent = false});
-  final Widget child;
-  final double padding;
-  final bool accent;
-
-  @override
-  Widget build(BuildContext context) => ManagementModuleCard(
-        padding: padding,
-        accent: accent,
-        child: child,
-      );
-}
-
-// ── Stat chip ────────────────────────────────────────────────
-class _StatChip extends StatelessWidget {
-  const _StatChip(
-      {required this.label,
-      required this.value,
-      required this.icon,
-      this.color = _C.charcoal});
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => ManagementMetricPill(
-        label: label,
-        value: value,
-        icon: icon,
-        color: color,
-      );
 }
 
 // ── B2B Tenant card ───────────────────────────────────────────
@@ -309,13 +120,13 @@ class _B2bCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: _C.surface,
+        color: OwnerColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: enabled ? _C.yellowDeep.withOpacity(0.5) : _C.border),
+            color: enabled ? OwnerColors.yellowDeep.withOpacity(0.5) : OwnerColors.border),
         boxShadow: [
           BoxShadow(
-              color: _C.charcoal.withOpacity(0.06),
+              color: OwnerColors.charcoal.withOpacity(0.06),
               blurRadius: 8,
               offset: const Offset(0, 3))
         ],
@@ -329,12 +140,12 @@ class _B2bCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: enabled ? _C.yellowSoft : _C.surfaceAlt,
+                color: enabled ? OwnerColors.yellowSoft : OwnerColors.surfaceAlt,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: enabled ? _C.yellowDeep : _C.border),
+                border: Border.all(color: enabled ? OwnerColors.yellowDeep : OwnerColors.border),
               ),
               child: Icon(Icons.hotel_rounded,
-                  color: enabled ? _C.charcoal : _C.textSoft, size: 22),
+                  color: enabled ? OwnerColors.charcoal : OwnerColors.textSoft, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -347,17 +158,17 @@ class _B2bCard extends StatelessWidget {
                             style: const TextStyle(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 15,
-                                color: _C.textStrong))),
+                                color: OwnerColors.textStrong))),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: enabled ? _C.successBg : _C.dangerBg,
+                        color: enabled ? OwnerColors.successBg : OwnerColors.dangerBg,
                         borderRadius: BorderRadius.circular(50),
                       ),
                       child: Text(enabled ? 'Active' : 'Paused',
                           style: TextStyle(
-                              color: enabled ? _C.success : _C.danger,
+                              color: enabled ? OwnerColors.success : OwnerColors.danger,
                               fontSize: 10,
                               fontWeight: FontWeight.w800)),
                     ),
@@ -365,11 +176,11 @@ class _B2bCard extends StatelessWidget {
                   if (hotel.isNotEmpty)
                     Row(children: [
                       const Icon(Icons.location_on_outlined,
-                          size: 12, color: _C.textSoft),
+                          size: 12, color: OwnerColors.textSoft),
                       const SizedBox(width: 3),
                       Text(hotel,
                           style: const TextStyle(
-                              color: _C.textSoft, fontSize: 12)),
+                              color: OwnerColors.textSoft, fontSize: 12)),
                     ]),
                 ])),
           ]),
@@ -387,7 +198,7 @@ class _B2bCard extends StatelessWidget {
           // Actions
           Row(children: [
             Expanded(
-                child: _DarkButton(
+                child: OwnerDarkButton(
                     label: 'Edit',
                     icon: Icons.edit_outlined,
                     onPressed: busy ? null : onEdit,
@@ -399,17 +210,17 @@ class _B2bCard extends StatelessWidget {
               child: Container(
                 height: 38,
                 decoration: BoxDecoration(
-                  color: enabled ? _C.dangerBg : _C.successBg,
+                  color: enabled ? OwnerColors.dangerBg : OwnerColors.successBg,
                   borderRadius: BorderRadius.circular(50),
                   border: Border.all(
                       color: enabled
-                          ? _C.danger.withOpacity(0.3)
-                          : _C.success.withOpacity(0.3)),
+                          ? OwnerColors.danger.withOpacity(0.3)
+                          : OwnerColors.success.withOpacity(0.3)),
                 ),
                 child: Center(
                     child: Text(enabled ? 'Pause' : 'Activate',
                         style: TextStyle(
-                            color: enabled ? _C.danger : _C.success,
+                            color: enabled ? OwnerColors.danger : OwnerColors.success,
                             fontWeight: FontWeight.w800,
                             fontSize: 12))),
               ),
@@ -422,8 +233,8 @@ class _B2bCard extends StatelessWidget {
 
   Widget _infoTag(IconData icon, String text) => ManagementStatusPill(
         label: text,
-        color: _C.textMid,
-        background: _C.surfaceAlt,
+        color: OwnerColors.textMid,
+        background: OwnerColors.surfaceAlt,
       );
 }
 
@@ -456,11 +267,11 @@ class _DriverCard extends StatelessWidget {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                  color: _C.surfaceAlt,
+                  color: OwnerColors.surfaceAlt,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _C.border)),
+                  border: Border.all(color: OwnerColors.border)),
               child: const Icon(Icons.local_taxi_outlined,
-                  color: _C.charcoal, size: 22)),
+                  color: OwnerColors.charcoal, size: 22)),
           const SizedBox(width: 12),
           Expanded(
               child: Column(
@@ -470,19 +281,19 @@ class _DriverCard extends StatelessWidget {
                     style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
-                        color: _C.textStrong)),
+                        color: OwnerColors.textStrong)),
                 const SizedBox(height: 3),
                 Row(children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 7, vertical: 1.5),
                     decoration: BoxDecoration(
-                        color: _C.yellowSoft,
+                        color: OwnerColors.yellowSoft,
                         borderRadius: BorderRadius.circular(50),
-                        border: Border.all(color: _C.yellowDeep)),
+                        border: Border.all(color: OwnerColors.yellowDeep)),
                     child: Text('$wallet DT',
                         style: const TextStyle(
-                            color: _C.charcoal,
+                            color: OwnerColors.charcoal,
                             fontSize: 10.5,
                             fontWeight: FontWeight.w800)),
                   ),
@@ -492,11 +303,11 @@ class _DriverCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                          color: _C.successBg,
+                          color: OwnerColors.successBg,
                           borderRadius: BorderRadius.circular(50)),
                       child: const Text('Auto-deduct',
                           style: TextStyle(
-                              color: _C.success,
+                              color: OwnerColors.success,
                               fontSize: 10,
                               fontWeight: FontWeight.w700)),
                     ),
@@ -508,7 +319,7 @@ class _DriverCard extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                    color: _C.charcoal, borderRadius: BorderRadius.circular(8)),
+                    color: OwnerColors.charcoal, borderRadius: BorderRadius.circular(8)),
                 child: const Icon(Icons.edit_outlined,
                     color: Colors.white, size: 15)),
             padding: EdgeInsets.zero,
@@ -520,7 +331,7 @@ class _DriverCard extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                      color: _C.danger, borderRadius: BorderRadius.circular(8)),
+                      color: OwnerColors.danger, borderRadius: BorderRadius.circular(8)),
                   child: const Icon(Icons.delete_outline,
                       color: Colors.white, size: 15)),
               padding: EdgeInsets.zero,
@@ -531,10 +342,10 @@ class _DriverCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-                color: _C.surfaceAlt, borderRadius: BorderRadius.circular(10)),
+                color: OwnerColors.surfaceAlt, borderRadius: BorderRadius.circular(10)),
             child: Text(subtitle,
                 style: const TextStyle(
-                    color: _C.textMid, fontSize: 11, height: 1.4)),
+                    color: OwnerColors.textMid, fontSize: 11, height: 1.4)),
           ),
         ],
       ]),
@@ -544,28 +355,30 @@ class _DriverCard extends StatelessWidget {
 
 class _OwnerRideCard extends StatelessWidget {
   const _OwnerRideCard({
+    required this.ride,
     required this.route,
     required this.status,
     required this.statusLabel,
-    required this.riderType,
-    required this.riderName,
-    required this.driverName,
+    required this.isB2b,
     required this.distance,
     required this.price,
-    required this.createdAt,
-    required this.isB2b,
+    required this.timeLabel,
+    required this.passengerSectionTitle,
+    required this.b2bSectionTitle,
+    required this.driverSectionTitle,
   });
 
+  final Map<String, dynamic> ride;
   final String route;
   final String status;
   final String statusLabel;
-  final String riderType;
-  final String riderName;
-  final String driverName;
+  final bool isB2b;
   final String distance;
   final String price;
-  final String createdAt;
-  final bool isB2b;
+  final String timeLabel;
+  final String passengerSectionTitle;
+  final String b2bSectionTitle;
+  final String driverSectionTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -595,18 +408,6 @@ class _OwnerRideCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    route,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: _C.textStrong,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
@@ -617,103 +418,45 @@ class _OwnerRideCard extends StatelessWidget {
                         background: color.withOpacity(0.10),
                       ),
                       ManagementStatusPill(
-                        label: isB2b ? 'B2B' : riderType,
-                        color: isB2b ? _C.info : _C.charcoal,
-                        background: isB2b ? _C.infoBg : _C.yellowSoft,
-                      ),
-                      ManagementStatusPill(
-                        label: price,
-                        color: _C.success,
-                        background: _C.successBg,
+                        label: isB2b ? 'B2B' : passengerSectionTitle,
+                        color: isB2b ? OwnerColors.info : OwnerColors.charcoal,
+                        background: isB2b ? OwnerColors.infoBg : OwnerColors.yellowSoft,
                       ),
                     ],
                   ),
+                  if (route.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      route,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: OwnerColors.textSoft,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
           ]),
-          const SizedBox(height: 12),
-          ManagementResponsiveWrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _OwnerRideInfoTile(
-                icon: Icons.person_outline_rounded,
-                label: riderType,
-                value: riderName.isEmpty ? '-' : riderName,
-              ),
-              _OwnerRideInfoTile(
-                icon: Icons.local_taxi_outlined,
-                label: 'Driver',
-                value: driverName.isEmpty ? '-' : driverName,
-              ),
-              _OwnerRideInfoTile(
-                icon: Icons.route_rounded,
-                label: 'Distance',
-                value: distance,
-              ),
-              _OwnerRideInfoTile(
-                icon: Icons.schedule_rounded,
-                label: 'Created',
-                value: createdAt.isEmpty ? '-' : createdAt,
-              ),
-            ],
+          LiveRideRequestSummary(
+            ride: ride,
+            distanceLabel: distance,
+            priceLabel: price,
+            timeLabel: timeLabel.isEmpty ? '—' : timeLabel,
+            labelColor: OwnerColors.textSoft,
+            valueColor: OwnerColors.textStrong,
+            borderColor: OwnerColors.border,
+            sectionBg: OwnerColors.surfaceAlt.withOpacity(0.55),
+            passengerSectionTitle: passengerSectionTitle,
+            b2bSectionTitle: b2bSectionTitle,
+            driverLabel: driverSectionTitle,
           ),
         ]),
       ),
-    );
-  }
-}
-
-class _OwnerRideInfoTile extends StatelessWidget {
-  const _OwnerRideInfoTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
-      decoration: BoxDecoration(
-        color: _C.surfaceAlt.withOpacity(0.78),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _C.border.withOpacity(0.78)),
-      ),
-      child: Row(children: [
-        Icon(icon, color: _C.textSoft, size: 16),
-        const SizedBox(width: 8),
-        Expanded(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: _C.textSoft,
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: _C.textStrong,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ]),
-        ),
-      ]),
     );
   }
 }
@@ -758,7 +501,7 @@ class _B2bBookingCard extends StatelessWidget {
                 style: const TextStyle(
                   fontWeight: FontWeight.w900,
                   fontSize: 13,
-                  color: _C.textStrong,
+                  color: OwnerColors.textStrong,
                 ),
               ),
             ),
@@ -773,30 +516,30 @@ class _B2bBookingCard extends StatelessWidget {
           Wrap(spacing: 6, runSpacing: 6, children: [
             ManagementStatusPill(
               label: guestName.isEmpty ? '-' : guestName,
-              color: _C.charcoal,
-              background: _C.yellowSoft,
+              color: OwnerColors.charcoal,
+              background: OwnerColors.yellowSoft,
             ),
             ManagementStatusPill(
               label: 'Room ${room.isEmpty ? '-' : room}',
-              color: _C.textMid,
-              background: _C.surfaceAlt,
+              color: OwnerColors.textMid,
+              background: OwnerColors.surfaceAlt,
             ),
             ManagementStatusPill(
               label: '$fare DT',
-              color: _C.success,
-              background: _C.successBg,
+              color: OwnerColors.success,
+              background: OwnerColors.successBg,
             ),
             if (sourceCode.isNotEmpty)
               ManagementStatusPill(
                 label: sourceCode,
-                color: _C.info,
-                background: _C.infoBg,
+                color: OwnerColors.info,
+                background: OwnerColors.infoBg,
               ),
             if (createdAt.isNotEmpty)
               ManagementStatusPill(
                 label: createdAt,
-                color: _C.textSoft,
-                background: _C.surfaceAlt,
+                color: OwnerColors.textSoft,
+                background: OwnerColors.surfaceAlt,
               ),
           ]),
         ]),
@@ -837,8 +580,6 @@ class _OwnerScreenState extends State<OwnerScreen>
   String? _token;
   String? _message;
   bool _busy = false;
-  Map<String, dynamic>? _metrics;
-  Map<String, dynamic>? _adminMetrics;
   List<Map<String, dynamic>> _trips = [];
   List<Map<String, dynamic>> _adminRides = [];
   List<Map<String, dynamic>> _adminB2b = [];
@@ -857,9 +598,13 @@ class _OwnerScreenState extends State<OwnerScreen>
   int _visibleRideRows = _ownerInitialRideRows;
   int _visibleB2bBookingRows = _ownerInitialB2bBookingRows;
   int _visibleB2bAccountRows = _ownerInitialB2bAccountRows;
+  int _visibleWalletRows = _ownerListPageStep;
+  int _visibleRatingRows = _ownerListPageStep;
+  int _visibleManagedDriverRows = _ownerListPageStep;
   bool _refreshingOwnerData = false;
   final Map<int, TextEditingController> _fareCtrls = {};
   double _commissionDemoPercent = 10.0;
+  final Set<int> _ownerTabsHydrated = {};
   Future<void> _goToHome() async {
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
@@ -904,19 +649,19 @@ class _OwnerScreenState extends State<OwnerScreen>
               TextField(
                   controller: emailCtrl,
                   decoration:
-                      _fd('New email (optional)', icon: Icons.email_outlined)),
+                      ownerFieldDecoration('New email (optional)', icon: Icons.email_outlined)),
               const SizedBox(height: 8),
               TextField(
                   controller: newPasswordCtrl,
                   obscureText: true,
-                  decoration: _fd('New password (optional)',
+                  decoration: ownerFieldDecoration('New password (optional)',
                       icon: Icons.lock_outline_rounded)),
               const SizedBox(height: 8),
               TextField(
                   controller: currentPasswordCtrl,
                   obscureText: true,
                   decoration:
-                      _fd('Current password', icon: Icons.password_rounded)),
+                      ownerFieldDecoration('Current password', icon: Icons.password_rounded)),
               if (error != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
@@ -997,6 +742,255 @@ class _OwnerScreenState extends State<OwnerScreen>
     }
   }
 
+  void _onOwnerTabChanged() {
+    final c = _tabController;
+    if (c == null || c.indexIsChanging) return;
+    unawaited(_ensureOwnerTabHydrated(c.index));
+  }
+
+  Future<void> _ensureOwnerTabHydrated(int tab) async {
+    if (_token == null || _ownerTabsHydrated.contains(tab)) return;
+    final ok = await _loadOwnerTabData(tab);
+    if (mounted && ok) setState(() => _ownerTabsHydrated.add(tab));
+  }
+
+  void _applyManagedUsersFromAppUsers(List<Map<String, dynamic>> appUsers) {
+    final appDriverUsers = appUsers
+        .where((u) => (u['role'] ?? '') == 'driver')
+        .where(_isRealManagedDriver)
+        .map((u) => {...u, 'source': 'app_user'})
+        .toList();
+    _managedDriverUsers = appDriverUsers;
+    _managedB2bUsers = appUsers.where((u) => (u['role'] ?? '') == 'b2b').toList();
+  }
+
+  void _syncTopUpAccountFromWallets(List<Map<String, dynamic>> driverWallets) {
+    final ids = driverWallets
+        .map((e) => (e['id'] as num?)?.toInt())
+        .whereType<int>()
+        .where((id) => id > 0)
+        .toList();
+    if (_topUpAccountId != null && !ids.contains(_topUpAccountId)) {
+      _topUpAccountId = null;
+    }
+    _topUpAccountId ??= ids.isEmpty ? null : ids.first;
+  }
+
+  /// Loads server data for a single Owner tab (lazy). Returns false on hard failure.
+  Future<bool> _loadOwnerTabData(int tab) async {
+    final t = _token;
+    if (t == null) return false;
+    Future<T?> safe<T>(Future<T> r) async {
+      try {
+        return await r;
+      } catch (_) {
+        return null;
+      }
+    }
+    if (mounted) setState(() => _busy = true);
+    var ok = true;
+    try {
+      switch (tab) {
+        case 0:
+          if (mounted) setState(() => _message = null);
+          break;
+        case 1:
+          final rides =
+              await safe(_api.listAdminRides(t, limit: _ownerAdminRideLimit));
+          if (!mounted) return false;
+          if (rides == null) {
+            setState(() => _message =
+                'Cannot reach API server. Check backend IP/network.');
+            ok = false;
+            break;
+          }
+          setState(() {
+            _adminRides = rides;
+            _visibleRideRows = _ownerInitialRideRows;
+            _message = null;
+          });
+          break;
+        case 2:
+          final pendingApprovalsFuture =
+              safe(_api.listAdminPendingUsers(t, limit: _ownerPendingUserLimit));
+          final appUsersFuture =
+              safe(_api.listAdminUsers(t, limit: _ownerAdminUserLimit));
+          final driverWalletsFuture =
+              safe(_api.listAdminDriverWalletBreakdown(t));
+          await Future.wait(
+              [pendingApprovalsFuture, appUsersFuture, driverWalletsFuture]);
+          final pendingApprovals = await pendingApprovalsFuture;
+          final appUsers = await appUsersFuture;
+          final driverWallets = await driverWalletsFuture;
+          if (!mounted) return false;
+          if (pendingApprovals == null ||
+              appUsers == null ||
+              driverWallets == null) {
+            setState(() => _message =
+                'Cannot reach API server. Check backend IP/network.');
+            ok = false;
+            break;
+          }
+          setState(() {
+            _pendingApprovals = pendingApprovals;
+            _applyManagedUsersFromAppUsers(appUsers);
+            _driverWalletBreakdown = driverWallets;
+            _syncTopUpAccountFromWallets(driverWallets);
+            _visibleManagedDriverRows = _ownerListPageStep;
+            _message = null;
+          });
+          break;
+        case 3:
+          final driverWalletsFuture =
+              safe(_api.listAdminDriverWalletBreakdown(t));
+          final appUsersFuture =
+              safe(_api.listAdminUsers(t, limit: _ownerAdminUserLimit));
+          await Future.wait([driverWalletsFuture, appUsersFuture]);
+          final driverWallets = await driverWalletsFuture;
+          final appUsers = await appUsersFuture;
+          if (!mounted) return false;
+          if (driverWallets == null || appUsers == null) {
+            setState(() => _message =
+                'Cannot reach API server. Check backend IP/network.');
+            ok = false;
+            break;
+          }
+          setState(() {
+            _driverWalletBreakdown = driverWallets;
+            _applyManagedUsersFromAppUsers(appUsers);
+            _syncTopUpAccountFromWallets(driverWallets);
+            _visibleWalletRows = _ownerListPageStep;
+            _message = null;
+          });
+          break;
+        case 4:
+          final ratingsFuture = safe(_api.listAdminDriverRatings(t));
+          final appUsersFuture =
+              safe(_api.listAdminUsers(t, limit: _ownerAdminUserLimit));
+          await Future.wait([ratingsFuture, appUsersFuture]);
+          final ratings = await ratingsFuture;
+          final appUsers = await appUsersFuture;
+          if (!mounted) return false;
+          if (ratings == null || appUsers == null) {
+            setState(() => _message =
+                'Cannot reach API server. Check backend IP/network.');
+            ok = false;
+            break;
+          }
+          setState(() {
+            _driverRatings = ratings;
+            _applyManagedUsersFromAppUsers(appUsers);
+            _visibleRatingRows = _ownerListPageStep;
+            _message = null;
+          });
+          break;
+        case 5:
+          final tripsFuture = safe(_api.listTrips(t));
+          final trips = await tripsFuture;
+          if (!mounted) return false;
+          if (trips == null) {
+            setState(() => _message =
+                'Cannot reach API server. Check backend IP/network.');
+            ok = false;
+            break;
+          }
+          setState(() {
+            _trips = trips
+                .map((e) => {
+                      'id': e.id,
+                      'date': e.date,
+                      'route': e.route,
+                      'fare': e.fare,
+                      'commission': e.commission,
+                      'type': e.type
+                    })
+                .toList();
+            _message = null;
+          });
+          break;
+        case 6:
+          final fareRoutes = await safe(_api.listAdminFareRoutes(t));
+          if (!mounted) return false;
+          if (fareRoutes == null) {
+            setState(() => _message =
+                'Cannot reach API server. Check backend IP/network.');
+            ok = false;
+            break;
+          }
+          setState(() {
+            _fareRoutes = fareRoutes;
+            _syncFareControllers(fareRoutes);
+            _message = null;
+          });
+          break;
+        case 7:
+          final fr = await safe(_api.listAdminTunisiaFlightArrivals(t));
+          if (!mounted) return false;
+          if (fr == null) {
+            setState(() => _message =
+                'Cannot reach API server. Check backend IP/network.');
+            ok = false;
+            break;
+          }
+          setState(() {
+            _flightArrivals = fr.flights;
+            _flightDataSource = fr.source;
+            _message = null;
+          });
+          break;
+        case 8:
+          final adminB2bFuture = safe(_api.listAdminB2bTenants(t));
+          final adminB2bBookingsFuture =
+              safe(_api.listAdminB2bBookings(t, limit: _ownerB2bBookingLimit));
+          final appUsersFuture =
+              safe(_api.listAdminUsers(t, limit: _ownerAdminUserLimit));
+          await Future.wait(
+              [adminB2bFuture, adminB2bBookingsFuture, appUsersFuture]);
+          final adminB2b = await adminB2bFuture;
+          final adminB2bBookings = await adminB2bBookingsFuture;
+          final appUsers = await appUsersFuture;
+          if (!mounted) return false;
+          if (adminB2b == null ||
+              adminB2bBookings == null ||
+              appUsers == null) {
+            setState(() => _message =
+                'Cannot reach API server. Check backend IP/network.');
+            ok = false;
+            break;
+          }
+          setState(() {
+            _adminB2b = adminB2b;
+            _adminB2bBookings = adminB2bBookings;
+            _visibleB2bBookingRows = _ownerInitialB2bBookingRows;
+            _visibleB2bAccountRows = _ownerInitialB2bAccountRows;
+            _applyManagedUsersFromAppUsers(appUsers);
+            _message = null;
+          });
+          break;
+        default:
+          ok = false;
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    return ok;
+  }
+
+  Future<void> _refreshOwnerSettingsData() async {
+    final t = _token;
+    if (t == null) return;
+    try {
+      final routes = await _api.listAdminFareRoutes(t);
+      if (!mounted) return;
+      setState(() {
+        _fareRoutes = routes;
+        _syncFareControllers(routes);
+      });
+    } catch (e) {
+      if (mounted) setState(() => _message = e.toString());
+    }
+  }
+
   String _ownerDriverPinSubtitle(AppLocalizations l, Map<String, dynamic> d) {
     final walletS = (d['wallet_balance'] ?? 0).toString();
     final ownerS = (d['owner_commission_rate'] ?? 10).toString();
@@ -1057,6 +1051,8 @@ class _OwnerScreenState extends State<OwnerScreen>
   };
 
   double? _rideDistanceKm(Map<String, dynamic> r) {
+    final q = r['quoted_distance_km'];
+    if (q is num) return q.toDouble();
     final pickup = (r['pickup'] ?? '').toString().trim();
     final destination = (r['destination'] ?? '').toString().trim();
     final a = _zoneCoords[pickup];
@@ -1068,9 +1064,19 @@ class _OwnerScreenState extends State<OwnerScreen>
   }
 
   String _ridePrice(Map<String, dynamic> r) {
-    final p = r['b2b_fare'] ?? r['fare'];
-    if (p is num) return '${p.toStringAsFixed(2)} DT';
+    final b2b = r['b2b_fare'];
+    if (b2b is num) return '${b2b.toStringAsFixed(2)} DT';
+    final quoted = r['quoted_fare_dt'];
+    if (quoted is num) return '${quoted.toStringAsFixed(2)} DT';
+    final f = r['fare'];
+    if (f is num) return '${f.toStringAsFixed(2)} DT';
     return '-';
+  }
+
+  String _requestLiveTime(Map<String, dynamic> r) {
+    final sched = (r['scheduled_pickup_at'] ?? '').toString().trim();
+    if (sched.isNotEmpty) return sched;
+    return (r['created_at'] ?? '').toString().trim();
   }
 
   String _rideStatusBucket(String raw) {
@@ -1144,11 +1150,11 @@ class _OwnerScreenState extends State<OwnerScreen>
       label: Text(label),
       selected: selected,
       onSelected: _busy ? null : (_) => onTap(),
-      selectedColor: _C.yellowSoft,
-      backgroundColor: _C.surface,
-      side: BorderSide(color: selected ? _C.yellowDeep : _C.border),
+      selectedColor: OwnerColors.yellowSoft,
+      backgroundColor: OwnerColors.surface,
+      side: BorderSide(color: selected ? OwnerColors.yellowDeep : OwnerColors.border),
       labelStyle: TextStyle(
-        color: selected ? _C.charcoal : _C.textStrong,
+        color: selected ? OwnerColors.charcoal : OwnerColors.textStrong,
         fontWeight: FontWeight.w700,
       ),
     );
@@ -1160,7 +1166,7 @@ class _OwnerScreenState extends State<OwnerScreen>
     required int count,
   }) {
     final selected = _b2bBookingStatusFilter == status;
-    final color = status == 'all' ? _C.charcoal : _ownerRideStatusColor(status);
+    final color = status == 'all' ? OwnerColors.charcoal : _ownerRideStatusColor(status);
     return ChoiceChip(
       label: Text('$label · $count'),
       selected: selected,
@@ -1171,10 +1177,10 @@ class _OwnerScreenState extends State<OwnerScreen>
                 _visibleB2bBookingRows = _ownerInitialB2bBookingRows;
               }),
       selectedColor: color.withOpacity(0.14),
-      backgroundColor: _C.surface,
-      side: BorderSide(color: selected ? color : _C.border),
+      backgroundColor: OwnerColors.surface,
+      side: BorderSide(color: selected ? color : OwnerColors.border),
       labelStyle: TextStyle(
-        color: selected ? color : _C.textStrong,
+        color: selected ? color : OwnerColors.textStrong,
         fontWeight: FontWeight.w800,
       ),
     );
@@ -1283,7 +1289,8 @@ class _OwnerScreenState extends State<OwnerScreen>
       rememberCurrentLocaleForRole(AppUiRole.owner);
       _token = r.accessToken;
       await SessionStore.saveOwnerToken(r.accessToken);
-      await _refreshAll();
+      _ownerTabsHydrated.clear();
+      await _ensureOwnerTabHydrated(0);
     } catch (e) {
       setState(() => _message = e.toString());
     } finally {
@@ -1295,6 +1302,7 @@ class _OwnerScreenState extends State<OwnerScreen>
     final t = _token;
     if (t == null) return;
     if (_refreshingOwnerData) return;
+    _ownerTabsHydrated.clear();
     _refreshingOwnerData = true;
     if (mounted) setState(() => _busy = true);
     try {
@@ -1306,14 +1314,12 @@ class _OwnerScreenState extends State<OwnerScreen>
         }
       }
 
-      final mFuture = safe(_api.ownerMetrics(t));
       final tripsFuture = safe(_api.listTrips(t));
       final adminRidesFuture =
           safe(_api.listAdminRides(t, limit: _ownerAdminRideLimit));
       final adminB2bFuture = safe(_api.listAdminB2bTenants(t));
       final adminB2bBookingsFuture =
           safe(_api.listAdminB2bBookings(t, limit: _ownerB2bBookingLimit));
-      final adminMetricsFuture = safe(_api.adminOwnerMetrics(t));
       final frFuture = safe(_api.listAdminTunisiaFlightArrivals(t));
       final fareRoutesFuture = safe(_api.listAdminFareRoutes(t));
       final driverWalletsFuture = safe(_api.listAdminDriverWalletBreakdown(t));
@@ -1324,12 +1330,10 @@ class _OwnerScreenState extends State<OwnerScreen>
           safe(_api.listAdminUsers(t, limit: _ownerAdminUserLimit));
 
       await Future.wait<Object?>([
-        mFuture,
         tripsFuture,
         adminRidesFuture,
         adminB2bFuture,
         adminB2bBookingsFuture,
-        adminMetricsFuture,
         frFuture,
         fareRoutesFuture,
         driverWalletsFuture,
@@ -1338,12 +1342,10 @@ class _OwnerScreenState extends State<OwnerScreen>
         appUsersFuture,
       ]);
 
-      final m = await mFuture;
       final trips = await tripsFuture;
       final adminRides = await adminRidesFuture;
       final adminB2b = await adminB2bFuture;
       final adminB2bBookings = await adminB2bBookingsFuture;
-      final adminMetrics = await adminMetricsFuture;
       final fr = await frFuture;
       final fareRoutes = await fareRoutesFuture;
       final driverWallets = await driverWalletsFuture;
@@ -1351,12 +1353,10 @@ class _OwnerScreenState extends State<OwnerScreen>
       final pendingApprovals = await pendingApprovalsFuture;
       final appUsers = await appUsersFuture;
 
-      if (m == null ||
-          trips == null ||
+      if (trips == null ||
           adminRides == null ||
           adminB2b == null ||
           adminB2bBookings == null ||
-          adminMetrics == null ||
           fr == null ||
           fareRoutes == null ||
           driverWallets == null ||
@@ -1369,8 +1369,6 @@ class _OwnerScreenState extends State<OwnerScreen>
       }
       if (!mounted) return;
       setState(() {
-        _metrics = m;
-        _adminMetrics = adminMetrics;
         _trips = trips
             .map((e) => {
                   'id': e.id,
@@ -1393,24 +1391,16 @@ class _OwnerScreenState extends State<OwnerScreen>
         _driverWalletBreakdown = driverWallets;
         _driverRatings = ratings;
         _pendingApprovals = pendingApprovals;
-        final appDriverUsers = appUsers
-            .where((u) => (u['role'] ?? '') == 'driver')
-            .where(_isRealManagedDriver)
-            .map((u) => {...u, 'source': 'app_user'})
-            .toList();
-        _managedDriverUsers = appDriverUsers;
-        _managedB2bUsers =
-            appUsers.where((u) => (u['role'] ?? '') == 'b2b').toList();
-        final ids = driverWallets
-            .map((e) => (e['id'] as num?)?.toInt())
-            .whereType<int>()
-            .where((id) => id > 0)
-            .toList();
-        if (_topUpAccountId != null && !ids.contains(_topUpAccountId))
-          _topUpAccountId = null;
-        _topUpAccountId ??= ids.isEmpty ? null : ids.first;
+        _applyManagedUsersFromAppUsers(appUsers);
+        _syncTopUpAccountFromWallets(driverWallets);
+        _visibleWalletRows = _ownerListPageStep;
+        _visibleRatingRows = _ownerListPageStep;
+        _visibleManagedDriverRows = _ownerListPageStep;
         _syncFareControllers(fareRoutes);
         _message = null;
+        _ownerTabsHydrated
+          ..clear()
+          ..addAll({0, 1, 2, 3, 4, 5, 6, 7, 8});
       });
     } catch (e) {
       final msg = e.toString();
@@ -1454,7 +1444,7 @@ class _OwnerScreenState extends State<OwnerScreen>
     });
     try {
       await _api.patchAdminFareRoute(token: t, routeId: routeId, baseFare: v);
-      await _refreshAll();
+      await _refreshOwnerSettingsData();
     } catch (e) {
       setState(() => _message = e.toString());
     } finally {
@@ -1585,7 +1575,7 @@ class _OwnerScreenState extends State<OwnerScreen>
               child: const Text('Cancel')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: _C.danger),
+            style: FilledButton.styleFrom(backgroundColor: OwnerColors.danger),
             child: const Text('Delete'),
           ),
         ],
@@ -1629,25 +1619,25 @@ class _OwnerScreenState extends State<OwnerScreen>
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(
                 controller: emailCtrl,
-                decoration: _fd('Email', icon: Icons.email_outlined)),
+                decoration: ownerFieldDecoration('Email', icon: Icons.email_outlined)),
             TextField(
               controller: passCtrl,
               decoration:
-                  _fd('Password (optional)', icon: Icons.lock_outline_rounded),
+                  ownerFieldDecoration('Password (optional)', icon: Icons.lock_outline_rounded),
             ),
             TextField(
                 controller: nameCtrl,
-                decoration: _fd('Name', icon: Icons.badge_outlined)),
+                decoration: ownerFieldDecoration('Name', icon: Icons.badge_outlined)),
             TextField(
                 controller: phoneCtrl,
-                decoration: _fd('Phone', icon: Icons.phone_outlined)),
+                decoration: ownerFieldDecoration('Phone', icon: Icons.phone_outlined)),
             TextField(
                 controller: modelCtrl,
                 decoration:
-                    _fd('Car type', icon: Icons.directions_car_outlined)),
+                    ownerFieldDecoration('Car type', icon: Icons.directions_car_outlined)),
             TextField(
                 controller: colorCtrl,
-                decoration: _fd('Car color', icon: Icons.palette_outlined)),
+                decoration: ownerFieldDecoration('Car color', icon: Icons.palette_outlined)),
           ]),
         ),
         actions: [
@@ -1705,17 +1695,17 @@ class _OwnerScreenState extends State<OwnerScreen>
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(
                 controller: emailCtrl,
-                decoration: _fd('Email', icon: Icons.email_outlined)),
+                decoration: ownerFieldDecoration('Email', icon: Icons.email_outlined)),
             TextField(
                 controller: passCtrl,
-                decoration: _fd('Password (optional)',
+                decoration: ownerFieldDecoration('Password (optional)',
                     icon: Icons.lock_outline_rounded)),
             TextField(
                 controller: nameCtrl,
-                decoration: _fd('Name', icon: Icons.badge_outlined)),
+                decoration: ownerFieldDecoration('Name', icon: Icons.badge_outlined)),
             TextField(
                 controller: phoneCtrl,
-                decoration: _fd('Phone', icon: Icons.phone_outlined)),
+                decoration: ownerFieldDecoration('Phone', icon: Icons.phone_outlined)),
           ]),
         ),
         actions: [
@@ -1784,7 +1774,7 @@ class _OwnerScreenState extends State<OwnerScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSt) => AlertDialog(
-          backgroundColor: _C.surface,
+          backgroundColor: OwnerColors.surface,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: Row(children: [
@@ -1792,11 +1782,11 @@ class _OwnerScreenState extends State<OwnerScreen>
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                    color: _C.yellowSoft,
+                    color: OwnerColors.yellowSoft,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: _C.yellowDeep)),
+                    border: Border.all(color: OwnerColors.yellowDeep)),
                 child: const Icon(Icons.local_taxi_outlined,
-                    color: _C.charcoal, size: 18)),
+                    color: OwnerColors.charcoal, size: 18)),
             const SizedBox(width: 10),
             Expanded(
                 child: Text((row['driver_name'] ?? 'Driver').toString(),
@@ -1810,7 +1800,7 @@ class _OwnerScreenState extends State<OwnerScreen>
                 controller: walletCtrl,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                decoration: _fd(
+                decoration: ownerFieldDecoration(
                     AppLocalizations.of(ctx)!.operatorWalletBalanceLabel,
                     icon: Icons.account_balance_wallet_outlined,
                     suffix: 'DT')),
@@ -1819,7 +1809,7 @@ class _OwnerScreenState extends State<OwnerScreen>
                 controller: ownerRateCtrl,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                decoration: _fd(
+                decoration: ownerFieldDecoration(
                     AppLocalizations.of(ctx)!.operatorOwnerCommissionLabel,
                     icon: Icons.percent_rounded,
                     suffix: '%')),
@@ -1828,33 +1818,33 @@ class _OwnerScreenState extends State<OwnerScreen>
                 controller: b2bRateCtrl,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                decoration: _fd(
+                decoration: ownerFieldDecoration(
                     AppLocalizations.of(ctx)!.operatorB2bCommissionLabel,
                     icon: Icons.business_center_outlined,
                     suffix: '%')),
             const SizedBox(height: 10),
             TextField(
                 controller: modelCtrl,
-                decoration: _fd(AppLocalizations.of(ctx)!.operatorCarModelLabel,
+                decoration: ownerFieldDecoration(AppLocalizations.of(ctx)!.operatorCarModelLabel,
                     icon: Icons.directions_car_outlined)),
             const SizedBox(height: 10),
             TextField(
                 controller: colorCtrl,
-                decoration: _fd(AppLocalizations.of(ctx)!.operatorCarColorLabel,
+                decoration: ownerFieldDecoration(AppLocalizations.of(ctx)!.operatorCarColorLabel,
                     icon: Icons.palette_outlined)),
             const SizedBox(height: 10),
             Container(
               decoration: BoxDecoration(
-                  color: _C.surfaceAlt,
+                  color: OwnerColors.surfaceAlt,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _C.border)),
+                  border: Border.all(color: OwnerColors.border)),
               child: SwitchListTile(
                 dense: true,
                 title: Text(AppLocalizations.of(ctx)!.operatorAutoDeductEnabled,
                     style: const TextStyle(fontWeight: FontWeight.w600)),
                 value: autoDeduct,
                 onChanged: (v) => setSt(() => autoDeduct = v),
-                activeColor: _C.yellow,
+                activeColor: OwnerColors.yellow,
               ),
             ),
           ])),
@@ -1862,11 +1852,11 @@ class _OwnerScreenState extends State<OwnerScreen>
             TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
                 child:
-                    const Text('Cancel', style: TextStyle(color: _C.textMid))),
+                    const Text('Cancel', style: TextStyle(color: OwnerColors.textMid))),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                  backgroundColor: _C.yellow,
-                  foregroundColor: _C.charcoal,
+                  backgroundColor: OwnerColors.yellow,
+                  foregroundColor: OwnerColors.charcoal,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(50)),
                   elevation: 0),
@@ -2004,18 +1994,18 @@ class _OwnerScreenState extends State<OwnerScreen>
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: _C.surface,
+        backgroundColor: OwnerColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(children: [
           Container(
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                  color: _C.yellowSoft,
+                  color: OwnerColors.yellowSoft,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _C.yellowDeep)),
+                  border: Border.all(color: OwnerColors.yellowDeep)),
               child: const Icon(Icons.add_business_rounded,
-                  color: _C.charcoal, size: 18)),
+                  color: OwnerColors.charcoal, size: 18)),
           const SizedBox(width: 10),
           const Text('Create B2B Account',
               style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
@@ -2025,34 +2015,34 @@ class _OwnerScreenState extends State<OwnerScreen>
           const SizedBox(height: 8),
           TextField(
               controller: hotelCtrl,
-              decoration: _fd('Hotel / Company', icon: Icons.hotel_rounded)),
+              decoration: ownerFieldDecoration('Hotel / Company', icon: Icons.hotel_rounded)),
           const SizedBox(height: 10),
           TextField(
               controller: emailCtrl,
-              decoration: _fd('Email', icon: Icons.email_outlined)),
+              decoration: ownerFieldDecoration('Email', icon: Icons.email_outlined)),
           const SizedBox(height: 10),
           TextField(
               controller: nameCtrl,
               decoration:
-                  _fd('Contact Name', icon: Icons.person_outline_rounded)),
+                  ownerFieldDecoration('Contact Name', icon: Icons.person_outline_rounded)),
           const SizedBox(height: 10),
           TextField(
               controller: phoneCtrl,
-              decoration: _fd('Phone', icon: Icons.phone_outlined)),
+              decoration: ownerFieldDecoration('Phone', icon: Icons.phone_outlined)),
           const SizedBox(height: 10),
           TextField(
               controller: passwordCtrl,
               obscureText: true,
-              decoration: _fd('Password', icon: Icons.lock_outline_rounded)),
+              decoration: ownerFieldDecoration('Password', icon: Icons.lock_outline_rounded)),
         ])),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel', style: TextStyle(color: _C.textMid))),
+              child: const Text('Cancel', style: TextStyle(color: OwnerColors.textMid))),
           ElevatedButton(
               style: ElevatedButton.styleFrom(
-                  backgroundColor: _C.yellow,
-                  foregroundColor: _C.charcoal,
+                  backgroundColor: OwnerColors.yellow,
+                  foregroundColor: OwnerColors.charcoal,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(50)),
                   elevation: 0),
@@ -2114,7 +2104,7 @@ class _OwnerScreenState extends State<OwnerScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSt) => AlertDialog(
-          backgroundColor: _C.surface,
+          backgroundColor: OwnerColors.surface,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: const Text('Edit B2B Account',
@@ -2124,53 +2114,53 @@ class _OwnerScreenState extends State<OwnerScreen>
             const SizedBox(height: 8),
             TextField(
                 controller: hotelCtrl,
-                decoration: _fd('Hotel / Company', icon: Icons.hotel_rounded)),
+                decoration: ownerFieldDecoration('Hotel / Company', icon: Icons.hotel_rounded)),
             const SizedBox(height: 10),
             TextField(
                 controller: codeCtrl,
-                decoration: _fd('Code', icon: Icons.tag_rounded)),
+                decoration: ownerFieldDecoration('Code', icon: Icons.tag_rounded)),
             const SizedBox(height: 10),
             TextField(
                 controller: labelCtrl,
-                decoration: _fd('Label', icon: Icons.label_outline_rounded)),
+                decoration: ownerFieldDecoration('Label', icon: Icons.label_outline_rounded)),
             const SizedBox(height: 10),
             TextField(
                 controller: nameCtrl,
                 decoration:
-                    _fd('Contact Name', icon: Icons.person_outline_rounded)),
+                    ownerFieldDecoration('Contact Name', icon: Icons.person_outline_rounded)),
             const SizedBox(height: 10),
             TextField(
                 controller: phoneCtrl,
-                decoration: _fd('Phone', icon: Icons.phone_outlined)),
+                decoration: ownerFieldDecoration('Phone', icon: Icons.phone_outlined)),
             const SizedBox(height: 10),
             TextField(
                 controller: pinCtrl,
                 obscureText: true,
-                decoration: _fd('PIN', icon: Icons.pin_outlined)),
+                decoration: ownerFieldDecoration('PIN', icon: Icons.pin_outlined)),
             const SizedBox(height: 10),
             Container(
               decoration: BoxDecoration(
-                  color: _C.surfaceAlt,
+                  color: OwnerColors.surfaceAlt,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _C.border)),
+                  border: Border.all(color: OwnerColors.border)),
               child: SwitchListTile(
                   dense: true,
                   title: const Text('Active',
                       style: TextStyle(fontWeight: FontWeight.w600)),
                   value: enabled,
                   onChanged: (v) => setSt(() => enabled = v),
-                  activeColor: _C.yellow),
+                  activeColor: OwnerColors.yellow),
             ),
           ])),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
                 child:
-                    const Text('Cancel', style: TextStyle(color: _C.textMid))),
+                    const Text('Cancel', style: TextStyle(color: OwnerColors.textMid))),
             ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: _C.yellow,
-                    foregroundColor: _C.charcoal,
+                    backgroundColor: OwnerColors.yellow,
+                    foregroundColor: OwnerColors.charcoal,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(50)),
                     elevation: 0),
@@ -2211,72 +2201,435 @@ class _OwnerScreenState extends State<OwnerScreen>
     hotelCtrl.dispose();
   }
 
-  String _arrivalAirportLabel(Map<String, dynamic> row) {
-    final code = Localizations.localeOf(context).languageCode;
-    return code == 'ar'
-        ? (row['arrival_airport_ar']?.toString() ??
-            row['arrival_airport_en']?.toString() ??
-            '')
-        : (row['arrival_airport_en']?.toString() ??
-            row['arrival_airport_ar']?.toString() ??
-            '');
-  }
-
-  String _departureAirportLabel(Map<String, dynamic> row) {
-    final city = (row['departure_city'] ?? '').toString().trim();
-    final country = (row['departure_country'] ?? '').toString().trim();
-    final iata = (row['departure_iata'] ?? '').toString().trim().toUpperCase();
-    if (city.isNotEmpty && country.isNotEmpty && iata.isNotEmpty) {
-      return '$city, $country ($iata)';
-    }
-    return (row['departure_airport'] ?? '').toString();
-  }
-
-  String _prettyDateTime(String raw) {
-    final s = raw.trim();
-    if (s.isEmpty) return '';
-    final normalized = s.replaceFirst(' - ', 'T').replaceFirst(' ', 'T');
-    final dt = DateTime.tryParse(normalized) ?? DateTime.tryParse(s);
-    if (dt == null) return s;
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    final local = dt.toLocal();
-    final day = local.day.toString().padLeft(2, '0');
-    final mon = months[local.month - 1];
-    final year = local.year.toString();
-    final hh = local.hour.toString().padLeft(2, '0');
-    final mm = local.minute.toString().padLeft(2, '0');
-    return '$day $mon $year – $hh:$mm';
-  }
-
   // ══ TAB BUILDERS ══════════════════════════════════════════
+
+  void _jumpOwnerTab(int index) {
+    final c = _tabController;
+    if (c == null || index < 0 || index >= c.length) return;
+    c.animateTo(index);
+  }
+
+  Widget _ownerNavQuickTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required int tabIndex,
+    required List<Color> gradient,
+  }) {
+    return RepaintBoundary(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => _jumpOwnerTab(tabIndex),
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: gradient,
+              ),
+              border: Border.all(
+                  color: OwnerColors.charcoal.withValues(alpha: 0.08)),
+              boxShadow: [
+                BoxShadow(
+                  color: OwnerColors.charcoal.withValues(alpha: 0.07),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.28),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: OwnerColors.charcoal.withValues(alpha: 0.06)),
+                    ),
+                    child: Icon(icon, color: OwnerColors.charcoal, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                            color: OwnerColors.charcoal,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: OwnerColors.charcoal.withValues(alpha: 0.52),
+                            fontWeight: FontWeight.w600,
+                            height: 1.25,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 22,
+                    color: OwnerColors.charcoal.withValues(alpha: 0.35),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDashboardTab(AppLocalizations l) {
+    return RefreshIndicator(
+      color: OwnerColors.yellow,
+      onRefresh: _refreshAll,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 520;
+          final cross = wide ? 2 : 1;
+          final tiles = <Widget>[
+            _ownerNavQuickTile(
+              icon: Icons.bolt_rounded,
+              title: _uiText(
+                en: 'Live operations',
+                ar: 'العمليات المباشرة',
+                fr: 'Operations live',
+                es: 'Operaciones en vivo',
+                de: 'Live-Betrieb',
+                it: 'Operazioni live',
+                ru: 'Онлайн-операции',
+                zh: '实时运营',
+              ),
+              subtitle: _uiText(
+                en: 'Dispatch, ride pipeline, filters',
+                ar: 'الإرسال وحالة الطلبات',
+                fr: 'Dispatch et file des courses',
+                es: 'Despacho y cola de pedidos',
+                de: 'Dispatch und Auftragsliste',
+                it: 'Dispatch e coda corse',
+                ru: 'Диспетчер и очередь',
+                zh: '调度与订单流',
+              ),
+              tabIndex: 1,
+              gradient: const [Color(0xFFFFF6D5), Color(0xFFFFE08A)],
+            ),
+            _ownerNavQuickTile(
+              icon: Icons.groups_rounded,
+              title: _uiText(
+                en: 'Fleet & access',
+                ar: 'الأسطول والوصول',
+                fr: 'Flotte et acces',
+                es: 'Flota y accesos',
+                de: 'Flotte und Zugang',
+                it: 'Flotta e accessi',
+                ru: 'Автопарк и доступ',
+                zh: '车队与账号',
+              ),
+              subtitle: _uiText(
+                en: 'Approvals, driver accounts, top-up',
+                ar: 'الموافقات وحسابات السائقين',
+                fr: 'Validations comptes chauffeurs',
+                es: 'Aprobaciones y cuentas',
+                de: 'Freigaben und Konten',
+                it: 'Approvazioni e conti',
+                ru: 'Заявки и аккаунты',
+                zh: '审批与充值',
+              ),
+              tabIndex: 2,
+              gradient: const [Color(0xFFE8F4FF), Color(0xFFD0E8FF)],
+            ),
+            _ownerNavQuickTile(
+              icon: Icons.account_balance_wallet_rounded,
+              title: _uiText(
+                en: 'Wallets',
+                ar: 'المحافظ',
+                fr: 'Portefeuilles',
+                es: 'Carteras',
+                de: 'Wallets',
+                it: 'Portafogli',
+                ru: 'Кошельки',
+                zh: '钱包',
+              ),
+              subtitle: _uiText(
+                en: 'Balances, commissions, income',
+                ar: 'الأرصدة والعمولات',
+                fr: 'Soldes et commissions',
+                es: 'Saldos y comisiones',
+                de: 'Salden und Provisionen',
+                it: 'Saldi e commissioni',
+                ru: 'Балансы и комиссии',
+                zh: '余额与分成',
+              ),
+              tabIndex: 3,
+              gradient: const [Color(0xFFF3E8FF), Color(0xFFE8D5FF)],
+            ),
+            _ownerNavQuickTile(
+              icon: Icons.star_rate_rounded,
+              title: _uiText(
+                en: 'Ratings',
+                ar: 'التقييمات',
+                fr: 'Notes',
+                es: 'Valoraciones',
+                de: 'Bewertungen',
+                it: 'Valutazioni',
+                ru: 'Рейтинги',
+                zh: '评分',
+              ),
+              subtitle: _uiText(
+                en: 'Quality signals per driver',
+                ar: 'جودة الأداء لكل سائق',
+                fr: 'Qualite par chauffeur',
+                es: 'Calidad por conductor',
+                de: 'Qualitaet pro Fahrer',
+                it: 'Qualita per autista',
+                ru: 'Качество по водителю',
+                zh: '按司机质量',
+              ),
+              tabIndex: 4,
+              gradient: const [Color(0xFFFFF9E6), Color(0xFFFFEFC2)],
+            ),
+            _ownerNavQuickTile(
+              icon: Icons.insights_rounded,
+              title: _uiText(
+                en: 'Analytics',
+                ar: 'التحليلات',
+                fr: 'Analytique',
+                es: 'Analitica',
+                de: 'Analytik',
+                it: 'Analitica',
+                ru: 'Аналитика',
+                zh: '分析',
+              ),
+              subtitle: _uiText(
+                en: 'Trip ledger',
+                ar: 'سجل الرحلات',
+                fr: 'Journal des courses',
+                es: 'Libro de viajes',
+                de: 'Fahrtenbuch',
+                it: 'Registro viaggi',
+                ru: 'Журнал поездок',
+                zh: '行程账',
+              ),
+              tabIndex: 5,
+              gradient: const [Color(0xFFEFFAF3), Color(0xFFD8F5E5)],
+            ),
+            _ownerNavQuickTile(
+              icon: Icons.tune_rounded,
+              title: l.ownerTabSettings,
+              subtitle: _uiText(
+                en: 'Pricing, commission, routes',
+                ar: 'التسعير والعمولة',
+                fr: 'Tarifs et commission',
+                es: 'Tarifas y comision',
+                de: 'Preise und Provision',
+                it: 'Prezzi e commissioni',
+                ru: 'Цены и комиссия',
+                zh: '定价与抽成',
+              ),
+              tabIndex: 6,
+              gradient: const [Color(0xFFF5F5F5), Color(0xFFE8E8E8)],
+            ),
+            _ownerNavQuickTile(
+              icon: Icons.flight_land_rounded,
+              title: l.operatorTabTodaysArrivals,
+              subtitle: _uiText(
+                en: 'Tunisia inbound board',
+                ar: 'لوحة الوصول',
+                fr: 'Tableau des arrivees',
+                es: 'Panel de llegadas',
+                de: 'Ankunftstafel',
+                it: 'Tabellone arrivi',
+                ru: 'Табло прилета',
+                zh: '进港看板',
+              ),
+              tabIndex: 7,
+              gradient: const [Color(0xFFE6F7FF), Color(0xFFD0EFFF)],
+            ),
+            _ownerNavQuickTile(
+              icon: Icons.apartment_rounded,
+              title: l.ownerTabHostelB2b,
+              subtitle: _uiText(
+                en: 'Tenants, bookings, hotel ops',
+                ar: 'الشركاء والحجوزات',
+                fr: 'Locataires et reservations',
+                es: 'Inquilinos y reservas',
+                de: 'Mieter und Buchungen',
+                it: 'Tenant e prenotazioni',
+                ru: 'B2B и брони',
+                zh: 'B2B与预订',
+              ),
+              tabIndex: 8,
+              gradient: const [Color(0xFFFFF0F0), Color(0xFFFFE4E4)],
+            ),
+          ];
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+            children: [
+              OwnerModule(
+                accent: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    OwnerSectionHead(
+                      _uiText(
+                        en: 'Command center',
+                        ar: 'مركز القيادة',
+                        fr: 'Poste de commande',
+                        es: 'Centro de mando',
+                        de: 'Kommandozentrale',
+                        it: 'Centro comando',
+                        ru: 'Командный центр',
+                        zh: '指挥中心',
+                      ),
+                      subtitle: _uiText(
+                        en: 'Jump to any module — each section loads on demand.',
+                        ar: 'انتقل لأي قسم — يُحمّل عند الطلب',
+                        fr: 'Acces modulaire — chargement a la demande',
+                        es: 'Saltos modulares — carga bajo demanda',
+                        de: 'Springe zu Modulen — Laden bei Bedarf',
+                        it: 'Vai ai moduli — caricamento on demand',
+                        ru: 'Переход по модулям — загрузка по запросу',
+                        zh: '按需加载各模块',
+                      ),
+                      trailing: OwnerDarkButton(
+                        label: l.adminLoadRidesBtn,
+                        icon: Icons.refresh_rounded,
+                        onPressed: _busy ? null : _refreshAll,
+                        small: true,
+                        fullWidth: false,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              OwnerSectionHead(
+                _uiText(
+                  en: 'Navigate',
+                  ar: 'تنقّل',
+                  fr: 'Navigation',
+                  es: 'Navegar',
+                  de: 'Navigation',
+                  it: 'Naviga',
+                  ru: 'Разделы',
+                  zh: '导航',
+                ),
+                subtitle: _uiText(
+                  en: 'No long scroll — pick a surface',
+                  ar: 'بدون تمرير طويل',
+                  fr: 'Sans defilement infini',
+                  es: 'Sin scroll infinito',
+                  de: 'Ohne Endlos-Scroll',
+                  it: 'Senza scroll infinito',
+                  ru: 'Без бесконечной прокрутки',
+                  zh: '告别长列表',
+                ),
+              ),
+              const SizedBox(height: 10),
+              GridView.count(
+                crossAxisCount: cross,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: wide ? 2.25 : 1.85,
+                children: tiles,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDriversTab(AppLocalizations l) {
+    return RefreshIndicator(
+      color: OwnerColors.yellow,
+      onRefresh: _refreshAll,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+        children: [
+          RepaintBoundary(child: _buildDriverManagementModule(l)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWalletsTabOnly(AppLocalizations l) {
+    return RefreshIndicator(
+      color: OwnerColors.yellow,
+      onRefresh: _refreshAll,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+        children: [
+          RepaintBoundary(child: _buildDriverWalletsModule(l)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRatingsTabOnly(AppLocalizations l) {
+    return RefreshIndicator(
+      color: OwnerColors.yellow,
+      onRefresh: _refreshAll,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+        children: [
+          RepaintBoundary(child: _buildDriverRatingsModule(l)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnalyticsTab(AppLocalizations l) {
+    return RefreshIndicator(
+      color: OwnerColors.yellow,
+      onRefresh: _refreshAll,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+        children: [
+          RepaintBoundary(child: _buildTripLedgerModule(l)),
+        ],
+      ),
+    );
+  }
 
   Widget _buildArrivalsTab(AppLocalizations l) {
     return RefreshIndicator(
-      color: _C.yellow,
+      color: OwnerColors.yellow,
       onRefresh: _refreshAll,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         children: [
-          _DarkButton(
+          OwnerDarkButton(
               label: l.adminLoadRidesBtn,
               icon: Icons.refresh_rounded,
               onPressed: _busy ? null : _refreshAll),
           const SizedBox(height: 16),
-          _SectionHead(l.operatorTabTodaysArrivals),
+          OwnerSectionHead(l.operatorTabTodaysArrivals),
           if ((_flightDataSource ?? '').startsWith('demo'))
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -2284,21 +2637,21 @@ class _OwnerScreenState extends State<OwnerScreen>
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: _C.yellowSoft,
+                  color: OwnerColors.yellowSoft,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _C.yellowDeep.withOpacity(0.35)),
+                  border: Border.all(color: OwnerColors.yellowDeep.withOpacity(0.35)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Icon(Icons.info_outline_rounded,
-                        color: _C.charcoal, size: 22),
+                        color: OwnerColors.charcoal, size: 22),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         l.flightArrivalsSampleDataBanner,
                         style: const TextStyle(
-                            color: _C.textStrong, fontSize: 13, height: 1.35),
+                            color: OwnerColors.textStrong, fontSize: 13, height: 1.35),
                       ),
                     ),
                   ],
@@ -2306,121 +2659,25 @@ class _OwnerScreenState extends State<OwnerScreen>
               ),
             ),
           if (_flightArrivals.isEmpty)
-            _Module(
+            OwnerModule(
                 child: Center(
                     child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(children: [
                 const Icon(Icons.flight_land_rounded,
-                    size: 40, color: _C.textSoft),
+                    size: 40, color: OwnerColors.textSoft),
                 const SizedBox(height: 8),
                 Text(l.operatorNoFlightArrivals,
-                    style: const TextStyle(color: _C.textSoft)),
+                    style: const TextStyle(color: OwnerColors.textSoft)),
               ]),
             )))
           else
-            _Module(
-                padding: 0,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    headingRowColor: WidgetStateProperty.all(_C.charcoal),
-                    headingTextStyle: const TextStyle(
-                        color: _C.yellow,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                        letterSpacing: 0.5),
-                    dataRowColor: WidgetStateProperty.resolveWith((s) =>
-                        s.contains(WidgetState.selected)
-                            ? _C.yellowSoft
-                            : null),
-                    border: TableBorder(
-                        horizontalInside: BorderSide(color: _C.border)),
-                    columns: [
-                      DataColumn(label: Text(l.operatorColFlightNumber)),
-                      const DataColumn(label: Text('Airline')),
-                      const DataColumn(label: Text('Status')),
-                      const DataColumn(label: Text('Aircraft')),
-                      DataColumn(label: Text(l.operatorColDepartureAirport)),
-                      DataColumn(label: Text(l.operatorColTakeoffTime)),
-                      DataColumn(label: Text(l.operatorColExpectedArrival)),
-                      const DataColumn(label: Text('Last update')),
-                      const DataColumn(label: Text('Speed')),
-                      const DataColumn(label: Text('Altitude')),
-                      DataColumn(label: Text(l.operatorColArrivalAirportTn)),
-                    ],
-                    rows: _flightArrivals.asMap().entries.map((e) {
-                      final r = e.value;
-                      return DataRow(cells: [
-                        DataCell(Text(r['flight_number']?.toString() ?? '',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 13))),
-                        DataCell(Text((r['airline'] ?? '').toString(),
-                            style: const TextStyle(fontSize: 13))),
-                        DataCell(Text((r['status'] ?? '').toString(),
-                            style: const TextStyle(fontSize: 13))),
-                        DataCell(Text((r['aircraft'] ?? '').toString(),
-                            style: const TextStyle(fontSize: 13))),
-                        DataCell(Text(_departureAirportLabel(r),
-                            style: const TextStyle(fontSize: 13))),
-                        DataCell(Text(r['takeoff_time']?.toString() ?? '',
-                            style: const TextStyle(fontSize: 13))),
-                        DataCell(Text(
-                          (() {
-                            final raw = _prettyDateTime(
-                                r['expected_arrival']?.toString() ?? '');
-                            return raw.trim().isEmpty ? '-' : raw;
-                          })(),
-                          style: const TextStyle(fontSize: 13),
-                        )),
-                        DataCell(Text(
-                            _prettyDateTime(r['last_update']?.toString() ?? ''),
-                            style: const TextStyle(fontSize: 13))),
-                        DataCell(Text(
-                            (r['speed_kmh'] == null)
-                                ? '-'
-                                : '${r['speed_kmh']} km/h',
-                            style: const TextStyle(fontSize: 13))),
-                        DataCell(Text(
-                            (r['altitude_m'] == null)
-                                ? '-'
-                                : '${r['altitude_m']} m',
-                            style: const TextStyle(fontSize: 13))),
-                        DataCell(Text(_arrivalAirportLabel(r),
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 13))),
-                      ]);
-                    }).toList(),
-                  ),
-                )),
-        ],
-      ),
-    );
-  }
-
-  // ══ TREASURY TAB — Modular, decoupled sections ════════════
-  Widget _buildTreasuryTab(AppLocalizations l) {
-    return RefreshIndicator(
-      color: _C.yellow,
-      onRefresh: _refreshAll,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-        children: [
-          // ① KPI overview
-          _buildKpiModule(l),
-          const SizedBox(height: 4),
-          // ② Driver management (create + top-up)
-          _buildDriverManagementModule(l),
-          const SizedBox(height: 4),
-          // ③ Driver wallets list
-          _buildDriverWalletsModule(l),
-          const SizedBox(height: 4),
-          // ④ Driver ratings
-          _buildDriverRatingsModule(l),
-          const SizedBox(height: 4),
-          // ⑤ Trip ledger
-          _buildTripLedgerModule(l),
+            OwnerModule(
+                padding: 12,
+                child: TodaysFlightArrivalsCardList(
+                  rows: _flightArrivals,
+                  theme: FlightArrivalsVisualTokens.owner(),
+                ))
         ],
       ),
     );
@@ -2433,19 +2690,19 @@ class _OwnerScreenState extends State<OwnerScreen>
             (r) => _rideStatusBucket((r['status'] ?? '').toString()) == status)
         .length;
     return RefreshIndicator(
-      color: _C.yellow,
+      color: OwnerColors.yellow,
       onRefresh: _refreshAll,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
         children: [
-          _Module(
+          OwnerModule(
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _SectionHead('Dispatch & monitoring',
+                  OwnerSectionHead('Dispatch & monitoring',
                       subtitle: 'Live operational overview'),
                   Text(
                     _adminRides.any((r) =>
@@ -2453,7 +2710,7 @@ class _OwnerScreenState extends State<OwnerScreen>
                             'accepted')
                         ? 'Accepted requests are ready for dispatch monitoring.'
                         : 'No accepted requests right now.',
-                    style: const TextStyle(color: _C.textSoft),
+                    style: const TextStyle(color: OwnerColors.textSoft),
                   ),
                   const SizedBox(height: 10),
                   Wrap(
@@ -2465,7 +2722,7 @@ class _OwnerScreenState extends State<OwnerScreen>
                                 _rideStatusFilter = 'accepted';
                                 _visibleRideRows = _ownerInitialRideRows;
                               }),
-                          child: _StatChip(
+                          child: OwnerStatChip(
                               label: _uiText(
                                   en: 'Accepted',
                                   ar: 'مقبول',
@@ -2478,14 +2735,14 @@ class _OwnerScreenState extends State<OwnerScreen>
                               value: '${countByStatus('accepted')}',
                               icon: Icons.verified_rounded,
                               color: _rideStatusFilter == 'accepted'
-                                  ? _C.yellowDeep
-                                  : _C.textSoft)),
+                                  ? OwnerColors.yellowDeep
+                                  : OwnerColors.textSoft)),
                       GestureDetector(
                           onTap: () => setState(() {
                                 _rideStatusFilter = 'refused';
                                 _visibleRideRows = _ownerInitialRideRows;
                               }),
-                          child: _StatChip(
+                          child: OwnerStatChip(
                               label: _uiText(
                                   en: 'Refused',
                                   ar: 'مرفوض',
@@ -2498,14 +2755,14 @@ class _OwnerScreenState extends State<OwnerScreen>
                               value: '${countByStatus('refused')}',
                               icon: Icons.block_rounded,
                               color: _rideStatusFilter == 'refused'
-                                  ? _C.danger
-                                  : _C.textSoft)),
+                                  ? OwnerColors.danger
+                                  : OwnerColors.textSoft)),
                       GestureDetector(
                           onTap: () => setState(() {
                                 _rideStatusFilter = 'ongoing';
                                 _visibleRideRows = _ownerInitialRideRows;
                               }),
-                          child: _StatChip(
+                          child: OwnerStatChip(
                               label: _uiText(
                                   en: 'Ongoing',
                                   ar: 'جار',
@@ -2518,14 +2775,14 @@ class _OwnerScreenState extends State<OwnerScreen>
                               value: '${countByStatus('ongoing')}',
                               icon: Icons.route,
                               color: _rideStatusFilter == 'ongoing'
-                                  ? _C.info
-                                  : _C.textSoft)),
+                                  ? OwnerColors.info
+                                  : OwnerColors.textSoft)),
                       GestureDetector(
                           onTap: () => setState(() {
                                 _rideStatusFilter = 'completed';
                                 _visibleRideRows = _ownerInitialRideRows;
                               }),
-                          child: _StatChip(
+                          child: OwnerStatChip(
                               label: _uiText(
                                   en: 'Completed',
                                   ar: 'مكتمل',
@@ -2538,14 +2795,14 @@ class _OwnerScreenState extends State<OwnerScreen>
                               value: '${countByStatus('completed')}',
                               icon: Icons.check_circle,
                               color: _rideStatusFilter == 'completed'
-                                  ? _C.success
-                                  : _C.textSoft)),
+                                  ? OwnerColors.success
+                                  : OwnerColors.textSoft)),
                       GestureDetector(
                           onTap: () => setState(() {
                                 _rideStatusFilter = 'all';
                                 _visibleRideRows = _ownerInitialRideRows;
                               }),
-                          child: _StatChip(
+                          child: OwnerStatChip(
                               label: _uiText(
                                   en: 'All',
                                   ar: 'الكل',
@@ -2558,8 +2815,8 @@ class _OwnerScreenState extends State<OwnerScreen>
                               value: '${_adminRides.length}',
                               icon: Icons.list_alt,
                               color: _rideStatusFilter == 'all'
-                                  ? _C.charcoal
-                                  : _C.textSoft)),
+                                  ? OwnerColors.charcoal
+                                  : OwnerColors.textSoft)),
                     ],
                   ),
                 ],
@@ -2573,94 +2830,26 @@ class _OwnerScreenState extends State<OwnerScreen>
     );
   }
 
-  // ① KPIs
-  Widget _buildKpiModule(AppLocalizations l) {
-    final m = _metrics;
-    final am = _adminMetrics;
-    return _Module(
-      accent: true,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _SectionHead(l.ownerTabTreasury,
-            subtitle: 'Financial overview',
-            trailing: _DarkButton(
-                label: 'Refresh',
-                icon: Icons.refresh_rounded,
-                onPressed: _busy ? null : _refreshAll,
-                small: true,
-                fullWidth: false)),
-        if (m != null || am != null)
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            if (m != null) ...[
-              _StatChip(
-                  label: 'My Profit',
-                  value: '${m['total_commission'] ?? 0} DT',
-                  icon: Icons.payments_outlined,
-                  color: _C.success),
-              _StatChip(
-                  label: 'Trips',
-                  value: '${m['trip_count'] ?? 0}',
-                  icon: Icons.route_outlined),
-              _StatChip(
-                  label: 'Rating',
-                  value: '${m['rating_average'] ?? 0} ⭐',
-                  icon: Icons.star_outlined,
-                  color: _C.yellowDeep),
-            ],
-            if (am != null) ...[
-              _StatChip(
-                  label: 'Total Commission',
-                  value: '${am['total_commission'] ?? 0} DT',
-                  icon: Icons.account_balance_outlined,
-                  color: _C.info),
-              _StatChip(
-                  label: 'All Trips',
-                  value: '${am['trip_count'] ?? 0}',
-                  icon: Icons.analytics_outlined),
-            ],
-          ])
-        else
-          const Text('Tap Refresh to load metrics',
-              style: TextStyle(color: _C.textSoft)),
-      ]),
-    );
-  }
-
-  // ② Driver management (create + wallet top-up)
+  // ① Driver management (approvals + accounts; wallet recharge lives under Wallets tab)
   Widget _buildDriverManagementModule(AppLocalizations l) {
-    final visibleWallets = _driverWalletBreakdown
-        .where(_isWalletVisible)
-        .where((row) => ((row['id'] as num?)?.toInt() ?? 0) > 0)
-        .toList();
-    final uniqueWalletsById = <int, Map<String, dynamic>>{};
-    for (final row in visibleWallets) {
-      final id = (row['id'] as num?)?.toInt();
-      if (id == null) continue;
-      uniqueWalletsById.putIfAbsent(id, () => row);
-    }
-    final rechargeWallets = uniqueWalletsById.values.toList();
-    final selectedTopUpId = rechargeWallets.any(
-      (row) => (row['id'] as num?)?.toInt() == _topUpAccountId,
-    )
-        ? _topUpAccountId
-        : null;
-    return _Module(
+    return OwnerModule(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _SectionHead('App User Requests',
+        OwnerSectionHead('App User Requests',
             subtitle: '${_pendingApprovals.length} pending'),
         if (_pendingApprovals.isEmpty)
           const Padding(
             padding: EdgeInsets.only(bottom: 10),
             child: Text('No pending Driver/B2B requests.',
-                style: TextStyle(color: _C.textSoft)),
+                style: TextStyle(color: OwnerColors.textSoft)),
           )
         else
           ..._pendingApprovals.map((u) => Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                    color: _C.surfaceAlt,
+                    color: OwnerColors.surfaceAlt,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _C.border)),
+                    border: Border.all(color: OwnerColors.border)),
                 child: Row(children: [
                   Expanded(
                     child: Text(
@@ -2717,10 +2906,10 @@ class _OwnerScreenState extends State<OwnerScreen>
                   ),
                 ]),
               )),
-        const Divider(height: 24, color: _C.border),
-        const Divider(height: 24, color: _C.border),
+        const Divider(height: 24, color: OwnerColors.border),
+        const Divider(height: 24, color: OwnerColors.border),
         const SizedBox(height: 8),
-        _SectionHead('Driver account tools',
+        OwnerSectionHead('Driver account tools',
             subtitle: 'Create and manage driver login accounts'),
         // Legacy create driver (PIN-based)
         ExpansionTile(
@@ -2729,11 +2918,11 @@ class _OwnerScreenState extends State<OwnerScreen>
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                  color: _C.yellowSoft,
+                  color: OwnerColors.yellowSoft,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _C.yellowDeep)),
+                  border: Border.all(color: OwnerColors.yellowDeep)),
               child: const Icon(Icons.person_add_alt_1_outlined,
-                  color: _C.charcoal, size: 18)),
+                  color: OwnerColors.charcoal, size: 18)),
           title: const Text('Add Driver Login Account',
               style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
           childrenPadding: const EdgeInsets.only(top: 8),
@@ -2741,23 +2930,23 @@ class _OwnerScreenState extends State<OwnerScreen>
             TextField(
                 controller: _newDriverPhone,
                 keyboardType: TextInputType.phone,
-                decoration: _fd('Phone', icon: Icons.phone_outlined)),
+                decoration: ownerFieldDecoration('Phone', icon: Icons.phone_outlined)),
             const SizedBox(height: 8),
             TextField(
                 controller: _newDriverEmail,
                 keyboardType: TextInputType.emailAddress,
-                decoration: _fd('Email', icon: Icons.email_outlined)),
+                decoration: ownerFieldDecoration('Email', icon: Icons.email_outlined)),
             const SizedBox(height: 8),
             TextField(
                 controller: _newDriverName,
                 decoration:
-                    _fd(l.operatorDriverNameLabel, icon: Icons.badge_outlined)),
+                    ownerFieldDecoration(l.operatorDriverNameLabel, icon: Icons.badge_outlined)),
             const SizedBox(height: 8),
             TextField(
               controller: _newDriverPin,
               obscureText: _obscureNewDriverPin,
               decoration:
-                  _fd('Password', icon: Icons.lock_outline_rounded).copyWith(
+                  ownerFieldDecoration('Password', icon: Icons.lock_outline_rounded).copyWith(
                 suffixIcon: IconButton(
                   onPressed: () => setState(
                       () => _obscureNewDriverPin = !_obscureNewDriverPin),
@@ -2765,7 +2954,7 @@ class _OwnerScreenState extends State<OwnerScreen>
                     _obscureNewDriverPin
                         ? Icons.visibility_outlined
                         : Icons.visibility_off_outlined,
-                    color: _C.textSoft,
+                    color: OwnerColors.textSoft,
                   ),
                 ),
               ),
@@ -2773,13 +2962,13 @@ class _OwnerScreenState extends State<OwnerScreen>
             const SizedBox(height: 8),
             TextField(
                 controller: _newDriverCarModel,
-                decoration: _fd(l.operatorCarModelLabel,
+                decoration: ownerFieldDecoration(l.operatorCarModelLabel,
                     icon: Icons.directions_car_outlined)),
             const SizedBox(height: 8),
             TextField(
                 controller: _newDriverCarColor,
                 decoration:
-                    _fd(l.operatorCarColorLabel, icon: Icons.palette_outlined)),
+                    ownerFieldDecoration(l.operatorCarColorLabel, icon: Icons.palette_outlined)),
             const SizedBox(height: 10),
             OutlinedButton.icon(
                 onPressed: _busy ? null : _pickNewDriverImage,
@@ -2788,9 +2977,9 @@ class _OwnerScreenState extends State<OwnerScreen>
                 style: OutlinedButton.styleFrom(
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(50)),
-                    side: const BorderSide(color: _C.border))),
+                    side: const BorderSide(color: OwnerColors.border))),
             const SizedBox(height: 12),
-            _YellowButton(
+            OwnerYellowButton(
                 label: _uiText(
                     en: 'Create Driver Login Account',
                     ar: 'إنشاء حساب دخول سائق',
@@ -2805,15 +2994,16 @@ class _OwnerScreenState extends State<OwnerScreen>
           ],
         ),
         const SizedBox(height: 12),
-        _SectionHead('Managed driver accounts',
-            subtitle: '${_managedDriverUsers.length} drivers'),
-        ..._managedDriverUsers.take(80).map((u) => Container(
+        OwnerSectionHead('Managed driver accounts',
+            subtitle:
+                '${_managedDriverUsers.length} drivers · showing ${math.min(_visibleManagedDriverRows, _managedDriverUsers.length)}'),
+        ..._managedDriverUsers.take(_visibleManagedDriverRows).map((u) => Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                  color: _C.surfaceAlt,
+                  color: OwnerColors.surfaceAlt,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _C.border)),
+                  border: Border.all(color: OwnerColors.border)),
               child: Row(children: [
                 Expanded(
                   child: Text(
@@ -2827,31 +3017,120 @@ class _OwnerScreenState extends State<OwnerScreen>
                 ),
                 IconButton(
                     onPressed: _busy ? null : () => _deleteManagedDriver(u),
-                    icon: const Icon(Icons.delete_outline, color: _C.danger)),
+                    icon: const Icon(Icons.delete_outline, color: OwnerColors.danger)),
               ]),
             )),
-        const Divider(height: 24, color: _C.border),
-        // Driver wallet top-up
+        if (_managedDriverUsers.length > _visibleManagedDriverRows)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Center(
+              child: OwnerDarkButton(
+                label: _uiText(
+                  en: 'Show more drivers',
+                  ar: 'عرض المزيد من السائقين',
+                  fr: 'Afficher plus de chauffeurs',
+                  es: 'Mostrar mas conductores',
+                  de: 'Mehr Fahrer anzeigen',
+                  it: 'Mostra piu autisti',
+                  ru: 'Еще водители',
+                  zh: '加载更多司机',
+                ),
+                icon: Icons.expand_more_rounded,
+                small: true,
+                fullWidth: false,
+                onPressed: () => setState(() {
+                  _visibleManagedDriverRows += _ownerListPageStep;
+                }),
+              ),
+            ),
+          ),
+      ]),
+    );
+  }
+
+  // ③ Driver wallets (+ recharge controls)
+  Widget _buildDriverWalletsModule(AppLocalizations l) {
+    final visibleWallets = _driverWalletBreakdown
+        .where(_isWalletVisible)
+        .where((row) => ((row['id'] as num?)?.toInt() ?? 0) > 0)
+        .toList();
+    final uniqueWalletsById = <int, Map<String, dynamic>>{};
+    for (final row in visibleWallets) {
+      final id = (row['id'] as num?)?.toInt();
+      if (id == null) continue;
+      uniqueWalletsById.putIfAbsent(id, () => row);
+    }
+    final rechargeWallets = uniqueWalletsById.values.toList();
+    final selectedTopUpId = rechargeWallets.any(
+      (row) => (row['id'] as num?)?.toInt() == _topUpAccountId,
+    )
+        ? _topUpAccountId
+        : null;
+
+    final visibleWalletsAll =
+        _driverWalletBreakdown.where(_isWalletVisible).toList();
+    final slice = visibleWalletsAll.take(_visibleWalletRows).toList();
+    return OwnerModule(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        OwnerSectionHead(
+          _uiText(
+            en: 'Wallet recharge',
+            ar: 'شحن المحفظة',
+            fr: 'Recharge portefeuille',
+            es: 'Recarga de cartera',
+            de: 'Wallet-Aufladung',
+            it: 'Ricarica wallet',
+            ru: 'Пополнение кошелька',
+            zh: '钱包充值',
+          ),
+          subtitle: _uiText(
+            en: 'Add balance to a driver wallet',
+            ar: 'إضافة رصيد لمحفظة السائق',
+            fr: 'Ajouter du solde au chauffeur',
+            es: 'Anadir saldo al conductor',
+            de: 'Guthaben fuer Fahrer',
+            it: 'Aggiungi saldo autista',
+            ru: 'Пополнить баланс водителя',
+            zh: '为司机钱包充值',
+          ),
+        ),
         Row(children: [
           Container(
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                  color: _C.infoBg, borderRadius: BorderRadius.circular(10)),
-              child:
-                  const Icon(Icons.savings_outlined, color: _C.info, size: 18)),
+                  color: OwnerColors.infoBg,
+                  borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.savings_outlined,
+                  color: OwnerColors.info, size: 18)),
           const SizedBox(width: 10),
-          const Text('Driver wallet recharge',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+          Expanded(
+            child: Text(
+              _uiText(
+                en: 'Select driver and amount',
+                ar: 'اختر السائق والمبلغ',
+                fr: 'Chauffeur et montant',
+                es: 'Conductor e importe',
+                de: 'Fahrer und Betrag',
+                it: 'Autista e importo',
+                ru: 'Водитель и сумма',
+                zh: '选择司机与金额',
+              ),
+              style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: OwnerColors.textStrong),
+            ),
+          ),
         ]),
         const SizedBox(height: 12),
         Row(children: [
           Expanded(
               child: DropdownButtonFormField<int>(
             value: selectedTopUpId,
-            decoration: _fd(l.operatorDriverNameLabel,
+            decoration: ownerFieldDecoration(l.operatorDriverNameLabel,
                 icon: Icons.person_outline_rounded),
-            dropdownColor: _C.surface,
+            dropdownColor: OwnerColors.surface,
             items: rechargeWallets
                 .map((d) => DropdownMenuItem<int>(
                     value: (d['id'] as num?)?.toInt(),
@@ -2868,10 +3147,10 @@ class _OwnerScreenState extends State<OwnerScreen>
                   controller: _topUpAmountController,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
-                  decoration: _fd('Amount', suffix: 'DT'))),
+                  decoration: ownerFieldDecoration('Amount', suffix: 'DT'))),
         ]),
         const SizedBox(height: 12),
-        _DarkButton(
+        OwnerDarkButton(
             label: _uiText(
                 en: 'Recharge Balance',
                 ar: 'شحن الرصيد',
@@ -2885,31 +3164,23 @@ class _OwnerScreenState extends State<OwnerScreen>
             onPressed: _busy || _topUpAccountId == null
                 ? null
                 : _rechargeDriverWallet),
-      ]),
-    );
-  }
-
-  // ③ Driver wallets
-  Widget _buildDriverWalletsModule(AppLocalizations l) {
-    final visibleWallets =
-        _driverWalletBreakdown.where(_isWalletVisible).toList();
-    return _Module(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _SectionHead(l.ownerDriverPinWalletsHeading,
-            subtitle: '${visibleWallets.length} drivers'),
-        if (visibleWallets.isEmpty)
+        const Divider(height: 28, color: OwnerColors.border),
+        OwnerSectionHead(l.ownerDriverPinWalletsHeading,
+            subtitle:
+                '${visibleWalletsAll.length} drivers · showing ${slice.length}'),
+        if (visibleWalletsAll.isEmpty)
           Center(
               child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(children: [
                     const Icon(Icons.account_balance_wallet_outlined,
-                        size: 36, color: _C.textSoft),
+                        size: 36, color: OwnerColors.textSoft),
                     const SizedBox(height: 8),
                     Text(l.ownerDriverPinWalletsEmpty,
-                        style: const TextStyle(color: _C.textSoft)),
+                        style: const TextStyle(color: OwnerColors.textSoft)),
                   ])))
         else
-          ...visibleWallets.map((d) {
+          ...slice.map((d) {
             final managed = _findManagedDriverByWalletRow(d);
             return _DriverCard(
               driver: d,
@@ -2920,6 +3191,30 @@ class _OwnerScreenState extends State<OwnerScreen>
                   managed != null ? () => _deleteManagedDriver(managed) : null,
             );
           }),
+        if (visibleWalletsAll.length > _visibleWalletRows)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Center(
+              child: OwnerDarkButton(
+                label: _uiText(
+                  en: 'Show more wallets',
+                  ar: 'عرض المزيد من المحافظ',
+                  fr: 'Afficher plus de portefeuilles',
+                  es: 'Mostrar mas carteras',
+                  de: 'Mehr Wallets anzeigen',
+                  it: 'Mostra piu portafogli',
+                  ru: 'Еще кошельки',
+                  zh: '加载更多钱包',
+                ),
+                icon: Icons.expand_more_rounded,
+                small: true,
+                fullWidth: false,
+                onPressed: () => setState(() {
+                  _visibleWalletRows += _ownerListPageStep;
+                }),
+              ),
+            ),
+          ),
       ]),
     );
   }
@@ -2927,9 +3222,10 @@ class _OwnerScreenState extends State<OwnerScreen>
   // ④ Driver ratings
   Widget _buildDriverRatingsModule(AppLocalizations l) {
     final visibleRatings = _driverRatings.where(_isRatingVisible).toList();
-    return _Module(
+    final slice = visibleRatings.take(_visibleRatingRows).toList();
+    return OwnerModule(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _SectionHead(_uiText(
+        OwnerSectionHead(_uiText(
             en: 'Driver Ratings',
             ar: 'تقييمات السائقين',
             fr: 'Notes des chauffeurs',
@@ -2937,7 +3233,9 @@ class _OwnerScreenState extends State<OwnerScreen>
             de: 'Fahrerbewertungen',
             it: 'Valutazioni',
             ru: 'Рейтинг',
-            zh: '司机评分')),
+            zh: '司机评分'),
+            subtitle:
+                '${visibleRatings.length} drivers · showing ${slice.length}'),
         if (visibleRatings.isEmpty)
           Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -2951,9 +3249,9 @@ class _OwnerScreenState extends State<OwnerScreen>
                       it: 'Nessuna valutazione',
                       ru: 'Нет оценок',
                       zh: '暂无评分'),
-                  style: const TextStyle(color: _C.textSoft)))
+                  style: const TextStyle(color: OwnerColors.textSoft)))
         else
-          ...visibleRatings.take(60).map((row) {
+          ...slice.map((row) {
             Map<String, dynamic>? managed;
             final phone = (row['phone'] ?? '').toString().trim();
             final name =
@@ -2972,20 +3270,20 @@ class _OwnerScreenState extends State<OwnerScreen>
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                  color: _C.surfaceAlt,
+                  color: OwnerColors.surfaceAlt,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _C.border)),
+                  border: Border.all(color: OwnerColors.border)),
               child: Row(children: [
                 Container(
                     width: 34,
                     height: 34,
                     decoration: BoxDecoration(
-                        color: _C.yellowSoft,
+                        color: OwnerColors.yellowSoft,
                         borderRadius: BorderRadius.circular(9),
-                        border: Border.all(color: _C.yellowDeep)),
+                        border: Border.all(color: OwnerColors.yellowDeep)),
                     child: const Center(
                         child: Icon(Icons.star_rounded,
-                            color: _C.charcoal, size: 18))),
+                            color: OwnerColors.charcoal, size: 18))),
                 const SizedBox(width: 10),
                 Expanded(
                     child: Text((row['driver_name'] ?? '').toString(),
@@ -2996,52 +3294,76 @@ class _OwnerScreenState extends State<OwnerScreen>
                       style: const TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 16,
-                          color: _C.charcoal)),
+                          color: OwnerColors.charcoal)),
                   Text(
                       '${row['rating_count']} ${_uiText(en: 'ratings', ar: 'تقييمات', fr: 'notes', es: 'califs.', de: 'Bewert.', it: 'valut.', ru: 'оценок', zh: '评分')}',
-                      style: const TextStyle(color: _C.textSoft, fontSize: 10)),
+                      style: const TextStyle(color: OwnerColors.textSoft, fontSize: 10)),
                 ]),
                 if (managed != null)
                   IconButton(
                       onPressed:
                           _busy ? null : () => _deleteManagedDriver(managed!),
-                      icon: const Icon(Icons.delete_outline, color: _C.danger)),
+                      icon: const Icon(Icons.delete_outline, color: OwnerColors.danger)),
               ]),
             );
           }),
+        if (visibleRatings.length > _visibleRatingRows)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Center(
+              child: OwnerDarkButton(
+                label: _uiText(
+                  en: 'Show more ratings',
+                  ar: 'عرض المزيد من التقييمات',
+                  fr: 'Afficher plus de notes',
+                  es: 'Mostrar mas valoraciones',
+                  de: 'Mehr Bewertungen',
+                  it: 'Mostra piu valutazioni',
+                  ru: 'Еще оценки',
+                  zh: '加载更多评分',
+                ),
+                icon: Icons.expand_more_rounded,
+                small: true,
+                fullWidth: false,
+                onPressed: () => setState(() {
+                  _visibleRatingRows += _ownerListPageStep;
+                }),
+              ),
+            ),
+          ),
       ]),
     );
   }
 
   // ⑤ Trip ledger
   Widget _buildTripLedgerModule(AppLocalizations l) {
-    return _Module(
+    return OwnerModule(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _SectionHead(l.ownerVaultHeading, subtitle: '${_trips.length} trips'),
+        OwnerSectionHead(l.ownerVaultHeading, subtitle: '${_trips.length} trips'),
         if (_trips.isEmpty)
           Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(l.noTripsYet,
-                  style: const TextStyle(color: _C.textSoft)))
+                  style: const TextStyle(color: OwnerColors.textSoft)))
         else
           ..._trips.map((t) => Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                    color: _C.surfaceAlt,
+                    color: OwnerColors.surfaceAlt,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _C.border)),
+                    border: Border.all(color: OwnerColors.border)),
                 child: Row(children: [
                   Container(
                       width: 34,
                       height: 34,
                       decoration: BoxDecoration(
-                          color: _C.charcoal,
+                          color: OwnerColors.charcoal,
                           borderRadius: BorderRadius.circular(9)),
                       child: const Center(
                           child: Icon(Icons.receipt_long_rounded,
-                              color: _C.yellow, size: 16))),
+                              color: OwnerColors.yellow, size: 16))),
                   const SizedBox(width: 10),
                   Expanded(
                       child: Column(
@@ -3057,7 +3379,7 @@ class _OwnerScreenState extends State<OwnerScreen>
                             l.tripListSubtitle(t['date'] as String,
                                 t['commission'].toString()),
                             style: const TextStyle(
-                                color: _C.textSoft, fontSize: 11)),
+                                color: OwnerColors.textSoft, fontSize: 11)),
                       ])),
                 ]),
               )),
@@ -3069,9 +3391,9 @@ class _OwnerScreenState extends State<OwnerScreen>
   Widget _buildRidesLogModule(AppLocalizations l) {
     final filteredRides = _adminRides.where(_matchesRideFilter).toList();
     final visibleRides = filteredRides.take(_visibleRideRows).toList();
-    return _Module(
+    return OwnerModule(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _SectionHead(
+        OwnerSectionHead(
           'Live ride stream',
           subtitle:
               '${visibleRides.length}/${filteredRides.length} rides loaded',
@@ -3084,18 +3406,9 @@ class _OwnerScreenState extends State<OwnerScreen>
         else
           ...visibleRides.map((r) {
             final isB2b = r['is_b2b'] == true;
-            final riderName = (isB2b
-                        ? (r['b2b_guest_name'] ??
-                            r['passenger_name'] ??
-                            r['user_id'])
-                        : (r['passenger_name'] ?? r['user_id']))
-                    ?.toString()
-                    .trim() ??
-                '';
-            final driverName =
-                (r['driver_name'] ?? r['driver_id'] ?? '').toString().trim();
             final status = (r['status'] ?? '').toString();
             return _OwnerRideCard(
+              ride: r,
               route: localizedRideRouteRow(
                 l,
                 r['pickup']?.toString() ?? '',
@@ -3103,18 +3416,26 @@ class _OwnerScreenState extends State<OwnerScreen>
               ),
               status: status,
               statusLabel: _ownerRideStatusLabel(l, status),
-              riderType: isB2b ? l.roleB2b : l.rolePassenger,
-              riderName: riderName,
-              driverName: driverName,
+              isB2b: isB2b,
               distance: '${_rideDistanceKm(r)?.toStringAsFixed(1) ?? '-'} km',
               price: _ridePrice(r),
-              createdAt: (r['created_at'] ?? '').toString(),
-              isB2b: isB2b,
+              timeLabel: _requestLiveTime(r),
+              passengerSectionTitle: l.rolePassenger,
+              b2bSectionTitle: l.roleB2b,
+              driverSectionTitle: _uiText(
+                  en: 'Driver',
+                  ar: 'السائق',
+                  fr: 'Chauffeur',
+                  es: 'Conductor',
+                  de: 'Fahrer',
+                  it: 'Autista',
+                  ru: 'Водитель',
+                  zh: '司机'),
             );
           }),
         if (visibleRides.length < filteredRides.length)
           Center(
-            child: _DarkButton(
+            child: OwnerDarkButton(
               label: _uiText(
                   en: 'Show more rides',
                   ar: 'عرض رحلات أكثر',
@@ -3138,156 +3459,30 @@ class _OwnerScreenState extends State<OwnerScreen>
 
   // ══ SETTINGS TAB ══════════════════════════════════════════
   Widget _buildSettingsTab(AppLocalizations l) {
-    return RefreshIndicator(
-      color: _C.yellow,
-      onRefresh: _refreshAll,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-        children: [
-          // Commission slider module
-          _Module(
-            accent: true,
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _SectionHead(l.ownerSettingsCommissionLabel),
-                  Text(l.ownerSettingsCommissionHint,
-                      style: const TextStyle(
-                          color: _C.textSoft, fontSize: 12, height: 1.4)),
-                  const SizedBox(height: 12),
-                  Center(
-                      child: Text(_commissionDemoPercent.toStringAsFixed(2),
-                          style: const TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.w900,
-                              color: _C.charcoal))),
-                  const Center(
-                      child: Text('%',
-                          style: TextStyle(color: _C.textSoft, fontSize: 14))),
-                  Slider(
-                      value: _commissionDemoPercent.clamp(0.0, 40.0),
-                      min: 0,
-                      max: 40,
-                      divisions: 400,
-                      label: _commissionDemoPercent.toStringAsFixed(1),
-                      activeColor: _C.yellow,
-                      inactiveColor: _C.border,
-                      onChanged: _busy
-                          ? null
-                          : (v) => setState(() => _commissionDemoPercent = v)),
-                ]),
-          ),
-          // Fare routes module
-          _Module(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _SectionHead(l.ownerSettingsRouteFaresHeading,
-                  subtitle: '${_fareRoutes.length} routes'),
-              if (_fareRoutes.isEmpty)
-                Text(l.adminNoRidesLoaded,
-                    style: const TextStyle(color: _C.textSoft))
-              else
-                ..._fareRoutes.map((r) {
-                  final id = (r['id'] as num).toInt();
-                  final label = localizedRideRouteRow(
-                      l,
-                      r['start']?.toString() ?? '',
-                      r['destination']?.toString() ?? '');
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                        color: _C.surfaceAlt,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: _C.border)),
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(label,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 13,
-                                  color: _C.textStrong)),
-                          const SizedBox(height: 12),
-                          Row(children: [
-                            GestureDetector(
-                              onTap: _busy
-                                  ? null
-                                  : () {
-                                      final c = _fareCtrls[id];
-                                      if (c == null) return;
-                                      final v = double.tryParse(
-                                              c.text.replaceAll(',', '.')) ??
-                                          0;
-                                      c.text = (v > 1 ? v - 1 : 0)
-                                          .toStringAsFixed(2);
-                                      setState(() {});
-                                    },
-                              child: Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                      color: _C.charcoal,
-                                      borderRadius: BorderRadius.circular(10)),
-                                  child: const Icon(Icons.remove_rounded,
-                                      color: Colors.white, size: 18)),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                                child: TextField(
-                              controller: _fareCtrls[id],
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                      decimal: true),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(
-                                    RegExp(r'[\d.,]'))
-                              ],
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w800, fontSize: 16),
-                              decoration: _fd('', suffix: 'DT'),
-                            )),
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: _busy
-                                  ? null
-                                  : () {
-                                      final c = _fareCtrls[id];
-                                      if (c == null) return;
-                                      final v = double.tryParse(
-                                              c.text.replaceAll(',', '.')) ??
-                                          0;
-                                      c.text = (v + 1).toStringAsFixed(2);
-                                      setState(() {});
-                                    },
-                              child: Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                      color: _C.charcoal,
-                                      borderRadius: BorderRadius.circular(10)),
-                                  child: const Icon(Icons.add_rounded,
-                                      color: Colors.white, size: 18)),
-                            ),
-                          ]),
-                          const SizedBox(height: 10),
-                          Align(
-                              alignment: Alignment.centerRight,
-                              child: _YellowButton(
-                                  label: l.ownerSaveRouteFare,
-                                  icon: Icons.save_outlined,
-                                  onPressed:
-                                      _busy ? null : () => _saveFareRoute(id),
-                                  small: true,
-                                  fullWidth: false)),
-                        ]),
-                  );
-                }),
-            ]),
-          ),
-        ],
+    return OwnerSettingsTab(
+      l: l,
+      busy: _busy,
+      commissionPercent: _commissionDemoPercent,
+      onCommissionChanged: (v) => setState(() => _commissionDemoPercent = v),
+      fareRoutes: _fareRoutes,
+      fareControllers: _fareCtrls,
+      onSaveFare: _saveFareRoute,
+      onPullRefresh: _refreshAll,
+      searchHint: _uiText(
+        en:
+            'Search by place, airport, or route — Maps suggestions refine the fare list.',
+        ar: 'ابحث عن مكان أو مطار أو مسار — اقتراحات الخرائط تصفّي قائمة الأسعار.',
+        fr:
+            'Recherchez un lieu, un aeroport ou un trajet — les suggestions Maps filtrent les tarifs.',
+        es:
+            'Busque lugar, aeropuerto o ruta — las sugerencias de Maps filtran tarifas.',
+        de:
+            'Ort, Flughafen oder Route suchen — Maps-Vorschlaege filtern die Tarifliste.',
+        it:
+            'Cerca luogo, aeroporto o percorso — i suggerimenti Maps filtrano le tariffe.',
+        ru:
+            'Ищите место, аэропорт или маршрут — подсказки Maps фильтруют тарифы.',
+        zh: '按地点、机场或路线搜索 — 地图建议会筛选运价列表。',
       ),
     );
   }
@@ -3333,8 +3528,8 @@ class _OwnerScreenState extends State<OwnerScreen>
                   ru: 'Приостановлен',
                   zh: '暂停',
                 ),
-          color: enabled ? _C.charcoal : _C.textSoft,
-          background: enabled ? _C.yellowSoft : _C.surfaceAlt,
+          color: enabled ? OwnerColors.charcoal : OwnerColors.textSoft,
+          background: enabled ? OwnerColors.yellowSoft : OwnerColors.surfaceAlt,
         );
 
     final filteredB2b =
@@ -3349,7 +3544,7 @@ class _OwnerScreenState extends State<OwnerScreen>
     final visiblePaused = paused.take(_visibleB2bAccountRows).toList();
 
     return RefreshIndicator(
-      color: _C.yellow,
+      color: OwnerColors.yellow,
       onRefresh: _refreshAll,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -3358,14 +3553,14 @@ class _OwnerScreenState extends State<OwnerScreen>
           // Action buttons
           Row(children: [
             Expanded(
-                child: _DarkButton(
+                child: OwnerDarkButton(
                     label: 'Refresh',
                     icon: Icons.refresh_rounded,
                     onPressed: _busy ? null : _refreshAll,
                     small: true)),
             const SizedBox(width: 8),
             Expanded(
-                child: _YellowButton(
+                child: OwnerYellowButton(
                     label: 'New B2B Account',
                     icon: Icons.add_business_rounded,
                     onPressed: _busy ? null : _createB2bTenant,
@@ -3374,10 +3569,10 @@ class _OwnerScreenState extends State<OwnerScreen>
           const SizedBox(height: 16),
 
           // B2B Bookings module
-          _Module(
+          OwnerModule(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _SectionHead(
+              OwnerSectionHead(
                 l.ownerAdminOversightHeading,
                 subtitle:
                     '${visibleBookings.length}/${filteredBookings.length} bookings',
@@ -3494,7 +3689,7 @@ class _OwnerScreenState extends State<OwnerScreen>
                 }),
               if (visibleBookings.length < filteredBookings.length)
                 Center(
-                  child: _DarkButton(
+                  child: OwnerDarkButton(
                     label: _uiText(
                         en: 'Show more orders',
                         ar: 'عرض طلبات أكثر',
@@ -3515,7 +3710,7 @@ class _OwnerScreenState extends State<OwnerScreen>
             ]),
           ),
           const SizedBox(height: 8),
-          _SectionHead(
+          OwnerSectionHead(
             _uiText(
               en: 'Hostel Accounts (B2B)',
               ar: 'حسابات الفنادق (B2B)',
@@ -3609,12 +3804,12 @@ class _OwnerScreenState extends State<OwnerScreen>
             const Padding(
               padding: EdgeInsets.only(bottom: 8),
               child: Text('No B2B accounts yet',
-                  style: TextStyle(color: _C.textSoft)),
+                  style: TextStyle(color: OwnerColors.textSoft)),
             ),
 
           // Active hotels (restored card design)
           if (enabled.isNotEmpty) ...[
-            _SectionHead(
+            OwnerSectionHead(
               _uiText(
                 en: 'Active B2B Accounts',
                 ar: 'حسابات B2B النشطة',
@@ -3639,7 +3834,7 @@ class _OwnerScreenState extends State<OwnerScreen>
               final email = (b['email'] ?? '').toString();
               final phone = ((tenant?['phone'] ?? b['phone']) ?? '').toString();
               final hotel = (tenant?['hotel'] ?? '').toString();
-              return _Module(
+              return OwnerModule(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -3649,10 +3844,10 @@ class _OwnerScreenState extends State<OwnerScreen>
                           width: 34,
                           height: 34,
                           decoration: BoxDecoration(
-                              color: _C.charcoal,
+                              color: OwnerColors.charcoal,
                               borderRadius: BorderRadius.circular(9)),
                           child: const Icon(Icons.hotel_rounded,
-                              color: _C.yellow, size: 16),
+                              color: OwnerColors.yellow, size: 16),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -3670,25 +3865,25 @@ class _OwnerScreenState extends State<OwnerScreen>
                     Text(
                         'Name: ${contact.isEmpty ? '-' : contact} | PIN: ${pin.isEmpty ? '-' : pin}',
                         style:
-                            const TextStyle(color: _C.textSoft, fontSize: 11)),
+                            const TextStyle(color: OwnerColors.textSoft, fontSize: 11)),
                     Text('Email: $email',
                         style:
-                            const TextStyle(color: _C.textSoft, fontSize: 11)),
+                            const TextStyle(color: OwnerColors.textSoft, fontSize: 11)),
                     Text('Phone: $phone',
                         style:
-                            const TextStyle(color: _C.textSoft, fontSize: 11)),
+                            const TextStyle(color: OwnerColors.textSoft, fontSize: 11)),
                     if (hotel.isNotEmpty)
                       Text('Hotel: $hotel',
                           style: const TextStyle(
-                              color: _C.textSoft, fontSize: 11)),
+                              color: OwnerColors.textSoft, fontSize: 11)),
                     const SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
                           child: FilledButton.icon(
                             style: FilledButton.styleFrom(
-                              backgroundColor: _C.yellow,
-                              foregroundColor: _C.charcoal,
+                              backgroundColor: OwnerColors.yellow,
+                              foregroundColor: OwnerColors.charcoal,
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(50)),
                             ),
@@ -3705,8 +3900,8 @@ class _OwnerScreenState extends State<OwnerScreen>
                         Expanded(
                           child: FilledButton(
                             style: FilledButton.styleFrom(
-                              backgroundColor: _C.dangerBg,
-                              foregroundColor: _C.danger,
+                              backgroundColor: OwnerColors.dangerBg,
+                              foregroundColor: OwnerColors.danger,
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(50)),
                             ),
@@ -3732,7 +3927,7 @@ class _OwnerScreenState extends State<OwnerScreen>
             }),
             if (visibleEnabled.length < enabled.length)
               Center(
-                child: _DarkButton(
+                child: OwnerDarkButton(
                   label: _uiText(
                       en: 'Show more active accounts',
                       ar: 'عرض حسابات نشطة أكثر',
@@ -3755,7 +3950,7 @@ class _OwnerScreenState extends State<OwnerScreen>
           // Paused hotels (restored card design)
           if (paused.isNotEmpty) ...[
             const SizedBox(height: 4),
-            _SectionHead(
+            OwnerSectionHead(
               _uiText(
                 en: 'Paused B2B Accounts',
                 ar: 'حسابات B2B المتوقفة',
@@ -3780,7 +3975,7 @@ class _OwnerScreenState extends State<OwnerScreen>
               final email = (b['email'] ?? '').toString();
               final phone = ((tenant?['phone'] ?? b['phone']) ?? '').toString();
               final hotel = (tenant?['hotel'] ?? '').toString();
-              return _Module(
+              return OwnerModule(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -3790,11 +3985,11 @@ class _OwnerScreenState extends State<OwnerScreen>
                           width: 34,
                           height: 34,
                           decoration: BoxDecoration(
-                              color: _C.surfaceAlt,
+                              color: OwnerColors.surfaceAlt,
                               borderRadius: BorderRadius.circular(9),
-                              border: Border.all(color: _C.border)),
+                              border: Border.all(color: OwnerColors.border)),
                           child: const Icon(Icons.hotel_rounded,
-                              color: _C.charcoal, size: 16),
+                              color: OwnerColors.charcoal, size: 16),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -3812,25 +4007,25 @@ class _OwnerScreenState extends State<OwnerScreen>
                     Text(
                         'Name: ${contact.isEmpty ? '-' : contact} | PIN: ${pin.isEmpty ? '-' : pin}',
                         style:
-                            const TextStyle(color: _C.textSoft, fontSize: 11)),
+                            const TextStyle(color: OwnerColors.textSoft, fontSize: 11)),
                     Text('Email: $email',
                         style:
-                            const TextStyle(color: _C.textSoft, fontSize: 11)),
+                            const TextStyle(color: OwnerColors.textSoft, fontSize: 11)),
                     Text('Phone: $phone',
                         style:
-                            const TextStyle(color: _C.textSoft, fontSize: 11)),
+                            const TextStyle(color: OwnerColors.textSoft, fontSize: 11)),
                     if (hotel.isNotEmpty)
                       Text('Hotel: $hotel',
                           style: const TextStyle(
-                              color: _C.textSoft, fontSize: 11)),
+                              color: OwnerColors.textSoft, fontSize: 11)),
                     const SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
                           child: FilledButton.icon(
                             style: FilledButton.styleFrom(
-                              backgroundColor: _C.yellow,
-                              foregroundColor: _C.charcoal,
+                              backgroundColor: OwnerColors.yellow,
+                              foregroundColor: OwnerColors.charcoal,
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(50)),
                             ),
@@ -3848,7 +4043,7 @@ class _OwnerScreenState extends State<OwnerScreen>
                           child: FilledButton(
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFFD4EDDA),
-                              foregroundColor: _C.charcoal,
+                              foregroundColor: OwnerColors.charcoal,
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(50)),
                             ),
@@ -3874,7 +4069,7 @@ class _OwnerScreenState extends State<OwnerScreen>
             }),
             if (visiblePaused.length < paused.length)
               Center(
-                child: _DarkButton(
+                child: OwnerDarkButton(
                   label: _uiText(
                       en: 'Show more paused accounts',
                       ar: 'عرض حسابات متوقفة أكثر',
@@ -3901,14 +4096,16 @@ class _OwnerScreenState extends State<OwnerScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: kOwnerPortalTabCount, vsync: this);
+    _tabController!.addListener(_onOwnerTabChanged);
     final t = widget.initialToken;
     if (t != null && t.isNotEmpty) {
       _token = t;
       unawaited(SessionStore.saveOwnerToken(t));
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _refreshAll();
+        _ownerTabsHydrated.clear();
+        unawaited(_ensureOwnerTabHydrated(0));
       });
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -3919,6 +4116,7 @@ class _OwnerScreenState extends State<OwnerScreen>
 
   @override
   void dispose() {
+    _tabController?.removeListener(_onOwnerTabChanged);
     _tabController?.dispose();
     _secretController.dispose();
     _newDriverPhone.dispose();
@@ -3941,14 +4139,14 @@ class _OwnerScreenState extends State<OwnerScreen>
     final tc = _tabController;
 
     return Scaffold(
-      backgroundColor: _C.bgWarm,
+      backgroundColor: OwnerColors.bgWarm,
       appBar: AppBar(
-        backgroundColor: _C.yellow,
-        foregroundColor: _C.charcoal,
+        backgroundColor: OwnerColors.yellow,
+        foregroundColor: OwnerColors.charcoal,
         centerTitle: true,
         leading: IconButton(
           onPressed: _goBack,
-          icon: const Icon(Icons.arrow_back_rounded, color: _C.charcoal),
+          icon: const Icon(Icons.arrow_back_rounded, color: OwnerColors.charcoal),
         ),
         title: Text(
           _uiText(
@@ -3962,31 +4160,31 @@ class _OwnerScreenState extends State<OwnerScreen>
             zh: '老板控制台',
           ),
           style: const TextStyle(
-              color: _C.charcoal, fontWeight: FontWeight.w800, fontSize: 16),
+              color: OwnerColors.charcoal, fontWeight: FontWeight.w800, fontSize: 16),
         ),
         actions: [
           LocalePopupMenuButton(
             authToken: _token,
             uiRole: AppUiRole.owner,
-            foregroundColor: _C.charcoal,
+            foregroundColor: OwnerColors.charcoal,
           ),
           if (_token != null)
             IconButton(
               onPressed: _editMyAccount,
               tooltip: 'My account',
               icon:
-                  const Icon(Icons.manage_accounts_rounded, color: _C.charcoal),
+                  const Icon(Icons.manage_accounts_rounded, color: OwnerColors.charcoal),
             ),
           if (_token != null)
             IconButton(
               onPressed: () => unawaited(_logout()),
               tooltip: l.logoutApp,
-              icon: const Icon(Icons.logout_rounded, color: _C.charcoal),
+              icon: const Icon(Icons.logout_rounded, color: OwnerColors.charcoal),
             ),
           if (_token != null)
             IconButton(
                 onPressed: _busy ? null : _refreshAll,
-                icon: const Icon(Icons.refresh_rounded, color: _C.charcoal)),
+                icon: const Icon(Icons.refresh_rounded, color: OwnerColors.charcoal)),
         ],
       ),
       body: _token == null
@@ -3999,11 +4197,11 @@ class _OwnerScreenState extends State<OwnerScreen>
                     width: 92,
                     height: 72,
                     decoration: BoxDecoration(
-                        color: _C.yellow,
+                        color: OwnerColors.yellow,
                         borderRadius: BorderRadius.circular(22),
                         boxShadow: [
                           BoxShadow(
-                              color: _C.yellow.withOpacity(0.45),
+                              color: OwnerColors.yellow.withOpacity(0.45),
                               blurRadius: 20)
                         ]),
                     child: const VoomLogo(height: 44),
@@ -4013,19 +4211,19 @@ class _OwnerScreenState extends State<OwnerScreen>
                       style: TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 24,
-                          color: _C.textStrong)),
+                          color: OwnerColors.textStrong)),
                   const SizedBox(height: 4),
                   Text(l.ownerPasswordCeoLabel,
-                      style: const TextStyle(color: _C.textSoft, fontSize: 13)),
+                      style: const TextStyle(color: OwnerColors.textSoft, fontSize: 13)),
                   const SizedBox(height: 24),
                   Container(
                     decoration: BoxDecoration(
-                        color: _C.surface,
+                        color: OwnerColors.surface,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: _C.border),
+                        border: Border.all(color: OwnerColors.border),
                         boxShadow: [
                           BoxShadow(
-                              color: _C.charcoal.withOpacity(0.07),
+                              color: OwnerColors.charcoal.withOpacity(0.07),
                               blurRadius: 12,
                               offset: const Offset(0, 4))
                         ]),
@@ -4037,18 +4235,18 @@ class _OwnerScreenState extends State<OwnerScreen>
                         decoration: InputDecoration(
                           labelText: l.ownerPassword,
                           labelStyle:
-                              const TextStyle(color: _C.textMid, fontSize: 13),
+                              const TextStyle(color: OwnerColors.textMid, fontSize: 13),
                           prefixIcon: const Icon(Icons.vpn_key_outlined,
-                              color: _C.charcoal, size: 18),
+                              color: OwnerColors.charcoal, size: 18),
                           filled: true,
-                          fillColor: _C.surfaceAlt,
+                          fillColor: OwnerColors.surfaceAlt,
                           enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: _C.border)),
+                              borderSide: const BorderSide(color: OwnerColors.border)),
                           focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide:
-                                  const BorderSide(color: _C.yellow, width: 2)),
+                                  const BorderSide(color: OwnerColors.yellow, width: 2)),
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 14),
                           suffixIcon: IconButton(
@@ -4056,13 +4254,13 @@ class _OwnerScreenState extends State<OwnerScreen>
                                   _obscurePassword
                                       ? Icons.visibility_outlined
                                       : Icons.visibility_off_outlined,
-                                  color: _C.textSoft),
+                                  color: OwnerColors.textSoft),
                               onPressed: () => setState(
                                   () => _obscurePassword = !_obscurePassword)),
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _YellowButton(
+                      OwnerYellowButton(
                           label: l.loginLoadDashboard,
                           icon: Icons.login_rounded,
                           onPressed: _busy ? null : _login),
@@ -4074,30 +4272,30 @@ class _OwnerScreenState extends State<OwnerScreen>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
-                            color: _C.dangerBg,
+                            color: OwnerColors.dangerBg,
                             borderRadius: BorderRadius.circular(12),
                             border:
-                                Border.all(color: _C.danger.withOpacity(0.3))),
+                                Border.all(color: OwnerColors.danger.withOpacity(0.3))),
                         child: Row(children: [
                           const Icon(Icons.error_outline_rounded,
-                              color: _C.danger, size: 16),
+                              color: OwnerColors.danger, size: 16),
                           const SizedBox(width: 8),
                           Expanded(
                               child: Text(_message!,
                                   style: const TextStyle(
-                                      color: _C.danger, fontSize: 13)))
+                                      color: OwnerColors.danger, fontSize: 13)))
                         ])),
                   ],
                   if (_busy) ...[
                     const SizedBox(height: 16),
                     const CircularProgressIndicator(
-                        color: _C.yellow, strokeWidth: 2.5)
+                        color: OwnerColors.yellow, strokeWidth: 2.5)
                   ],
                 ]),
               ),
             )
           : tc == null
-              ? const Center(child: CircularProgressIndicator(color: _C.yellow))
+              ? const Center(child: CircularProgressIndicator(color: OwnerColors.yellow))
               // ── Dashboard ──────────────────────────────────
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -4113,83 +4311,292 @@ class _OwnerScreenState extends State<OwnerScreen>
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                                color: _C.yellow.withOpacity(0.4),
+                                color: OwnerColors.yellow.withOpacity(0.4),
                                 blurRadius: 10,
                                 offset: const Offset(0, 3))
                           ],
                         ),
                         child: Row(children: [
                           const Icon(Icons.check_circle_rounded,
-                              color: _C.charcoal, size: 20),
+                              color: OwnerColors.charcoal, size: 20),
                           const SizedBox(width: 8),
                           Expanded(
                               child: Text(l.ownerWelcomeHq,
                                   style: const TextStyle(
-                                      color: _C.charcoal,
+                                      color: OwnerColors.charcoal,
                                       fontWeight: FontWeight.w700,
                                       fontSize: 13))),
                         ]),
                       ),
                       const SizedBox(height: 8),
-                      // Tab bar
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                            color: _C.charcoal,
-                            borderRadius: BorderRadius.circular(14)),
-                        child: TabBar(
-                          controller: tc,
-                          isScrollable: true,
-                          indicatorColor: _C.yellow,
-                          indicatorWeight: 3,
-                          labelColor: _C.yellow,
-                          unselectedLabelColor: Colors.white38,
-                          labelStyle: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 12,
-                              letterSpacing: 0.3),
-                          unselectedLabelStyle: const TextStyle(
-                              fontWeight: FontWeight.w500, fontSize: 12),
-                          tabs: [
-                            Tab(text: '✈️ ${l.operatorTabTodaysArrivals}'),
-                            Tab(
-                                text:
-                                    '💸 ${_uiText(en: "Live orders", ar: "طلبات مباشرة", fr: "Commandes en direct", es: "Pedidos en vivo", de: "Live-Aufträge", it: "Ordini live", ru: "Заказы онлайн", zh: "实时订单")}'),
-                            Tab(text: '💰 ${l.ownerTabTreasury}'),
-                            Tab(text: '⚙️ ${l.ownerTabSettings}'),
-                            Tab(text: '🏨 ${l.ownerTabHostelB2b}'),
-                          ],
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final wide = constraints.maxWidth >= 960;
+                            final destinations = <NavigationRailDestination>[
+                              NavigationRailDestination(
+                                icon: const Icon(Icons.dashboard_customize_outlined),
+                                selectedIcon:
+                                    const Icon(Icons.dashboard_customize_rounded),
+                                label: Text(_uiText(
+                                  en: 'Home',
+                                  ar: 'الرئيسية',
+                                  fr: 'Accueil',
+                                  es: 'Inicio',
+                                  de: 'Home',
+                                  it: 'Home',
+                                  ru: 'Главная',
+                                  zh: '首页',
+                                )),
+                              ),
+                              NavigationRailDestination(
+                                icon: const Icon(Icons.bolt_outlined),
+                                selectedIcon: const Icon(Icons.bolt_rounded),
+                                label: Text(_uiText(
+                                  en: 'Live',
+                                  ar: 'مباشر',
+                                  fr: 'Live',
+                                  es: 'Live',
+                                  de: 'Live',
+                                  it: 'Live',
+                                  ru: 'Онлайн',
+                                  zh: '实时',
+                                )),
+                              ),
+                              NavigationRailDestination(
+                                icon: const Icon(Icons.groups_outlined),
+                                selectedIcon: const Icon(Icons.groups_rounded),
+                                label: Text(_uiText(
+                                  en: 'Fleet',
+                                  ar: 'الأسطول',
+                                  fr: 'Flotte',
+                                  es: 'Flota',
+                                  de: 'Flotte',
+                                  it: 'Flotta',
+                                  ru: 'Флот',
+                                  zh: '车队',
+                                )),
+                              ),
+                              NavigationRailDestination(
+                                icon: const Icon(Icons.account_balance_wallet_outlined),
+                                selectedIcon:
+                                    const Icon(Icons.account_balance_wallet_rounded),
+                                label: Text(_uiText(
+                                  en: 'Wallets',
+                                  ar: 'محافظ',
+                                  fr: 'Wallets',
+                                  es: 'Carteras',
+                                  de: 'Wallets',
+                                  it: 'Wallet',
+                                  ru: 'Кошельки',
+                                  zh: '钱包',
+                                )),
+                              ),
+                              NavigationRailDestination(
+                                icon: const Icon(Icons.star_outline_rounded),
+                                selectedIcon: const Icon(Icons.star_rate_rounded),
+                                label: Text(_uiText(
+                                  en: 'Stars',
+                                  ar: 'نجوم',
+                                  fr: 'Notes',
+                                  es: 'Estrellas',
+                                  de: 'Stars',
+                                  it: 'Stelle',
+                                  ru: 'Звезды',
+                                  zh: '评分',
+                                )),
+                              ),
+                              NavigationRailDestination(
+                                icon: const Icon(Icons.insights_outlined),
+                                selectedIcon: const Icon(Icons.insights_rounded),
+                                label: Text(_uiText(
+                                  en: 'Stats',
+                                  ar: 'إحصاء',
+                                  fr: 'Stats',
+                                  es: 'Stats',
+                                  de: 'Stats',
+                                  it: 'Stats',
+                                  ru: 'Стат',
+                                  zh: '统计',
+                                )),
+                              ),
+                              NavigationRailDestination(
+                                icon: const Icon(Icons.tune_outlined),
+                                selectedIcon: const Icon(Icons.tune_rounded),
+                                label: Text(l.ownerTabSettings),
+                              ),
+                              NavigationRailDestination(
+                                icon: const Icon(Icons.flight_land_outlined),
+                                selectedIcon: const Icon(Icons.flight_land_rounded),
+                                label: Text(l.operatorTabTodaysArrivals),
+                              ),
+                              NavigationRailDestination(
+                                icon: const Icon(Icons.apartment_outlined),
+                                selectedIcon: const Icon(Icons.apartment_rounded),
+                                label: Text(l.ownerTabHostelB2b),
+                              ),
+                            ];
+                            final tabView = TabBarView(
+                              controller: tc,
+                              children: [
+                                RepaintBoundary(child: _buildDashboardTab(l)),
+                                RepaintBoundary(child: _buildLiveOrdersTab(l)),
+                                RepaintBoundary(child: _buildDriversTab(l)),
+                                RepaintBoundary(child: _buildWalletsTabOnly(l)),
+                                RepaintBoundary(child: _buildRatingsTabOnly(l)),
+                                RepaintBoundary(child: _buildAnalyticsTab(l)),
+                                RepaintBoundary(child: _buildSettingsTab(l)),
+                                RepaintBoundary(child: _buildArrivalsTab(l)),
+                                RepaintBoundary(child: _buildB2bTab(l)),
+                              ],
+                            );
+                            if (wide) {
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  OwnerNavigationRail(
+                                    controller: tc,
+                                    destinations: destinations,
+                                  ),
+                                  const VerticalDivider(
+                                    width: 1,
+                                    thickness: 1,
+                                    color: OwnerColors.border,
+                                  ),
+                                  Expanded(child: tabView),
+                                ],
+                              );
+                            }
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Container(
+                                  margin:
+                                      const EdgeInsets.symmetric(horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    color: OwnerColors.charcoal,
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: TabBar(
+                                    controller: tc,
+                                    isScrollable: true,
+                                    tabAlignment: TabAlignment.start,
+                                    indicatorColor: OwnerColors.yellow,
+                                    indicatorWeight: 3,
+                                    labelColor: OwnerColors.yellow,
+                                    unselectedLabelColor: Colors.white38,
+                                    labelStyle: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 11,
+                                      letterSpacing: 0.2,
+                                    ),
+                                    unselectedLabelStyle: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 11,
+                                    ),
+                                    tabs: [
+                                      Tab(
+                                        text: _uiText(
+                                          en: 'Home',
+                                          ar: 'رئيسية',
+                                          fr: 'Accueil',
+                                          es: 'Inicio',
+                                          de: 'Home',
+                                          it: 'Home',
+                                          ru: 'Главная',
+                                          zh: '首页',
+                                        ),
+                                      ),
+                                      Tab(
+                                        text: _uiText(
+                                          en: 'Live',
+                                          ar: 'مباشر',
+                                          fr: 'Live',
+                                          es: 'Live',
+                                          de: 'Live',
+                                          it: 'Live',
+                                          ru: 'Онлайн',
+                                          zh: '实时',
+                                        ),
+                                      ),
+                                      Tab(
+                                        text: _uiText(
+                                          en: 'Fleet',
+                                          ar: 'أسطول',
+                                          fr: 'Flotte',
+                                          es: 'Flota',
+                                          de: 'Flotte',
+                                          it: 'Flotta',
+                                          ru: 'Флот',
+                                          zh: '车队',
+                                        ),
+                                      ),
+                                      Tab(
+                                        text: _uiText(
+                                          en: 'Wallets',
+                                          ar: 'محافظ',
+                                          fr: 'Wallets',
+                                          es: 'Carteras',
+                                          de: 'Wallets',
+                                          it: 'Wallet',
+                                          ru: 'Кошельки',
+                                          zh: '钱包',
+                                        ),
+                                      ),
+                                      Tab(
+                                        text: _uiText(
+                                          en: 'Ratings',
+                                          ar: 'تقييم',
+                                          fr: 'Notes',
+                                          es: 'Notas',
+                                          de: 'Rating',
+                                          it: 'Voti',
+                                          ru: 'Рейтинг',
+                                          zh: '评分',
+                                        ),
+                                      ),
+                                      Tab(
+                                        text: _uiText(
+                                          en: 'Stats',
+                                          ar: 'إحصاء',
+                                          fr: 'Stats',
+                                          es: 'Stats',
+                                          de: 'Stats',
+                                          it: 'Stats',
+                                          ru: 'Аналит',
+                                          zh: '统计',
+                                        ),
+                                      ),
+                                      Tab(text: l.ownerTabSettings),
+                                      Tab(text: l.operatorTabTodaysArrivals),
+                                      Tab(text: l.ownerTabHostelB2b),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(child: tabView),
+                              ],
+                            );
+                          },
                         ),
                       ),
-                      Expanded(
-                          child: TabBarView(
-                        controller: tc,
-                        children: [
-                          _buildArrivalsTab(l),
-                          _buildLiveOrdersTab(l),
-                          _buildTreasuryTab(l),
-                          _buildSettingsTab(l),
-                          _buildB2bTab(l)
-                        ],
-                      )),
                       if (_message != null)
                         Container(
                           margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
-                              color: _C.dangerBg,
+                              color: OwnerColors.dangerBg,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                  color: _C.danger.withOpacity(0.3))),
+                                  color: OwnerColors.danger.withOpacity(0.3))),
                           child: Row(children: [
                             const Icon(Icons.error_outline_rounded,
-                                color: _C.danger, size: 16),
+                                color: OwnerColors.danger, size: 16),
                             const SizedBox(width: 8),
                             Expanded(
                                 child: Text(_message!,
                                     style: const TextStyle(
-                                        color: _C.danger, fontSize: 13)))
+                                        color: OwnerColors.danger, fontSize: 13)))
                           ]),
                         ),
                     ]),

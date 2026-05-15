@@ -89,6 +89,7 @@
   "adminRideRow": "{pickup} → {destination}",
   "driverLocationRow": "纬度 {lat}，经度 {lng}",
   "chatScreenTitle": "行程聊天",
+  "chatConversationShortTitle": "聊天",
   "messageFieldHint": "输入消息",
   "sendChatMessage": "发送",
   "accountDisabledContactAdmin": "账号已停用，请联系管理员。",
@@ -349,6 +350,24 @@
   "@driverOfferTimeChip": {
     "placeholders": {
       "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "driverOfferRoutePreviewLabel": "Route preview",
+  "driverOfferPassengerSectionTitle": "Passenger",
+  "driverOfferPassengerNameLabel": "Name",
+  "driverOfferPassengerPhoneLabel": "Phone",
+  "driverOfferB2bSectionTitle": "Corporate",
+  "driverOfferB2bCompanyLabel": "Company",
+  "driverOfferB2bCompanyUnknown": "Corporate account",
+  "driverOfferB2bGuestLabel": "Guest",
+  "driverOfferB2bRoomLabel": "Room",
+  "driverOfferB2bCodeLabel": "Code",
+  "driverOfferB2bAgreedFare": "Corporate fare: {amount} DT",
+  "@driverOfferB2bAgreedFare": {
+    "placeholders": {
+      "amount": {
         "type": "String"
       }
     }
@@ -642,6 +661,7 @@
   "operatorColTakeoffTime": "起飞时间",
   "operatorColExpectedArrival": "预计到达（今日）",
   "operatorColArrivalAirportTn": "到达机场（突尼斯）",
+  "flightArrivalsTerminalGate": "航站楼 · 登机口",
   "operatorChooseDriverTopUp": "选择要充值的司机:",
   "operatorAmountReceivedDt": "收到金额 (DT):",
   "operatorRechargeBalance": "充值余额",
@@ -669,5 +689,5 @@
   },
   "ownerDriverPinWalletsHeading": "司机钱包",
   "ownerDriverPinWalletsEmpty": "暂无已加载的 PIN 司机账户。",
-  "flightArrivalsSampleDataBanner": "仅为示例航班 — 后端未接入 AirLabs。请在 Taxi 项目目录的 `.env` 中设置 AIRLABS_API_KEY 并重启 API 服务。"
+  "flightArrivalsSampleDataBanner": "Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server."
 }

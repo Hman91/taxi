@@ -1,7 +1,7 @@
 """REST API for Taxi Pro."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 import re
 from typing import Any, Callable, Optional, Tuple, TypeVar
@@ -60,13 +60,19 @@ def airport_fares() -> Tuple[Any, int]:
 def quote_fare() -> Tuple[Any, int]:
     data = request.get_json(silent=True) or {}
     mode = data.get("mode", "airport")
+    pt_raw = (
+        data.get("pricing_time")
+        or data.get("scheduled_pickup_at")
+        or data.get("scheduledPickupAt")
+    )
+    pt = pricing.parse_pricing_time(pt_raw)
     if mode == "airport":
         route_key = data.get("route_key")
         route = pricing.get_airport_route(route_key or "")
         if not route:
             return jsonify({"error": "invalid_route_key"}), 400
         base = float(route["base_fare"])
-        final, is_night = pricing.calculate_fare(base)
+        br = pricing.fare_price_breakdown(base, pricing_time=pt)
         return (
             jsonify(
                 {
@@ -75,9 +81,11 @@ def quote_fare() -> Tuple[Any, int]:
                     "start": route["start"],
                     "destination": route["destination"],
                     "distance_km": route["distance_km"],
-                    "base_fare": base,
-                    "final_fare": round(final, 3),
-                    "is_night": is_night,
+                    "base_fare": br["base_fare_dt"],
+                    "night_surcharge_dt": br["night_surcharge_dt"],
+                    "final_fare": br["fare_dt"],
+                    "is_night": br["is_night"],
+                    "night_surcharge_percent": br["night_surcharge_percent"],
                 }
             ),
             200,
@@ -91,14 +99,18 @@ def quote_fare() -> Tuple[Any, int]:
                 dist = float(dist)
             except (TypeError, ValueError):
                 return jsonify({"error": "invalid_distance"}), 400
-        final, is_night = pricing.calculate_gps_fare(dist)
+        base_gps = pricing.PRISE_EN_CHARGE + (float(dist) * pricing.PRIX_PAR_KM)
+        br = pricing.fare_price_breakdown(base_gps, pricing_time=pt)
         return (
             jsonify(
                 {
                     "mode": "gps",
                     "distance_km": dist,
-                    "final_fare": round(final, 3),
-                    "is_night": is_night,
+                    "base_fare": br["base_fare_dt"],
+                    "night_surcharge_dt": br["night_surcharge_dt"],
+                    "final_fare": br["fare_dt"],
+                    "is_night": br["is_night"],
+                    "night_surcharge_percent": br["night_surcharge_percent"],
                 }
             ),
             200,
@@ -134,16 +146,22 @@ def create_b2b_booking(**kwargs: Any) -> Tuple[Any, int]:
     source_code_by_uid = email.split("@")[0].strip() if "@" in email else ""
     source_code = source_code_by_uid or source_code_input or "b2b"
     try:
-        fare = float(data.get("fare", 0.0))
+        float(data.get("fare", 0.0))
     except (TypeError, ValueError):
         return jsonify({"error": "invalid_fare"}), 400
-    if not route or not guest_name or fare < 0:
+    if not route or not guest_name:
         return jsonify({"error": "missing_fields"}), 400
     parts = route.split("➡️")
     pickup = parts[0].strip() if parts else ""
     destination = parts[1].strip() if len(parts) > 1 else ""
     if not pickup or not destination:
         return jsonify({"error": "invalid_route"}), 400
+    pt = pricing.parse_pricing_time(scheduled_pickup_at) or datetime.now(timezone.utc)
+    fare = float(
+        pricing.fare_quote_for_pickup_destination(
+            pickup, destination, pricing_time=pt
+        )["fare_dt"]
+    )
     tenant = db_module.b2b_tenant_by_code(source_code) if source_code else None
     room_compound = " | ".join(
         [

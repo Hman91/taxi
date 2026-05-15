@@ -211,6 +211,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get operatorColArrivalAirportTn => 'Ankunftsflughafen (Tunesien)';
 
   @override
+  String get flightArrivalsTerminalGate => 'Terminal · Gate';
+
+  @override
   String get operatorChooseDriverTopUp => 'Fahrer zum Aufladen wählen:';
 
   @override
@@ -401,6 +404,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get chatScreenTitle => 'Fahrt-Chat';
+
+  @override
+  String get chatConversationShortTitle => 'Chat';
 
   @override
   String get messageFieldHint => 'Nachricht eingeben';
@@ -625,6 +631,41 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String driverOfferTimeChip(String minutes) {
     return '$minutes min';
+  }
+
+  @override
+  String get driverOfferRoutePreviewLabel => 'Route preview';
+
+  @override
+  String get driverOfferPassengerSectionTitle => 'Passenger';
+
+  @override
+  String get driverOfferPassengerNameLabel => 'Name';
+
+  @override
+  String get driverOfferPassengerPhoneLabel => 'Phone';
+
+  @override
+  String get driverOfferB2bSectionTitle => 'Corporate';
+
+  @override
+  String get driverOfferB2bCompanyLabel => 'Company';
+
+  @override
+  String get driverOfferB2bCompanyUnknown => 'Corporate account';
+
+  @override
+  String get driverOfferB2bGuestLabel => 'Guest';
+
+  @override
+  String get driverOfferB2bRoomLabel => 'Room';
+
+  @override
+  String get driverOfferB2bCodeLabel => 'Code';
+
+  @override
+  String driverOfferB2bAgreedFare(String amount) {
+    return 'Corporate fare: $amount DT';
   }
 
   @override
@@ -924,5 +965,5 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get flightArrivalsSampleDataBanner =>
-      'Nur Beispiel-Flüge — das Backend nutzt AirLabs nicht. Legen Sie AIRLABS_API_KEY in einer `.env` im Taxi-Projektordner ab und starten Sie die API neu.';
+      'Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server.';
 }

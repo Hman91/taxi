@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../api/models.dart';
@@ -16,6 +17,7 @@ import '../app_locale.dart'
         userChoseLocaleThisSession;
 import '../l10n/app_localizations.dart';
 import '../l10n/place_localization.dart';
+import '../l10n/ride_address_display.dart';
 import '../l10n/ride_status_localization.dart';
 import '../models/app_notification.dart';
 import '../models/chat_message.dart';
@@ -24,7 +26,6 @@ import '../config.dart';
 import '../services/local_notification_service.dart';
 import '../services/session_store.dart';
 import '../services/taxi_app_service.dart';
-import '../theme/taxi_app_theme.dart';
 import '../widgets/locale_popup_menu.dart';
 import '../widgets/management_platform_ui.dart';
 import '../utils/chat_unread_poll.dart'
@@ -34,8 +35,11 @@ import '../utils/chat_unread_poll.dart'
         maxChatMessageId,
         rideMayHaveConversation;
 import '../utils/int_from_json.dart';
+import '../widgets/driver_dispatch_location_card.dart';
 import '../widgets/driver_ride_offer_card.dart';
+import '../widgets/todays_flight_arrivals_panel.dart';
 import '../widgets/voom_logo.dart';
+import 'live_trip_map_screen.dart';
 import 'ride_chat_screen.dart';
 import 'unified_login_screen.dart';
 
@@ -470,8 +474,9 @@ class _DriverRideDetailsCardState extends State<_DriverRideDetailsCard> {
   Future<void> _loadQuote() async {
     final key =
         '${widget.ride.pickup.trim()} $airportRouteKeySeparator ${widget.ride.destination.trim()}';
+    final pt = DateTime.tryParse(widget.ride.scheduledPickupAt ?? '');
     try {
-      final quote = await widget.api.quoteAirport(key);
+      final quote = await widget.api.quoteAirport(key, pricingTime: pt);
       if (!mounted) return;
       setState(() {
         _quote = quote;
@@ -655,8 +660,11 @@ class _DriverRideDetailsCardState extends State<_DriverRideDetailsCard> {
               ),
               const SizedBox(height: 12),
               _DriverRouteLine(
-                pickup: localizedPlaceName(l, ride.pickup),
-                destination: localizedPlaceName(l, ride.destination),
+                pickupTitle: ridePickupTitle(ride, l),
+                pickupAddress: ridePickupAddressLine(ride, l),
+                destinationTitle: rideDestinationTitle(ride, l),
+                destinationAddress: rideDestinationAddressLine(ride, l),
+                coordsLine: rideEndpointCoordsLine(ride),
               ),
             ]),
           ),
@@ -701,15 +709,18 @@ class _DriverRideDetailsCardState extends State<_DriverRideDetailsCard> {
             const SizedBox(height: 10),
             Wrap(spacing: 6, runSpacing: 6, children: [
               ManagementStatusPill(
-                label: 'Room ${ride.b2bRoomNumber ?? '-'}',
+                label: (ride.b2bTenantName ?? '').trim().isNotEmpty
+                    ? ride.b2bTenantName!.trim()
+                    : l.driverOfferB2bCompanyUnknown,
                 color: _C.textMid,
                 background: _C.surfaceAlt,
               ),
-              if ((ride.b2bSourceCode ?? '').trim().isNotEmpty)
+              if ((ride.b2bRoomNumber ?? '').trim().isNotEmpty)
                 ManagementStatusPill(
-                  label: ride.b2bSourceCode!.trim(),
-                  color: _C.info,
-                  background: _C.infoBg,
+                  label:
+                      '${l.driverOfferB2bRoomLabel}: ${ride.b2bRoomNumber!.trim()}',
+                  color: _C.textMid,
+                  background: _C.surfaceAlt,
                 ),
             ]),
           ],
@@ -768,10 +779,19 @@ class _DriverRideDetailsCardState extends State<_DriverRideDetailsCard> {
 }
 
 class _DriverRouteLine extends StatelessWidget {
-  const _DriverRouteLine({required this.pickup, required this.destination});
+  const _DriverRouteLine({
+    required this.pickupTitle,
+    required this.destinationTitle,
+    this.pickupAddress,
+    this.destinationAddress,
+    this.coordsLine,
+  });
 
-  final String pickup;
-  final String destination;
+  final String pickupTitle;
+  final String destinationTitle;
+  final String? pickupAddress;
+  final String? destinationAddress;
+  final String? coordsLine;
 
   @override
   Widget build(BuildContext context) {
@@ -779,7 +799,8 @@ class _DriverRouteLine extends StatelessWidget {
       _DriverRoutePoint(
         icon: Icons.my_location_rounded,
         label: 'Pickup location',
-        value: pickup,
+        value: pickupTitle,
+        detail: pickupAddress,
         color: _C.danger,
       ),
       Padding(
@@ -796,9 +817,22 @@ class _DriverRouteLine extends StatelessWidget {
       _DriverRoutePoint(
         icon: Icons.flag_rounded,
         label: 'Destination',
-        value: destination,
+        value: destinationTitle,
+        detail: destinationAddress,
         color: _C.success,
       ),
+      if ((coordsLine ?? '').trim().isNotEmpty) ...[
+        const SizedBox(height: 10),
+        SelectableText(
+          coordsLine!.trim(),
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: _C.textSoft,
+            height: 1.35,
+          ),
+        ),
+      ],
     ]);
   }
 }
@@ -808,12 +842,14 @@ class _DriverRoutePoint extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.detail,
     required this.color,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final String? detail;
   final Color color;
 
   @override
@@ -831,24 +867,39 @@ class _DriverRoutePoint extends StatelessWidget {
       ),
       const SizedBox(width: 10),
       Expanded(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: _C.textSoft,
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                color: _C.textSoft,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              color: _C.textStrong,
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
+            Text(
+              value,
+              style: const TextStyle(
+                color: _C.textStrong,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
             ),
-          ),
-        ]),
+            if ((detail ?? '').trim().isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                detail!.trim(),
+                style: const TextStyle(
+                  color: _C.textMid,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     ]);
   }
@@ -935,10 +986,8 @@ class _DriverScreenState extends State<DriverScreen>
   final _pinController = TextEditingController(text: '1234');
   List<String> _locations = [];
   String _location = '';
-  String? _locationText;
-  String? _locationError;
-  bool _locating = false;
-  double? _nearestZoneDistanceKm;
+  double? _driverMapLat;
+  double? _driverMapLng;
   String? _token;
   int? _userId;
   int? _driverId;
@@ -963,7 +1012,9 @@ class _DriverScreenState extends State<DriverScreen>
   final Set<int> _notifiedClosedRideIds = <int>{};
   Set<int> _lastPendingRideIds = <int>{};
   final Set<int> _selfAcceptedRideIds = <int>{};
-  final Set<int> _dismissedPendingRideIds = <int>{};
+  /// Local UI state for pending offers: `released` | `accepted` (pruned when ride leaves pending).
+  final Map<int, String> _pendingOfferOutcome = <int, String>{};
+  DateTime? _lastDispatchGpsUi;
   final Map<int, int> _unreadChatByRideId = <int, int>{};
   final Map<int, int> _rideIdByConversationId = <int, int>{};
   final Map<int, int> _conversationIdByRideId = <int, int>{};
@@ -1092,14 +1143,14 @@ class _DriverScreenState extends State<DriverScreen>
 
   Future<void> _detectDriverLocation({bool push = true}) async {
     final l10n = AppLocalizations.of(context)!;
-    setState(() {
-      _locating = true;
-      _locationError = null;
-    });
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        setState(() => _locationError = l10n.passengerLocationServiceDisabled);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.passengerLocationServiceDisabled)),
+          );
+        }
         return;
       }
       var permission = await Geolocator.checkPermission();
@@ -1108,7 +1159,11 @@ class _DriverScreenState extends State<DriverScreen>
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        setState(() => _locationError = l10n.passengerLocationPermissionDenied);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.passengerLocationPermissionDenied)),
+          );
+        }
         return;
       }
       final p = await Geolocator.getCurrentPosition(
@@ -1119,26 +1174,43 @@ class _DriverScreenState extends State<DriverScreen>
       final zone = nearest.zone;
       if (!mounted) return;
       setState(() {
-        _locationText =
-            '${p.latitude.toStringAsFixed(6)}, ${p.longitude.toStringAsFixed(6)}';
-        _nearestZoneDistanceKm = nearest.distanceMeters == null
-            ? null
-            : nearest.distanceMeters! / 1000.0;
+        _driverMapLat = p.latitude;
+        _driverMapLng = p.longitude;
         if (zone != null && zone.isNotEmpty) _location = zone;
       });
       if (push && zone != null && zone.isNotEmpty) await _pushDriverLocation();
     } catch (e) {
       if (!mounted) return;
-      setState(() => _locationError = e.toString());
-    } finally {
-      if (mounted) setState(() => _locating = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
-  Color _distanceColor(double km) {
-    if (km < 3.0) return _C.success;
-    if (km <= 10.0) return _C.yellowDeep;
-    return _C.danger;
+  void _openDriverLiveMap([Ride? ride]) {
+    if (!isGoogleMapsPlatformSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Live map needs GOOGLE_MAPS_API_KEY on Android/iOS (see config / local.properties).',
+          ),
+        ),
+      );
+      return;
+    }
+    final gps = (_driverMapLat != null && _driverMapLng != null)
+        ? LatLng(_driverMapLat!, _driverMapLng!)
+        : null;
+    final zone = _location.trim().isEmpty ? null : _location.trim();
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => LiveTripMapScreen(
+          role: LiveTripMapRole.driver,
+          myGps: gps,
+          focusRide: ride,
+          driverDeclaredZone: zone,
+        ),
+      ),
+    );
   }
 
   Future<void> _goToHome() async {
@@ -1873,7 +1945,15 @@ class _DriverScreenState extends State<DriverScreen>
           }
         }
       }
-      setState(() => _rides = walletSafeRides);
+      setState(() {
+        _rides = walletSafeRides;
+        final pendingIds = walletSafeRides
+            .where((r) => r.status == 'pending')
+            .map((r) => r.id)
+            .toSet();
+        _pendingOfferOutcome
+            .removeWhere((id, _) => !pendingIds.contains(id));
+      });
       await _syncConversationRideMap(walletSafeRides);
       await _pollChatUnreadFallback();
       await _refreshGains();
@@ -1938,57 +2018,6 @@ class _DriverScreenState extends State<DriverScreen>
     } finally {
       if (!silent && mounted) setState(() => _busy = false);
     }
-  }
-
-  String _arrivalAirportLabel(Map<String, dynamic> row) {
-    final code = Localizations.localeOf(context).languageCode;
-    if (code == 'ar') {
-      return row['arrival_airport_ar']?.toString() ??
-          row['arrival_airport_en']?.toString() ??
-          '';
-    }
-    return row['arrival_airport_en']?.toString() ??
-        row['arrival_airport_ar']?.toString() ??
-        '';
-  }
-
-  String _departureAirportLabel(Map<String, dynamic> row) {
-    final city = (row['departure_city'] ?? '').toString().trim();
-    final country = (row['departure_country'] ?? '').toString().trim();
-    final iata = (row['departure_iata'] ?? '').toString().trim().toUpperCase();
-    if (city.isNotEmpty && country.isNotEmpty && iata.isNotEmpty) {
-      return '$city, $country ($iata)';
-    }
-    return (row['departure_airport'] ?? '').toString();
-  }
-
-  String _prettyDateTime(String raw) {
-    final s = raw.trim();
-    if (s.isEmpty) return '';
-    final normalized = s.replaceFirst(' - ', 'T').replaceFirst(' ', 'T');
-    final dt = DateTime.tryParse(normalized) ?? DateTime.tryParse(s);
-    if (dt == null) return s;
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    final local = dt.toLocal();
-    final day = local.day.toString().padLeft(2, '0');
-    final mon = months[local.month - 1];
-    final year = local.year.toString();
-    final hh = local.hour.toString().padLeft(2, '0');
-    final mm = local.minute.toString().padLeft(2, '0');
-    return '$day $mon $year – $hh:$mm';
   }
 
   Future<void> _syncConversationRideMap(List<Ride> rides) async {
@@ -2384,21 +2413,27 @@ class _DriverScreenState extends State<DriverScreen>
     final t = _token;
     if (t == null) return;
     _selfAcceptedRideIds.add(ride.id);
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _pendingOfferOutcome[ride.id] = 'accepted';
+    });
     try {
       await _api.acceptRide(token: t, rideId: ride.id);
       await _refreshRides();
       _tabController?.animateTo(1);
     } catch (e) {
       _selfAcceptedRideIds.remove(ride.id);
-      setState(() => _message = e.toString());
+      setState(() {
+        _message = e.toString();
+        _pendingOfferOutcome.remove(ride.id);
+      });
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   void _declineOffer(Ride ride) {
-    setState(() => _dismissedPendingRideIds.add(ride.id));
+    setState(() => _pendingOfferOutcome[ride.id] = 'released');
   }
 
   Future<void> _releaseRide(Ride ride) async {
@@ -2491,6 +2526,7 @@ class _DriverScreenState extends State<DriverScreen>
             rideId: ride.id,
             conversationId: cid,
             showDriverQuickReplies: true,
+            minimalTripHeader: true,
           ),
         ),
       );
@@ -2567,131 +2603,123 @@ class _DriverScreenState extends State<DriverScreen>
 
   // ══ PENDING OFFERS TAB ═════════════════════════════════════
   Widget _buildPendingTab(AppLocalizations l, List<Ride> pendingOffers) {
+    final driverDot = (_driverMapLat != null && _driverMapLng != null)
+        ? LatLng(_driverMapLat!, _driverMapLng!)
+        : null;
+
     return RefreshIndicator(
       color: _C.yellow,
       onRefresh: _refreshRides,
-      child: ListView(
+      child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-        children: [
-          _Module(
-            accent: true,
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _SectionHead('Dispatch',
-                  subtitle: '${pendingOffers.length} open offers'),
-              // Zone selector
-              Container(
-                decoration: BoxDecoration(
-                    color: _C.surfaceAlt,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _C.border)),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _location.isEmpty ? null : _location,
-                    isExpanded: true,
-                    icon: const Icon(Icons.place_outlined,
-                        color: _C.charcoal, size: 18),
-                    items: _locations
-                        .map((e) => DropdownMenuItem(
-                            value: e,
-                            child: Text(localizedPlaceName(l, e),
-                                style: const TextStyle(fontSize: 13))))
-                        .toList(),
-                    onChanged: (v) async {
-                      if (v == null) return;
-                      setState(() => _location = v);
-                      await _pushDriverLocation();
-                    },
-                    hint: Text(l.ridePickupLabel,
-                        style:
-                            const TextStyle(color: _C.textSoft, fontSize: 13)),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            sliver: SliverToBoxAdapter(
+              child: _Module(
+                accent: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _SectionHead(
+                      'Dispatch',
+                      subtitle: '${pendingOffers.length} open offers',
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _DarkButton(
+                            label: l.adminLoadRidesBtn,
+                            icon: Icons.refresh_rounded,
+                            onPressed: _busy ? null : _refreshRides,
+                            small: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _StatChip(
+                          label: l.driverPendingRides,
+                          value: '${pendingOffers.length}',
+                          icon: Icons.hourglass_top_rounded,
+                          color: _C.yellowDeep,
+                        ),
+                        _StatChip(
+                          label: 'Alerts',
+                          value: '$_unreadCount',
+                          icon: Icons.notifications_active_rounded,
+                          color: _C.info,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            sliver: SliverToBoxAdapter(
+              child: DriverDispatchLocationCard(
+                seedGps: driverDot,
+                onLiveGps: (ll) {
+                  final now = DateTime.now();
+                  if (_lastDispatchGpsUi != null &&
+                      now.difference(_lastDispatchGpsUi!) <
+                          const Duration(seconds: 2)) {
+                    return;
+                  }
+                  _lastDispatchGpsUi = now;
+                  if (!mounted) return;
+                  setState(() {
+                    _driverMapLat = ll.latitude;
+                    _driverMapLng = ll.longitude;
+                  });
+                },
+              ),
+            ),
+          ),
+          if (pendingOffers.isEmpty)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+              sliver: SliverToBoxAdapter(
+                child: _Module(
+                  child: ManagementEmptyState(
+                    message: l.driverPendingRides,
+                    icon: Icons.local_taxi_outlined,
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _locationText != null
-                              ? 'GPS: $_locationText'
-                              : (_locationError ??
-                                  (_locating
-                                      ? l.passengerLocationDetecting
-                                      : l.passengerLocationUnavailable)),
-                          style:
-                              const TextStyle(color: _C.textSoft, fontSize: 11),
-                        ),
-                        if (_nearestZoneDistanceKm != null &&
-                            _location.trim().isNotEmpty)
-                          Text(
-                            'Nearest zone: ${localizedPlaceName(l, _location)} (${_nearestZoneDistanceKm!.toStringAsFixed(1)} km)',
-                            style: TextStyle(
-                              color: _distanceColor(_nearestZoneDistanceKm!),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: _locating
-                        ? null
-                        : () => unawaited(_detectDriverLocation()),
-                    icon: const Icon(Icons.my_location_rounded, size: 18),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(children: [
-                Expanded(
-                    child: _DarkButton(
-                        label: l.adminLoadRidesBtn,
-                        icon: Icons.refresh_rounded,
-                        onPressed: _busy ? null : _refreshRides,
-                        small: true)),
-              ]),
-              const SizedBox(height: 12),
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                _StatChip(
-                    label: l.driverPendingRides,
-                    value: '${pendingOffers.length}',
-                    icon: Icons.hourglass_top_rounded,
-                    color: _C.yellowDeep),
-                _StatChip(
-                    label: 'Alerts',
-                    value: '$_unreadCount',
-                    icon: Icons.notifications_active_rounded,
-                    color: _C.info),
-              ]),
-            ]),
-          ),
-          if (pendingOffers.isEmpty)
-            _Module(
-              child: ManagementEmptyState(
-                message: l.driverPendingRides,
-                icon: Icons.local_taxi_outlined,
-              ),
             )
           else
-            ...pendingOffers
-                .where((r) => !_dismissedPendingRideIds.contains(r.id))
-                .map((r) => Padding(
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final r = pendingOffers[index];
+                    return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: DriverRideOfferCard(
-                          ride: r,
-                          api: _api,
-                          busy: _busy,
-                          onAccept: () => _acceptRide(r),
-                          onReject: () => _declineOffer(r)),
-                    )),
+                        ride: r,
+                        api: _api,
+                        busy: _busy,
+                        onAccept: () => _acceptRide(r),
+                        onReject: () => _declineOffer(r),
+                        driverGps: driverDot,
+                        localOutcome: _pendingOfferOutcome[r.id],
+                      ),
+                    );
+                  },
+                  childCount: pendingOffers.length,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -2911,125 +2939,10 @@ class _DriverScreenState extends State<DriverScreen>
             )
           else
             _Module(
-              padding: 0,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  headingRowColor: WidgetStateProperty.all(_C.charcoal),
-                  headingTextStyle: const TextStyle(
-                    color: _C.yellow,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                    letterSpacing: 0.5,
-                  ),
-                  dataRowColor: WidgetStateProperty.resolveWith(
-                    (s) =>
-                        s.contains(WidgetState.selected) ? _C.yellowSoft : null,
-                  ),
-                  border: const TableBorder(
-                    horizontalInside: BorderSide(color: _C.border),
-                  ),
-                  columns: [
-                    DataColumn(label: Text(l.operatorColFlightNumber)),
-                    const DataColumn(label: Text('Airline')),
-                    const DataColumn(label: Text('Status')),
-                    const DataColumn(label: Text('Aircraft')),
-                    DataColumn(label: Text(l.operatorColDepartureAirport)),
-                    DataColumn(label: Text(l.operatorColTakeoffTime)),
-                    DataColumn(label: Text(l.operatorColExpectedArrival)),
-                    const DataColumn(label: Text('Last update')),
-                    const DataColumn(label: Text('Speed')),
-                    const DataColumn(label: Text('Altitude')),
-                    DataColumn(label: Text(l.operatorColArrivalAirportTn)),
-                  ],
-                  rows: _flightArrivals.map((r) {
-                    return DataRow(
-                      cells: [
-                        DataCell(
-                          Text(
-                            r['flight_number']?.toString() ?? '',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            (r['airline'] ?? '').toString(),
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            (r['status'] ?? '').toString(),
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            (r['aircraft'] ?? '').toString(),
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            _departureAirportLabel(r),
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            r['takeoff_time']?.toString() ?? '',
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            (() {
-                              final raw = _prettyDateTime(
-                                r['expected_arrival']?.toString() ?? '',
-                              );
-                              return raw.trim().isEmpty ? '-' : raw;
-                            })(),
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            _prettyDateTime(r['last_update']?.toString() ?? ''),
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            (r['speed_kmh'] == null)
-                                ? '-'
-                                : '${r['speed_kmh']} km/h',
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            (r['altitude_m'] == null)
-                                ? '-'
-                                : '${r['altitude_m']} m',
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            _arrivalAirportLabel(r),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  }).toList(),
-                ),
+              padding: 12,
+              child: TodaysFlightArrivalsCardList(
+                rows: _flightArrivals,
+                theme: FlightArrivalsVisualTokens.management(),
               ),
             ),
         ],
@@ -3082,6 +2995,14 @@ class _DriverScreenState extends State<DriverScreen>
               onPressed: () => unawaited(_logout()),
               tooltip: l.logoutApp,
               icon: const Icon(Icons.logout_rounded, color: _C.charcoal),
+            ),
+          if (_token != null)
+            IconButton(
+              onPressed: () => _openDriverLiveMap(
+                pendingOffers.isNotEmpty ? pendingOffers.first : null,
+              ),
+              tooltip: 'Live map',
+              icon: const Icon(Icons.map_rounded, color: _C.charcoal),
             ),
           if (_token != null)
             IconButton(

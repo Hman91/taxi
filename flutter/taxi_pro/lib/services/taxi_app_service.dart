@@ -12,11 +12,13 @@ class TaxiAppService {
 
   Future<Map<String, double>> getAirportFares() => _client.getAirportFares();
 
-  Future<Map<String, dynamic>> quoteAirport(String routeKey) =>
-      _client.quoteAirport(routeKey);
+  Future<Map<String, dynamic>> quoteAirport(String routeKey,
+          {DateTime? pricingTime}) =>
+      _client.quoteAirport(routeKey, pricingTime: pricingTime);
 
-  Future<Map<String, dynamic>> quoteGps({double? distanceKm}) =>
-      _client.quoteGps(distanceKm: distanceKm);
+  Future<Map<String, dynamic>> quoteGps(
+          {double? distanceKm, DateTime? pricingTime}) =>
+      _client.quoteGps(distanceKm: distanceKm, pricingTime: pricingTime);
 
   Future<LoginResponse> login({required String role, required String secret}) =>
       _client.login(role: role, secret: secret);

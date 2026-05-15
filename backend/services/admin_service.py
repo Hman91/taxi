@@ -7,9 +7,6 @@ import json
 import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
-from zoneinfo import ZoneInfo
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -18,6 +15,7 @@ from werkzeug.security import generate_password_hash
 from ..extensions import db
 from .. import db as db_module
 from ..models import B2BBooking, B2BTenant, Conversation, Driver, Message, Ride, User
+from . import aviation_edge
 from . import rides as rides_service
 
 
@@ -62,43 +60,8 @@ def _vehicle_parts(raw: str) -> tuple[str, str]:
 
 
 def _ride_dict(r: Ride) -> Dict[str, Any]:
-    passenger_name = None
-    passenger = db.session.get(User, int(r.user_id))
-    if passenger is not None:
-        email = (passenger.email or "").strip()
-        if email:
-            passenger_name = email.split("@", 1)[0]
-    driver_name = ""
-    if r.driver_id is not None:
-        d = db.session.get(Driver, int(r.driver_id))
-        if d is not None:
-            driver_name = (d.display_name or "").strip()
-    b2b_guest_name = None
-    b2b = db.session.scalars(
-        select(B2BBooking).where(B2BBooking.ride_id == int(r.id))
-    ).first()
-    if b2b is not None:
-        b2b_guest_name = (b2b.guest_name or "").strip() or None
-        if b2b_guest_name:
-            passenger_name = b2b_guest_name
-    if not passenger_name:
-        passenger_name = f"user_{int(r.user_id)}"
-    if not driver_name and r.driver_id is not None:
-        driver_name = f"driver_{int(r.driver_id)}"
-    return {
-        "id": int(r.id),
-        "user_id": int(r.user_id),
-        "driver_id": int(r.driver_id) if r.driver_id is not None else None,
-        "driver_name": driver_name,
-        "passenger_name": passenger_name,
-        "b2b_guest_name": b2b_guest_name,
-        "is_b2b": b2b is not None,
-        "status": r.status,
-        "pickup": r.pickup,
-        "destination": r.destination,
-        "created_at": _ts(r.created_at),
-        "updated_at": _ts(r.updated_at),
-    }
+    """Same shape as app ride JSON; skip per-row fare quotes (admin lists can be large)."""
+    return db_module._ride_dict(r, include_fare_quote=False)
 
 
 def list_rides(*, limit: int = 200) -> List[Dict[str, Any]]:
@@ -720,9 +683,8 @@ def list_tunisia_flight_arrivals_demo() -> List[Dict[str, Any]]:
             "departure_country": "France",
             "takeoff_time": "05:40",
             "expected_arrival": f"{today} 08:15",
-            "last_update": f"{today} 07:55",
-            "speed_kmh": None,
-            "altitude_m": None,
+            "arrival_terminal": "T1",
+            "arrival_gate": "B12",
             "arrival_airport_ar": "مطار النفيضة",
             "arrival_airport_en": "Enfidha Airport (NBE)",
         },
@@ -737,9 +699,8 @@ def list_tunisia_flight_arrivals_demo() -> List[Dict[str, Any]]:
             "departure_country": "Belgium",
             "takeoff_time": "06:10",
             "expected_arrival": f"{today} 09:40",
-            "last_update": f"{today} 09:12",
-            "speed_kmh": None,
-            "altitude_m": None,
+            "arrival_terminal": "",
+            "arrival_gate": "",
             "arrival_airport_ar": "مطار قرطاج",
             "arrival_airport_en": "Tunis–Carthage Airport (TUN)",
         },
@@ -754,96 +715,12 @@ def list_tunisia_flight_arrivals_demo() -> List[Dict[str, Any]]:
             "departure_country": "France",
             "takeoff_time": "07:25",
             "expected_arrival": f"{today} 10:50",
-            "last_update": f"{today} 10:20",
-            "speed_kmh": None,
-            "altitude_m": None,
+            "arrival_terminal": "2E",
+            "arrival_gate": "",
             "arrival_airport_ar": "مطار المنستير",
             "arrival_airport_en": "Monastir Airport (MIR)",
         },
     ]
-
-
-def _hhmm_from_isoish(raw: str) -> str:
-    s = (raw or "").strip()
-    if not s:
-        return ""
-    s = s.replace("Z", "+00:00")
-    try:
-        dt = datetime.fromisoformat(s)
-        return dt.strftime("%H:%M")
-    except Exception:
-        pass
-    if "T" in s:
-        tail = s.split("T", 1)[1]
-        return tail[:5]
-    if " " in s:
-        tail = s.split(" ", 1)[1]
-        return tail[:5]
-    return s[:5]
-
-
-def _pretty_datetime(raw: str, *, fallback_epoch: Any = None) -> str:
-    s = (raw or "").strip()
-    dt: Optional[datetime] = None
-    if s:
-        sx = s.replace("Z", "+00:00")
-        try:
-            dt = datetime.fromisoformat(sx)
-        except Exception:
-            dt = None
-    if dt is None and isinstance(fallback_epoch, (int, float)):
-        try:
-            dt = datetime.fromtimestamp(float(fallback_epoch))
-        except Exception:
-            dt = None
-    if dt is None:
-        return s
-    return dt.strftime("%d %b %Y").strip() + f" – {dt.strftime('%H:%M')}"
-
-
-_DEP_IATA_FALLBACK: Dict[str, Tuple[str, str]] = {
-    "IST": ("Istanbul", "Turkey"),
-    "BRU": ("Brussels", "Belgium"),
-    "LGW": ("London", "United Kingdom"),
-    "ORY": ("Paris", "France"),
-    "CDG": ("Paris", "France"),
-    "DOH": ("Doha", "Qatar"),
-}
-
-_TUNISIA_IATA = frozenset({"TUN", "NBE", "MIR"})
-
-
-def _today_tunisia() -> date:
-    try:
-        return datetime.now(ZoneInfo("Africa/Tunis")).date()
-    except Exception:
-        return date.today()
-
-
-def _iso_date_prefix(s: str) -> str:
-    s = (s or "").strip().replace("Z", "+00:00")
-    if len(s) >= 10 and s[4] == "-" and s[7] == "-":
-        candidate = s[:10]
-        try:
-            datetime.strptime(candidate, "%Y-%m-%d")
-            return candidate
-        except ValueError:
-            return ""
-    return ""
-
-
-def _tunisia_airport_labels(arrival_code: str) -> Tuple[str, str]:
-    arr_en = {
-        "TUN": "Tunis–Carthage Airport (TUN)",
-        "NBE": "Enfidha Airport (NBE)",
-        "MIR": "Monastir Airport (MIR)",
-    }.get(arrival_code, f"{arrival_code} Airport")
-    arr_ar = {
-        "TUN": "مطار قرطاج",
-        "NBE": "مطار النفيضة",
-        "MIR": "مطار المنستير",
-    }.get(arrival_code, "مطار")
-    return arr_ar, arr_en
 
 
 def _dedupe_sort_flight_rows(flights: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -858,275 +735,24 @@ def _dedupe_sort_flight_rows(flights: List[Dict[str, Any]]) -> List[Dict[str, An
     return out
 
 
-def _normalize_tracking_row(
-    r: Dict[str, Any], *, arr_iata: str, tunisian_iata: frozenset[str]
-) -> Optional[Dict[str, Any]]:
-    arrival_code = str(r.get("arr_iata") or arr_iata or "").upper()
-    if arrival_code not in tunisian_iata:
-        return None
-
-    flight_number = (
-        str(r.get("flight_iata") or "").strip()
-        or str(r.get("flight_number") or "").strip()
-        or str(r.get("flight_icao") or "").strip()
-        or str(r.get("hex") or "").strip()
-    )
-    if not flight_number:
-        return None
-
-    dep_airport = (
-        str(r.get("dep_name") or "").strip()
-        or str(r.get("dep_city") or "").strip()
-        or str(r.get("dep_iata") or "").strip()
-        or "Unknown"
-    )
-    dep_iata = str(r.get("dep_iata") or "").strip().upper()
-    dep_city = str(r.get("dep_city") or "").strip()
-    dep_country = str(r.get("dep_country") or "").strip()
-    if dep_iata and (not dep_city or not dep_country):
-        fallback = _DEP_IATA_FALLBACK.get(dep_iata)
-        if fallback is not None:
-            dep_city = dep_city or fallback[0]
-            dep_country = dep_country or fallback[1]
-
-    takeoff_raw = str(
-        r.get("dep_time")
-        or r.get("dep_estimated")
-        or r.get("dep_actual")
-        or r.get("dep_scheduled")
-        or ""
-    ).strip()
-    arrival_raw = str(
-        r.get("arr_time")
-        or r.get("arr_estimated")
-        or r.get("arr_actual")
-        or r.get("arr_scheduled")
-        or ""
-    ).strip()
-    updated_raw = r.get("updated")
-    airline_iata = str(r.get("airline_iata") or "").strip().upper()
-    airline_icao = str(r.get("airline_icao") or "").strip().upper()
-    aircraft_icao = str(r.get("aircraft_icao") or "").strip().upper()
-    status_raw = str(r.get("status") or "").strip().lower()
-    arr_ar, arr_en = _tunisia_airport_labels(arrival_code)
-
-    expected = _pretty_datetime(arrival_raw)
-    last_update = _pretty_datetime("", fallback_epoch=updated_raw)
-    speed_val = r.get("speed")
-    alt_val = r.get("alt")
-    speed_kmh = int(float(speed_val)) if isinstance(speed_val, (int, float)) else None
-    altitude_m = int(float(alt_val)) if isinstance(alt_val, (int, float)) else None
-    return {
-        "flight_number": flight_number,
-        "airline": (
-            f"{airline_iata} / {airline_icao}"
-            if airline_iata and airline_icao
-            else airline_iata or airline_icao
-        ),
-        "status": status_raw or "unknown",
-        "aircraft": aircraft_icao,
-        "departure_airport": dep_airport,
-        "departure_iata": dep_iata,
-        "departure_city": dep_city,
-        "departure_country": dep_country,
-        "takeoff_time": _hhmm_from_isoish(takeoff_raw),
-        "expected_arrival": expected,
-        "last_update": last_update,
-        "speed_kmh": speed_kmh,
-        "altitude_m": altitude_m,
-        "arrival_airport_ar": arr_ar,
-        "arrival_airport_en": arr_en,
-    }
-
-
-def _normalize_schedule_row(
-    r: Dict[str, Any], *, arr_iata: str, tunisian_iata: frozenset[str], today_tun: str
-) -> Optional[Dict[str, Any]]:
-    arrival_code = str(r.get("arr_iata") or arr_iata or "").upper()
-    if arrival_code not in tunisian_iata:
-        return None
-
-    arr_val = r.get("arr_time")
-    arrival_raw: str = ""
-    tunisia_arrival_day: Optional[str] = None
-    if isinstance(arr_val, (int, float)):
-        try:
-            dt_tun = datetime.fromtimestamp(float(arr_val), tz=ZoneInfo("UTC")).astimezone(
-                ZoneInfo("Africa/Tunis")
-            )
-            tunisia_arrival_day = dt_tun.date().isoformat()
-            arrival_raw = dt_tun.strftime("%Y-%m-%d %H:%M")
-        except Exception:
-            arrival_raw = ""
-    else:
-        arrival_raw = str(
-            arr_val or r.get("arr_estimated") or r.get("arr_scheduled") or ""
-        ).strip()
-        dp = _iso_date_prefix(arrival_raw)
-        if dp:
-            tunisia_arrival_day = dp
-
-    if tunisia_arrival_day is not None and tunisia_arrival_day != today_tun:
-        return None
-
-    flight_number = str(r.get("flight_iata") or "").strip()
-    if not flight_number:
-        ai = str(r.get("airline_iata") or "").strip().upper()
-        num = str(r.get("flight_number") or "").strip()
-        if ai and num:
-            flight_number = f"{ai}{num}"
-        elif num:
-            flight_number = num
-    if not flight_number:
-        return None
-
-    dep_airport = (
-        str(r.get("dep_name") or "").strip()
-        or str(r.get("dep_city") or "").strip()
-        or str(r.get("dep_iata") or "").strip()
-        or "Unknown"
-    )
-    dep_iata = str(r.get("dep_iata") or "").strip().upper()
-    dep_city = str(r.get("dep_city") or "").strip()
-    dep_country = str(r.get("dep_country") or "").strip()
-    if dep_iata and (not dep_city or not dep_country):
-        fallback = _DEP_IATA_FALLBACK.get(dep_iata)
-        if fallback is not None:
-            dep_city = dep_city or fallback[0]
-            dep_country = dep_country or fallback[1]
-    takeoff_raw = str(
-        r.get("dep_time") or r.get("dep_scheduled") or r.get("dep_estimated") or ""
-    ).strip()
-    airline_iata = str(r.get("airline_iata") or "").strip().upper()
-    airline_icao = str(r.get("airline_icao") or "").strip().upper()
-    aircraft_icao = str(r.get("aircraft_icao") or "").strip().upper()
-    status_raw = str(r.get("status") or "").strip().lower()
-    arr_ar, arr_en = _tunisia_airport_labels(arrival_code)
-    return {
-        "flight_number": flight_number,
-        "airline": (
-            f"{airline_iata} / {airline_icao}"
-            if airline_iata and airline_icao
-            else airline_iata or airline_icao
-        ),
-        "status": status_raw or "scheduled",
-        "aircraft": aircraft_icao,
-        "departure_airport": dep_airport,
-        "departure_iata": dep_iata,
-        "departure_city": dep_city,
-        "departure_country": dep_country,
-        "takeoff_time": _hhmm_from_isoish(takeoff_raw),
-        "expected_arrival": _pretty_datetime(arrival_raw),
-        "last_update": "—",
-        "speed_kmh": None,
-        "altitude_m": None,
-        "arrival_airport_ar": arr_ar,
-        "arrival_airport_en": arr_en,
-    }
-
-
-def _airlabs_schedules_arrivals(api_key: str) -> List[Dict[str, Any]]:
-    """Timetable-style rows (many flights per day); filtered to Tunisia local calendar date."""
-    today_tun = _today_tunisia().isoformat()
-    flights: List[Dict[str, Any]] = []
-
-    for arr_iata in _TUNISIA_IATA:
-        try:
-            query = urlencode(
-                {
-                    "api_key": api_key,
-                    "arr_iata": arr_iata,
-                    # Airport query: AirLabs allows a high cap; lower tiers may cap server-side.
-                    "limit": "500",
-                }
-            )
-            url = f"https://airlabs.co/api/v9/schedules?{query}"
-            req = Request(
-                url,
-                headers={
-                    "User-Agent": "Mozilla/5.0 TaxiPro/1.0",
-                    "Accept": "application/json",
-                },
-            )
-            with urlopen(req, timeout=12) as resp:
-                payload = json.loads(resp.read().decode("utf-8"))
-        except Exception:
-            continue
-
-        rows = payload.get("response") if isinstance(payload, dict) else None
-        if not isinstance(rows, list):
-            continue
-
-        for r in rows:
-            if not isinstance(r, dict):
-                continue
-            row = _normalize_schedule_row(
-                r, arr_iata=arr_iata, tunisian_iata=_TUNISIA_IATA, today_tun=today_tun
-            )
-            if row is not None:
-                flights.append(row)
-
-    return _dedupe_sort_flight_rows(flights)
-
-
-def _airlabs_tracking_snapshot(api_key: str) -> List[Dict[str, Any]]:
-    """Small real-time snapshot (only aircraft the vendor is currently tracking)."""
-    flights: List[Dict[str, Any]] = []
-
-    for arr_iata in _TUNISIA_IATA:
-        try:
-            query = urlencode(
-                {
-                    "api_key": api_key,
-                    "arr_iata": arr_iata,
-                    "limit": "100",
-                }
-            )
-            url = f"https://airlabs.co/api/v9/flights?{query}"
-            req = Request(
-                url,
-                headers={
-                    "User-Agent": "Mozilla/5.0 TaxiPro/1.0",
-                    "Accept": "application/json",
-                },
-            )
-            with urlopen(req, timeout=8) as resp:
-                payload = json.loads(resp.read().decode("utf-8"))
-        except Exception:
-            continue
-
-        rows = payload.get("response") if isinstance(payload, dict) else None
-        if not isinstance(rows, list):
-            continue
-
-        for r in rows:
-            if not isinstance(r, dict):
-                continue
-            row = _normalize_tracking_row(r, arr_iata=arr_iata, tunisian_iata=_TUNISIA_IATA)
-            if row is not None:
-                flights.append(row)
-
-    return _dedupe_sort_flight_rows(flights)
-
-
 def resolve_tunisia_flight_arrivals() -> Tuple[List[Dict[str, Any]], str]:
     """Return (flight rows, diagnostic source id) for `/tunisia-flight-arrivals`.
 
     ``flight_data_source`` explains which path produced the list (for UI hints).
     """
-    api_key = (os.environ.get("AIRLABS_API_KEY") or "").strip()
+    api_key = (os.environ.get("AVIATION_EDGE_API_KEY") or "").strip()
     if not api_key:
         return list_tunisia_flight_arrivals_demo(), "demo_no_api_key"
 
-    schedules = _airlabs_schedules_arrivals(api_key)
+    schedules = aviation_edge.tunisia_arrivals_via_timetables(api_key)
     if schedules:
-        return schedules, "airlabs_schedules"
+        return _dedupe_sort_flight_rows(schedules), "aviation_edge_timetable"
 
-    tracking = _airlabs_tracking_snapshot(api_key)
+    tracking = aviation_edge.tunisia_arrivals_via_live_tracker(api_key)
     if tracking:
-        return tracking, "airlabs_tracking"
+        return _dedupe_sort_flight_rows(tracking), "aviation_edge_flights"
 
-    return list_tunisia_flight_arrivals_demo(), "demo_airlabs_empty"
+    return list_tunisia_flight_arrivals_demo(), "demo_aviation_edge_empty"
 
 
 def list_tunisia_flight_arrivals_live() -> List[Dict[str, Any]]:

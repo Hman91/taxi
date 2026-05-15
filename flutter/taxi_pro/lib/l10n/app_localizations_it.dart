@@ -210,6 +210,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get operatorColArrivalAirportTn => 'Aeroporto di arrivo (Tunisia)';
 
   @override
+  String get flightArrivalsTerminalGate => 'Terminal · gate';
+
+  @override
   String get operatorChooseDriverTopUp => 'Scegli l\'autista da ricaricare:';
 
   @override
@@ -401,6 +404,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get chatScreenTitle => 'Chat corsa';
+
+  @override
+  String get chatConversationShortTitle => 'Chat';
 
   @override
   String get messageFieldHint => 'Scrivi un messaggio';
@@ -625,6 +631,41 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String driverOfferTimeChip(String minutes) {
     return '$minutes min';
+  }
+
+  @override
+  String get driverOfferRoutePreviewLabel => 'Route preview';
+
+  @override
+  String get driverOfferPassengerSectionTitle => 'Passenger';
+
+  @override
+  String get driverOfferPassengerNameLabel => 'Name';
+
+  @override
+  String get driverOfferPassengerPhoneLabel => 'Phone';
+
+  @override
+  String get driverOfferB2bSectionTitle => 'Corporate';
+
+  @override
+  String get driverOfferB2bCompanyLabel => 'Company';
+
+  @override
+  String get driverOfferB2bCompanyUnknown => 'Corporate account';
+
+  @override
+  String get driverOfferB2bGuestLabel => 'Guest';
+
+  @override
+  String get driverOfferB2bRoomLabel => 'Room';
+
+  @override
+  String get driverOfferB2bCodeLabel => 'Code';
+
+  @override
+  String driverOfferB2bAgreedFare(String amount) {
+    return 'Corporate fare: $amount DT';
   }
 
   @override
@@ -926,5 +967,5 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get flightArrivalsSampleDataBanner =>
-      'Solo voli di esempio: il backend non usa AirLabs. Impostate AIRLABS_API_KEY nel file `.env` nella cartella del progetto Taxi e riavviate l\'API.';
+      'Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server.';
 }

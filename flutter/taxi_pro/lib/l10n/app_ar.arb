@@ -89,6 +89,7 @@
   "adminRideRow": "{pickup} → {destination}",
   "driverLocationRow": "خط العرض {lat}، خط الطول {lng}",
   "chatScreenTitle": "محادثة الرحلة",
+  "chatConversationShortTitle": "محادثة",
   "messageFieldHint": "اكتب رسالة",
   "sendChatMessage": "إرسال",
   "accountDisabledContactAdmin": "الحساب معطّل. تواصل مع المشرف.",
@@ -168,6 +169,24 @@
   "@driverOfferTimeChip": {
     "placeholders": {
       "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "driverOfferRoutePreviewLabel": "معاينة المسار",
+  "driverOfferPassengerSectionTitle": "الراكب",
+  "driverOfferPassengerNameLabel": "الاسم",
+  "driverOfferPassengerPhoneLabel": "الهاتف",
+  "driverOfferB2bSectionTitle": "الشركات",
+  "driverOfferB2bCompanyLabel": "الشركة",
+  "driverOfferB2bCompanyUnknown": "حساب شركة",
+  "driverOfferB2bGuestLabel": "الضيف",
+  "driverOfferB2bRoomLabel": "الغرفة",
+  "driverOfferB2bCodeLabel": "الرمز",
+  "driverOfferB2bAgreedFare": "أجرة الشركة: {amount} د.ت",
+  "@driverOfferB2bAgreedFare": {
+    "placeholders": {
+      "amount": {
         "type": "String"
       }
     }
@@ -642,6 +661,7 @@
   "operatorColTakeoffTime": "وقت الإقلاع",
   "operatorColExpectedArrival": "الوصول المتوقع (اليوم)",
   "operatorColArrivalAirportTn": "مطار الوصول (تونس)",
+  "flightArrivalsTerminalGate": "المبنى · البوابة",
   "operatorChooseDriverTopUp": "اختر السائق لشحن الرصيد:",
   "operatorAmountReceivedDt": "المبلغ المستلم (د.ت):",
   "operatorRechargeBalance": "شحن الرصيد",
@@ -669,5 +689,5 @@
   },
   "ownerDriverPinWalletsHeading": "محافظ السائقين (PIN)",
   "ownerDriverPinWalletsEmpty": "لا توجد حسابات سائقين (PIN) محمّلة.",
-  "flightArrivalsSampleDataBanner": "رحلات تجريبية فقط — الخادم لا يستخدم AirLabs. أضف AIRLABS_API_KEY إلى ملف `.env` في مجلد مشروع Taxi ثم أعد تشغيل الـ API."
+  "flightArrivalsSampleDataBanner": "Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server."
 }

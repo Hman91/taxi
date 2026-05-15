@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import random
 import math
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple
+from zoneinfo import ZoneInfo
 
 from .. import db as db_module
 
@@ -241,16 +242,75 @@ def get_airport_route(route_key: str) -> Optional[Dict[str, float | str]]:
     }
 
 
-def calculate_fare(base_fare: float) -> Tuple[float, bool]:
-    current_hour = datetime.now().hour
-    is_night = current_hour >= 21 or current_hour < 5
-    final_price = base_fare * 1.5 if is_night else base_fare
-    return final_price, is_night
+_PRICING_TZ = ZoneInfo("Africa/Tunis")
+# Night window: 21:00–24:00 and 00:00–05:00 local (Tunisia).
+_NIGHT_START_HOUR = 21
+_NIGHT_END_HOUR_EXCLUSIVE = 5
 
 
-def calculate_gps_fare(distance_km: float) -> Tuple[float, bool]:
+def is_night_window_local(dt: datetime) -> bool:
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    local = dt.astimezone(_PRICING_TZ)
+    h = local.hour
+    return h >= _NIGHT_START_HOUR or h < _NIGHT_END_HOUR_EXCLUSIVE
+
+
+def parse_pricing_time(raw: Any) -> Optional[datetime]:
+    """Parse ISO8601 (or datetime) to aware UTC. None if missing/invalid."""
+    if raw in (None, ""):
+        return None
+    if isinstance(raw, datetime):
+        dt = raw
+    elif isinstance(raw, str):
+        v = raw.strip()
+        if v.endswith("Z"):
+            v = v[:-1] + "+00:00"
+        try:
+            dt = datetime.fromisoformat(v)
+        except ValueError:
+            return None
+    else:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def fare_price_breakdown(
+    base_fare: float, *, pricing_time: Optional[datetime] = None
+) -> Dict[str, float | bool | int]:
+    """Daytime base + optional +50% night surcharge (Tunisia local clock)."""
+    ref = pricing_time or datetime.now(timezone.utc)
+    base = round(float(base_fare), 3)
+    night = is_night_window_local(ref)
+    if night:
+        surcharge = round(base * 0.5, 3)
+        total = round(base + surcharge, 3)
+    else:
+        surcharge = 0.0
+        total = base
+    return {
+        "base_fare_dt": base,
+        "night_surcharge_dt": surcharge,
+        "fare_dt": total,
+        "is_night": night,
+        "night_surcharge_percent": 50 if night else 0,
+    }
+
+
+def calculate_fare(
+    base_fare: float, pricing_time: Optional[datetime] = None
+) -> Tuple[float, bool]:
+    br = fare_price_breakdown(base_fare, pricing_time=pricing_time)
+    return float(br["fare_dt"]), bool(br["is_night"])
+
+
+def calculate_gps_fare(
+    distance_km: float, pricing_time: Optional[datetime] = None
+) -> Tuple[float, bool]:
     base_fare = PRISE_EN_CHARGE + (distance_km * PRIX_PAR_KM)
-    return calculate_fare(base_fare)
+    return calculate_fare(base_fare, pricing_time=pricing_time)
 
 
 def random_stub_distance_km() -> float:
@@ -258,7 +318,12 @@ def random_stub_distance_km() -> float:
     return round(random.uniform(2.0, 20.0), 1)
 
 
-def fare_quote_for_pickup_destination(start: str, destination: str) -> Dict[str, float | bool]:
+def fare_quote_for_pickup_destination(
+    start: str,
+    destination: str,
+    *,
+    pricing_time: Optional[datetime] = None,
+) -> Dict[str, float | bool | int]:
     """Best-effort distance (km) and passenger fare (DT) for pickup → destination."""
     _ensure_seed_if_empty()
     pickup = (start or "").strip()
@@ -270,10 +335,7 @@ def fare_quote_for_pickup_destination(start: str, destination: str) -> Dict[str,
     else:
         d_km = float(row["distance_km"])
         b = float(row["base_fare"])
-    fare, is_night = calculate_fare(b)
-    return {
-        "distance_km": round(d_km, 3),
-        "base_fare_dt": round(b, 3),
-        "fare_dt": round(float(fare), 3),
-        "is_night": bool(is_night),
-    }
+    br = fare_price_breakdown(b, pricing_time=pricing_time)
+    out: Dict[str, float | bool | int] = {"distance_km": round(d_km, 3)}
+    out.update(br)
+    return out

@@ -13,7 +13,9 @@
   "tabAirport": "المطار",
   "tabGps": "GPS",
   "route": "المسار",
-  "nightFare50": "+50٪ تعريفة ليلية",
+  "nightFare50": "تعريفة ليلية (+50٪)",
+  "nightFareScheduleHint": "الزيادة الليلية +50٪ من 21:00 إلى 5:00 بتوقيت تونس (Africa/Tunis). السعر يتبع هذا التوقيت.",
+  "ownerWalletShareHint": "عند إنهاء الرحلة يخصم المالك من محفظة السائق: 10٪ لرحلات الركاب؛ رحلات B2B تضيف 5٪ (15٪ إجمالاً).",
   "rateYourLastRide": "قيّم رحلتك الأخيرة",
   "submitRating": "إرسال التقييم",
   "thankYouFeedback": "شكراً على ملاحظاتك!",
@@ -92,6 +94,7 @@
   "chatScreenTitle": "محادثة الرحلة",
   "messageFieldHint": "اكتب رسالة",
   "sendChatMessage": "إرسال",
+  "chatConversationShortTitle": "محادثة",
   "accountDisabledContactAdmin": "الحساب معطّل. تواصل مع المشرف.",
   "signedInWithGoogle": "تم تسجيل الدخول باستخدام Google",
   "passengerGoogleLoginRequired": "تسجيل الدخول عبر Google مطلوب للركاب.",
@@ -148,6 +151,20 @@
   "driverRideRequestBannerTitle": "طلب رحلة جديد!",
   "driverOfferFromLabel": "من",
   "driverOfferToLabel": "إلى",
+  "driverOfferPassengerSectionTitle": "الراكب",
+  "driverOfferPassengerNameLabel": "الاسم",
+  "driverOfferPassengerPhoneLabel": "الهاتف",
+  "driverOfferB2bCompanyUnknown": "حساب شركة",
+  "driverOfferB2bGuestLabel": "الضيف",
+  "driverOfferB2bRoomLabel": "الغرفة",
+  "driverOfferB2bAgreedFare": "أجرة الشركة: {amount} د.ت",
+  "@driverOfferB2bAgreedFare": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "driverRejectOfferButton": "رفض",
   "driverOfferFareChip": "{amount} د",
   "@driverOfferFareChip": {
@@ -670,5 +687,20 @@
   },
   "ownerDriverPinWalletsHeading": "محافظ السائقين (PIN)",
   "ownerDriverPinWalletsEmpty": "لا توجد حسابات سائقين (PIN) محمّلة.",
-  "flightArrivalsSampleDataBanner": "رحلات تجريبية فقط — الخادم لا يستخدم AirLabs. أضف AIRLABS_API_KEY إلى ملف `.env` في مجلد مشروع Taxi ثم أعد تشغيل الـ API."
+  "flightArrivalsSampleDataBanner": "Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server.",
+  "passengerLanguageReminderTitle": "اختر لغتك",
+  "passengerLanguageReminderSubtitle": "سنعرض القوائم والأسعار والمساعدة بهذه اللغة. يمكنك تغييرها في أي وقت من الإعدادات.",
+  "passengerLanguageReminderContinue": "متابعة",
+  "passengerLanguageNameArabic": "العربية",
+  "passengerLanguageNameGerman": "الألمانية",
+  "passengerLanguageNameSpanish": "الإسبانية",
+  "passengerLanguageNameFrench": "الفرنسية",
+  "passengerLanguageNameItalian": "الإيطالية",
+  "passengerLanguageNameRussian": "الروسية",
+  "passengerLanguageNameChinese": "الصينية",
+  "passengerLanguageNameEnglish": "الإنجليزية",
+  "passengerLanguageRegionMena": "الشرق الأوسط وشمال أفريقيا",
+  "passengerLanguageRegionAsia": "آسيا",
+  "passengerLanguageRegionEurope": "أوروبا",
+  "passengerLanguageRegionGlobal": "عالمي"
 }

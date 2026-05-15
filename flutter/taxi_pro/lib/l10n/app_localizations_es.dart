@@ -212,6 +212,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get operatorColArrivalAirportTn => 'Aeropuerto de llegada (Túnez)';
 
   @override
+  String get flightArrivalsTerminalGate => 'Terminal · puerta';
+
+  @override
   String get operatorChooseDriverTopUp => 'Elegir conductor a recargar:';
 
   @override
@@ -402,6 +405,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get chatScreenTitle => 'Chat del viaje';
+
+  @override
+  String get chatConversationShortTitle => 'Chat';
 
   @override
   String get messageFieldHint => 'Escriba un mensaje';
@@ -627,6 +633,41 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String driverOfferTimeChip(String minutes) {
     return '$minutes min';
+  }
+
+  @override
+  String get driverOfferRoutePreviewLabel => 'Route preview';
+
+  @override
+  String get driverOfferPassengerSectionTitle => 'Passenger';
+
+  @override
+  String get driverOfferPassengerNameLabel => 'Name';
+
+  @override
+  String get driverOfferPassengerPhoneLabel => 'Phone';
+
+  @override
+  String get driverOfferB2bSectionTitle => 'Corporate';
+
+  @override
+  String get driverOfferB2bCompanyLabel => 'Company';
+
+  @override
+  String get driverOfferB2bCompanyUnknown => 'Corporate account';
+
+  @override
+  String get driverOfferB2bGuestLabel => 'Guest';
+
+  @override
+  String get driverOfferB2bRoomLabel => 'Room';
+
+  @override
+  String get driverOfferB2bCodeLabel => 'Code';
+
+  @override
+  String driverOfferB2bAgreedFare(String amount) {
+    return 'Corporate fare: $amount DT';
   }
 
   @override
@@ -928,5 +969,5 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get flightArrivalsSampleDataBanner =>
-      'Solo vuelos de muestra — el servidor no está usando AirLabs. Añada AIRLABS_API_KEY en un archivo `.env` en la carpeta del proyecto Taxi y reinicie la API.';
+      'Sample flights only — live flight data is not loading. Set AVIATION_EDGE_API_KEY in `taxi/.env` or `backend/.env`, save, then restart the API server.';
 }

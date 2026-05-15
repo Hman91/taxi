@@ -63,11 +63,16 @@ class TaxiApiClient {
     return fares.map((k, v) => MapEntry(k, (v as num).toDouble()));
   }
 
-  Future<Map<String, dynamic>> quoteAirport(String routeKey) async {
+  Future<Map<String, dynamic>> quoteAirport(String routeKey,
+      {DateTime? pricingTime}) async {
+    final body = <String, dynamic>{'mode': 'airport', 'route_key': routeKey};
+    if (pricingTime != null) {
+      body['pricing_time'] = pricingTime.toUtc().toIso8601String();
+    }
     final r = await _http.post(
       _u('/api/fares/quote'),
       headers: _jsonHeaders(),
-      body: jsonEncode({'mode': 'airport', 'route_key': routeKey}),
+      body: jsonEncode(body),
     );
     if (r.statusCode != 200) {
       throw TaxiApiException(r.body, r.statusCode);
@@ -75,10 +80,14 @@ class TaxiApiClient {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> quoteGps({double? distanceKm}) async {
+  Future<Map<String, dynamic>> quoteGps(
+      {double? distanceKm, DateTime? pricingTime}) async {
     final body = <String, dynamic>{'mode': 'gps'};
     if (distanceKm != null) {
       body['distance_km'] = distanceKm;
+    }
+    if (pricingTime != null) {
+      body['pricing_time'] = pricingTime.toUtc().toIso8601String();
     }
     final r = await _http.post(
       _u('/api/fares/quote'),
@@ -766,12 +775,29 @@ class TaxiApiClient {
     required String pickup,
     required String destination,
     DateTime? scheduledPickupAt,
+    String? pickupAddress,
+    String? pickupDisplayName,
+    String? destinationAddress,
+    String? destinationDisplayName,
+    double? pickupLat,
+    double? pickupLng,
+    double? destinationLat,
+    double? destinationLng,
   }) async {
     final payload = <String, dynamic>{
       'pickup': pickup,
       'destination': destination,
       if (scheduledPickupAt != null)
         'scheduled_pickup_at': scheduledPickupAt.toUtc().toIso8601String(),
+      if ((pickupAddress ?? '').trim().isNotEmpty) 'pickup_address': pickupAddress!.trim(),
+      if ((pickupDisplayName ?? '').trim().isNotEmpty) 'pickup_display_name': pickupDisplayName!.trim(),
+      if ((destinationAddress ?? '').trim().isNotEmpty) 'destination_address': destinationAddress!.trim(),
+      if ((destinationDisplayName ?? '').trim().isNotEmpty)
+        'destination_display_name': destinationDisplayName!.trim(),
+      if (pickupLat != null) 'pickup_lat': pickupLat,
+      if (pickupLng != null) 'pickup_lng': pickupLng,
+      if (destinationLat != null) 'destination_lat': destinationLat,
+      if (destinationLng != null) 'destination_lng': destinationLng,
     };
     final r = await _http.post(
       _u('/api/rides'),
